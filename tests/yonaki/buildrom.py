@@ -18,7 +18,7 @@ def build(out, scenario=None, extra=(), quiet=True):
     if r.returncode:
         raise RuntimeError(r.stdout + r.stderr)
     rel = out.relative_to(ROOT)
-    for c in ([str(CC / 'ca65'), '-g', '-I', '.', '-I', str(rel), 'src/yonaki/yonaki.s', '-o', f'{rel}/yonaki.o',
+    for c in ([str(CC / 'ca65'), '-g', '-I', '.', '-I', str(rel), '-I', str(CC.parent / 'asminc'), 'src/yonaki/yonaki.s', '-o', f'{rel}/yonaki.o',
                '-l', f'{rel}/yonaki.lst'],
               [str(CC / 'ld65'), '-C', f'{rel}/yonaki.cfg', f'{rel}/yonaki.o', '-o', f'{rel}/yonaki.sfc', '-m',
                f'{rel}/yonaki.map', '-Ln', f'{rel}/labels.txt'],

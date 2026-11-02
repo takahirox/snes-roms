@@ -57,7 +57,7 @@ build/yonaki/data.inc: FORCE
 	$(PYTHON) -I tools/yonaki/build.py $(YONAKI_FLAGS)
 
 build/yonaki/yonaki.o: build/yonaki/data.inc $(YONAKI_SRC) FORCE
-	$(CA65) -g -I . -I build/yonaki src/yonaki/yonaki.s -o $@ -l build/yonaki/yonaki.lst
+	$(CA65) -g -I . -I build/yonaki -I tools/vendor/cc65-2.19/asminc src/yonaki/yonaki.s -o $@ -l build/yonaki/yonaki.lst
 
 build/yonaki/yonaki.sfc: build/yonaki/yonaki.o FORCE
 	$(LD65) -C build/yonaki/yonaki.cfg build/yonaki/yonaki.o -o $@ -m build/yonaki/yonaki.map -Ln build/yonaki/labels.txt
