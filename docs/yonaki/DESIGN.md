@@ -1,241 +1,261 @@
-# 夜鳴き鐘 (よなきがね) — 設計
+# 夜鳴き鐘 (Yonaki Kane) — design
 
-スーパーファミコン用のオリジナルのサウンドノベル。実写の背景に、青いシルエットの登場人物。
-選択肢によって物語が分かれ、導き方を誤るとバッドエンドになり、真相にたどり着けない。
-本編をクリアすると、同じ一夜の別の物語 (シナリオ) が選択肢として解禁される。
+An original sound novel for the Super Famicom: photographic backgrounds with characters shown as blue silhouettes.
+The story branches on the player's choices; guide it badly and you reach a bad ending without getting to the truth.
+Clearing the main story unlocks other stories (scenarios) set on the same night, reached through new choices.
 
-既存の作品の物語・人物・台詞・絵・曲は使わない。ジャンルの型 (閉ざされた宿、伝説、分岐、
-バッドエンド、クリア後の別シナリオ、背景と人物のシルエット) だけを借りる。
+No story, characters, lines, pictures or music from existing works are used. Only the conventions of the genre are
+borrowed (an isolated inn, a legend, branching, bad endings, extra scenarios after clearing, backgrounds with
+character silhouettes).
 
-> **ネタバレ注意**: このファイルには真相を含む。
+> **Spoiler warning**: this file contains the solution.
 
 ---
 
-## 1. 舞台
+## 1. Setting
 
-- 1994 年 (平成 6 年) 10 月 22 日 (土) の夕方から翌朝まで。
-- 北関東の山奥、架空の **霧見沢 (きりみざわ) 温泉** の一軒宿 **水明館 (すいめいかん)**。
-  明治 7 年創業。売却が決まり、この週末で 120 年の営業を終える。
-- 宿へは霧見川に架かる霧見橋を渡る一本道だけ。台風 26 号 (架空) の夜、橋の手前の道が
-  土砂で埋まり、宿は孤立する。電話は 19:30 に不通、21:40 に停電 (自家発電機で帳場と
-  談話室の一部だけ点く)。携帯電話は圏外 (1994 年)。
+- From the evening of Saturday 22 October 1994 (Heisei 6) to the next morning.
+- **水明館 (Suimeikan)**, a lone inn at the fictional **霧見沢 (Kirimizawa) hot spring**, deep in the mountains of
+  northern Kantō. Founded in Meiji 7 (1874). It has been sold and ends 120 years of business this weekend.
+- The only way in is a single road over 霧見橋 (Kirimi Bridge) across 霧見川 (the Kirimi River). On the night of
+  Typhoon No. 26 (fictional) a landslide buries the road before the bridge and the inn is cut off. The phone goes
+  dead at 19:30 and the power fails at 21:40 (a generator lights only the front desk and part of the lounge).
+  There is no mobile coverage (it is 1994).
 
-### 館の配置
-| 場所 | 内容 |
+### Layout of the inn
+| Place | Contents |
 |---|---|
-| 玄関・帳場 | 帳場の奥に事務室 (業務用無線機)、その奥に母屋 (女将と圭介) |
-| 談話室 | 振り子時計、囲炉裏、古い写真の額。夜はここが避難所になる |
-| 大広間 | 夕食の席 |
-| 板場 (厨房) | 権藤の城。奥に権藤の部屋 (小さな仏壇) |
-| 本館 2 階 | 客室。松の間 (久我山)、竹の間 (森下夫妻)、梅の間 (黒井)、桐の間 (僕)、楓の間 (千尋) |
-| 離れ「鶴の間」 | 志賀教授。本館 1 階奥から短い廊下 |
-| 大浴場 | 現在の男湯・女湯 |
-| 旧湯殿 | 明治の木造の湯殿。1969 年から閉鎖。本館裏から庭を渡る **渡り廊下** の先。軒下に小さな青銅の鐘「夜鳴き鐘」。隣に源泉の弁がある **釜場** |
-| 酒蔵 | 本館の地下。急な石段 |
-| 物置 | 古い宿帳と先代の日誌 |
+| Entrance / 帳場 (front desk) | Behind the desk, the office (business radio); behind that, the family quarters (the proprietress and Keisuke) |
+| 談話室 (lounge) | Pendulum clock, sunken hearth (囲炉裏), framed old photographs. At night it becomes the shelter |
+| 大広間 (banquet hall) | Where dinner is served |
+| 板場 (kitchen) | Gondō's domain. At the back, Gondō's room (a small Buddhist altar) |
+| Main building, 2nd floor | Guest rooms: 松の間 (Pine room; Kugayama), 竹の間 (Bamboo room; the Morishitas), 梅の間 (Plum room; Kuroi), 桐の間 (Paulownia room; me), 楓の間 (Maple room; Chihiro) |
+| Annex 鶴の間 (Crane room) | Professor Shiga. A short corridor from the back of the main building's ground floor |
+| Main baths | Today's men's and women's baths |
+| 旧湯殿 (old bathhouse) | A wooden Meiji-era bathhouse, closed since 1969. At the end of the **covered walkway** (渡り廊下) that crosses the garden from behind the main building. Under its eaves hangs a small bronze bell, the 夜鳴き鐘 ("bell that rings at night"). Next to it is the **boiler room** (釜場) with the valve for the hot spring source |
+| 酒蔵 (sake cellar) | Under the main building. Steep stone steps |
+| Storeroom | Old guest registers and the previous owner's diary |
 
-### 伝説「おゆらさま」
-江戸の末、宿の娘お由良が大水の夜に湯殿で溺れた。それから嵐の夜、誰もいない湯殿の鐘が
-鳴ると、おゆらさまが客をひとり湯に呼ぶ。呼ばれた者は朝、湯の中で見つかる。
-1969 年の台風の夜、鐘が鳴り、仲居の千鶴 (17) が旧湯殿で溺れて見つかった、と伝わる。
+### The legend of おゆらさま (Oyura-sama)
+At the end of the Edo period, Oyura (Oyura), the innkeeper's daughter, drowned in the bathhouse on a night of
+flooding. Ever since, on stormy nights, when the bell of the empty bathhouse rings, Oyura-sama calls one guest into
+the water. The one who is called is found in the bath in the morning.
+It is said that on a typhoon night in 1969 the bell rang, and the maid Chizuru (Chizuru, 17) was found drowned in the
+old bathhouse.
 
 ---
 
-## 2. 人物
+## 2. Characters
 
-| 名前 | 年齢 | 立場 | 表の顔 | 裏 |
+| Name | Age | Position | Public face | Hidden side |
 |---|---|---|---|---|
-| **僕** 結城 航 (ゆうき わたる) | 24 | 旅行雑誌『旅と宿』の新人記者 | 語り手。最終営業の取材に来た | — |
-| 早瀬 千尋 (はやせ ちひろ) | 29 | フリーのカメラマン | 僕の取材の相棒。冷静で皮肉屋、面倒見がいい。ポラロイドで試し撮りをする | — |
-| 水嶋 志乃 (みずしま しの) | 58 | 女将 | 売却に最後まで反対した | 先代 (義父) が 1969 年に何かを隠したと薄々感じていた |
-| 水嶋 圭介 | 32 | 若旦那 (志乃の息子) | 売却を進めた現実家 | 借金を一人で抱えている |
-| 権藤 益男 (ごんどう ますお) | 61 | 板前 (勤続 40 年) | 無口で腕のいい料理人。不眠で睡眠薬を飲む | **千鶴の父。犯人** |
-| 宮本 小夜 (みやもと さよ) | 19 | 仲居 (地元の娘) | 伝説を本気で怖がる。嵐で泊まり込み | — |
-| 久我山 達也 (くがやま たつや) | 47 | 久我山観光の社長。水明館の買い手 | 横柄で酒好き。旧湯殿を壊してリゾートにすると言う | **1969 年に千鶴を死なせた** |
-| 志賀 宗一郎 (しが そういちろう) | 71 | 民俗学者 (元大学教授) | おゆらさま伝説の研究で長逗留 | 先代の日誌から 1969 年の真相を知った |
-| 森下 遼 (もりした りょう) | 28 | 「新婚」の客 | 人目を避ける | 恵美と駆け落ち中 |
-| 森下 恵美 (えみ) | 26 | 同上 | 怯えている | 父の決めた縁談の相手が久我山の甥。久我山に顔を知られている |
-| 黒井 澄子 (くろい すみこ) | 35 | 一人旅の女 | 子どものころここに来たと言う | **千鶴の妹 (旧姓 権藤)**。差出人不明の手紙 (実は志賀) に呼ばれた |
-| (過去) 権藤 千鶴 | 17 | 1969 年の仲居 | — | 久我山に襲われ、湯船で溺れた |
-| (過去) お由良 | 16 | 江戸末の宿の娘 | 伝説の娘 | おゆら篇の主役 |
+| **僕** ("I") 結城 航 (Yūki Wataru) | 24 | Rookie reporter for the travel magazine 『旅と宿』 (Travel and Inns) | The narrator. Came to cover the last days of business | — |
+| 早瀬 千尋 (Hayase Chihiro) | 29 | Freelance photographer | My partner on the assignment. Cool-headed, sardonic, looks after others. Takes test shots with a Polaroid | — |
+| 水嶋 志乃 (Mizushima Shino) | 58 | Proprietress (女将) | Opposed the sale to the very end | Has vaguely sensed that the previous owner (her father-in-law) hid something in 1969 |
+| 水嶋 圭介 (Mizushima Keisuke) | 32 | Young master (Shino's son) | The realist who pushed the sale through | Carries the debts alone |
+| 権藤 益男 (Gondō Masuo) | 61 | Chef (40 years at the inn) | Taciturn, skilled cook. Insomniac who takes sleeping pills | **Chizuru's father. The killer** |
+| 宮本 小夜 (Miyamoto Sayo) | 19 | Maid (a local girl) | Truly afraid of the legend. Stays overnight because of the storm | — |
+| 久我山 達也 (Kugayama Tatsuya) | 47 | President of Kugayama Kankō; the buyer of 水明館 | Overbearing and fond of drink. Says he will tear down the old bathhouse and build a resort | **Caused Chizuru's death in 1969** |
+| 志賀 宗一郎 (Shiga Sōichirō) | 71 | Folklorist (retired university professor) | A long-stay guest researching the Oyura-sama legend | Learned the truth of 1969 from the previous owner's diary |
+| 森下 遼 (Morishita Ryō) | 28 | A "newlywed" guest | Avoids being seen | Eloping with Emi |
+| 森下 恵美 (Morishita Emi) | 26 | Same | Frightened | The man her father arranged for her to marry is Kugayama's nephew; Kugayama knows her face |
+| 黒井 澄子 (Kuroi Sumiko) | 35 | A woman travelling alone | Says she came here as a child | **Chizuru's younger sister (née Gondō)**. Summoned by an anonymous letter (actually from Shiga) |
+| (past) 権藤 千鶴 (Gondō Chizuru) | 17 | Maid in 1969 | — | Attacked by Kugayama; drowned in the bathtub |
+| (past) お由良 (Oyura) | 16 | Innkeeper's daughter at the end of the Edo period | The girl of the legend | Protagonist of おゆら篇 |
 
-### 関係
-- 権藤は 1969 年、娘の千鶴を失った。妻は次女の澄子 (当時 10 歳) を連れて家を出た。権藤は
-  「千鶴のそばにいたい」と宿に残り、25 年、事故だと信じてきた。毎年 10 月 22 日 (千鶴の
-  命日) に旧湯殿の前へ花を置く (小夜が知っている)。
-- 1969 年の真相: 当時 22 歳の久我山は、県議の父と常連だった。台風の夜、酔って千鶴を
-  旧湯殿に連れ出し、抵抗した千鶴は頭を打って湯船に落ち、久我山はそのまま逃げた。
-  先代の水嶋源一郎は濡れて戻る久我山を見ていたが、久我山の父の金 (翌年の改装資金) と
-  引き換えに黙り、「鐘が鳴った、おゆらさまだ」と言った。真相は先代の日誌に残った。
-- 志賀は今年の夏、物置で日誌を見つけた。9 月に権藤へ見せ (父親には知る権利があると考えた)、
-  最終営業の週末に家族と宿の前で真相を明かすつもりで、澄子に差出人なしの手紙を送った。
-  権藤には澄子を呼んだことを話していない。
+### Relationships
+- In 1969 Gondō lost his daughter Chizuru. His wife left, taking their younger daughter Sumiko (then 10). Gondō stayed at the
+  inn ("I want to stay near Chizuru") and for 25 years believed it was an accident. Every year on 22 October (Chizuru's
+  death anniversary) he leaves flowers in front of the old bathhouse (Sayo knows this).
+- The truth of 1969: Kugayama, then 22, was a regular guest with his father, a prefectural assemblyman. On the night of
+  the typhoon he got drunk and took Chizuru out to the old bathhouse; she resisted, hit her head and fell into the
+  bathtub, and Kugayama simply ran. The previous owner, 水嶋源一郎 (Mizushima Gen'ichirō), saw Kugayama come back
+  soaking wet, but kept quiet in exchange for Kugayama's father's money (the funds for the next year's renovation),
+  and said "鐘が鳴った、おゆらさまだ" ("the bell rang; it was Oyura-sama"). The truth was left in the previous
+  owner's diary.
+- This summer Shiga found the diary in the storeroom. In September he showed it to Gondō (believing a father had the
+  right to know), and, intending to reveal the truth in front of the family and the inn on the last weekend of
+  business, sent Sumiko an unsigned letter. He has not told Gondō that he summoned Sumiko.
 
 ---
 
-## 3. 真相 (本編)
+## 3. The solution (main story)
 
-### 権藤の計画
-最後の嵐の夜、千鶴と同じ旧湯殿、同じ湯船で、伝説どおりに久我山を「呼ばせる」。
-鐘を仕掛けにして、自分のいない時刻に鳴らす。
+### Gondō's plan
+On the last stormy night, in the same old bathhouse and the same bathtub as Chizuru, make the legend "call" Kugayama.
+Rig the bell to ring at a time when he himself is elsewhere.
 
-### 時刻表 (真相)
-| 時刻 | 出来事 |
+### Timeline (the truth)
+| Time | Event |
 |---|---|
-| 15:00 | 小夜が旧湯殿を掃除し、湯船を **空のまま** にする (明日の「お別れの湯」のため) |
-| 16:30 | 僕と千尋が到着。権藤が旧湯殿の前に白い菊を置いているのを見る |
-| 18:00–19:45 | 夕食。志賀が伝説を話す (鐘のことも)。久我山は泥酔し「あの風呂には昔一度入った」「壊して露天にする」。恵美を見て顔色を変える。権藤は「お疲れでしょう」と久我山にだけ地酒を一本付ける (**睡眠薬入り**、小夜が運ぶ) |
-| 19:30 | 電話が不通に |
-| 20:00 | 解散。権藤は献立の **試し刷り** (誤植のまま) の裏に「千鶴のことで話がある。八時半、旧湯殿」と書き、松の間の戸の下へ |
-| 20:15–21:10 | 僕は談話室で志賀に取材。20:45ごろ志賀に頼まれて板場へ茶をもらいに行く。**板場は無人。ラジオの演歌だけが鳴り、鍋が噴いていた**。僕は火を止める |
-| 20:30 | 久我山が薬で朦朧としながら旧湯殿へ。権藤が背後から薪で殴り、空の湯船に横たえる |
-| 20:40–20:55 | 権藤が鐘の舌にたこ糸を結び、梁に渡し、湯桶 (浮き) に結んで湯船へ下ろす。釜場の弁を開ける |
-| 21:00 | 権藤が板場へ戻る |
-| 21:40 | 停電 |
-| 22:30ごろ | 湯が久我山の顔に達し、薬で眠ったまま溺れる。腕時計が 22:41 で止まる |
-| 23:02 | 湯が満ちて湯桶が浮き上がり、糸が引かれて **鐘が鳴る**。全員が談話室か帳場にいた |
-| 23:10 | 僕・圭介・権藤が旧湯殿へ。湯があふれ、湯気の中に久我山がうつ伏せ。千尋がポラロイドを撮る |
-| 23:40–00:40 | 談話室に全員。それぞれの 21:00 前後の行動を話す。権藤は「八時半から十時まで板場にいた。誰も来なかった」と言う (**嘘**) |
-| 00:50 | 澄子が自分は千鶴の妹だと明かす (疑いが向いたとき、または話の流れで) |
-| 01:20 | 志賀がポラロイドの糸に気づき、権藤を酒蔵に呼び出して自首を勧める。権藤は志賀を突き落とし、手帳から日誌の記述の頁を破る |
-| 02:00 | **二度目の鐘**。鳴らしたのは澄子 (姉を想って旧湯殿へ行き、鐘の綱の残りを引いた)。白い浴衣でろうそくを持つ澄子を、僕は廊下の先に見る (おゆらさまに見える) |
-| 02:30 | 志賀がいないと分かり、捜す。酒蔵の石段の下で見つかる |
-| 03:00–04:30 | 僕の推理 (真エンド) |
-| 05:40 | 夜明け。雨がやむ |
-| 07:00 | 消防団が土砂を越えて来る |
+| 15:00 | Sayo cleans the old bathhouse and leaves the bathtub **empty** (for tomorrow's "farewell bath") |
+| 16:30 | I and Chihiro arrive. We see Gondō placing white chrysanthemums in front of the old bathhouse |
+| 18:00–19:45 | Dinner. Shiga tells the legend (including the bell). Kugayama, very drunk, says "あの風呂には昔一度入った" ("I bathed in that bath once, long ago") and "壊して露天にする" ("I'll tear it down and make an open-air bath"). He goes pale on seeing Emi. Gondō, saying "お疲れでしょう" ("you must be tired"), sends a bottle of local sake to Kugayama alone (**laced with sleeping pills**; Sayo carries it) |
+| 19:30 | The phone goes dead |
+| 20:00 | Everyone disperses. On the back of a **proof print** of the menu (with its misprint), Gondō writes "千鶴のことで話がある。八時半、旧湯殿" ("I need to talk about Chizuru. Half past eight, the old bathhouse") and slips it under the door of 松の間 |
+| 20:15–21:10 | I interview Shiga in the lounge. Around 20:45, at Shiga's request, I go to the kitchen for tea. **The kitchen is empty. Only enka plays on the radio, and a pot is boiling over**. I turn off the flame |
+| 20:30 | Kugayama, groggy from the drug, goes to the old bathhouse. Gondō strikes him from behind with a piece of firewood and lays him in the empty bathtub |
+| 20:40–20:55 | Gondō ties kite string to the bell's clapper, runs it over a beam, ties it to a bath bucket (the float) and lowers that into the tub. He opens the valve in the boiler room |
+| 21:00 | Gondō returns to the kitchen |
+| 21:40 | Power failure |
+| about 22:30 | The water reaches Kugayama's face and he drowns, still asleep from the drug. His wristwatch stops at 22:41 |
+| 23:02 | The tub fills, the bucket floats up, the string is pulled and **the bell rings**. Everyone was in the lounge or at the front desk |
+| 23:10 | I, Keisuke and Gondō go to the old bathhouse. Water is overflowing; in the steam Kugayama lies face down. Chihiro takes a Polaroid |
+| 23:40–00:40 | Everyone in the lounge. Each tells what they did around 21:00. Gondō says "八時半から十時まで板場にいた。誰も来なかった" ("I was in the kitchen from half past eight to ten. Nobody came") (**a lie**) |
+| 00:50 | Sumiko reveals that she is Chizuru's sister (when suspicion falls on her, or as the conversation goes) |
+| 01:20 | Shiga notices the string in the Polaroid, calls Gondō down to the sake cellar and urges him to turn himself in. Gondō pushes Shiga down the steps and tears the pages with the diary notes out of his notebook |
+| 02:00 | **The second bell**. It is rung by Sumiko (thinking of her sister, she went to the old bathhouse and pulled what was left of the bell rope). I see Sumiko, in a white yukata and holding a candle, at the end of the corridor (she looks like Oyura-sama) |
+| 02:30 | Shiga is found to be missing and everyone searches. He is found at the foot of the stone steps to the sake cellar |
+| 03:00–04:30 | My deduction (true ending) |
+| 05:40 | Dawn. The rain stops |
+| 07:00 | The volunteer fire brigade gets past the landslide |
 
-### 推理 (真エンドの条件)
-最後の推理で次を順に答える。間違えると、そこで別の結末になる。
-1. **鐘は誰が鳴らしたか** → 誰でもない。湯桶の浮きと糸の仕掛け
-   (手がかり: 千尋のポラロイドに写った鐘から湯へ下りる細い線、昼は空だった湯船があふれていた、
-   糸の先に結ばれた湯桶、板場のたこ糸)
-2. **弁が開けられたのはいつか** → 21 時ごろ
-   (手がかり: 権藤と小夜が言った「あの湯船は満たすのに二時間かかる」、鐘は 23:02)
-3. **21 時前後に一人だったのは** → 黒井、森下夫妻 (恵美が部屋を出ていた)、権藤
-   (手がかり: 女将は千尋と撮影、圭介は無線で小夜が茶を運んだ、志賀は僕と取材中)
-4. **犯人は** → 権藤
-   (手がかり: 僕が 20:45 に見た無人の板場と、権藤の「誰も来なかった」という嘘。
-   呼び出しの紙は誤植の残る試し刷り (板場にしかない)。久我山にだけ付けられた酒)
-5. **なぜ** → 千鶴の父だから
-   (手がかり: 白い菊、10 月 22 日が命日、権藤の部屋の仏壇の少女の写真、澄子の「父は板前だった」)
+### Deduction (conditions for the true ending)
+In the final deduction the player answers the following in order. A wrong answer leads to a different ending at
+that point.
+1. **Who rang the bell?** → Nobody. A device of a floating bath bucket and a string
+   (clues: the thin line running from the bell down to the water in Chihiro's Polaroid; the bathtub, empty in the
+   afternoon, was overflowing; the bath bucket tied to the end of the string; kite string from the kitchen)
+2. **When was the valve opened?** → Around 21:00
+   (clues: "あの湯船は満たすのに二時間かかる" ("that tub takes two hours to fill"), as Gondō and Sayo said; the bell
+   rang at 23:02)
+3. **Who was alone around 21:00?** → Kuroi, the Morishitas (Emi had left the room), Gondō
+   (clues: the proprietress was doing a photo shoot with Chihiro, Keisuke was on the radio while Sayo brought him tea,
+   Shiga was being interviewed by me)
+4. **Who is the killer?** → Gondō
+   (clues: the empty kitchen I saw at 20:45 and Gondō's lie that "誰も来なかった" ("nobody came"). The summons was
+   written on a proof print with the misprint still in it (found only in the kitchen). Sake sent to Kugayama alone)
+5. **Why?** → Because he is Chizuru's father
+   (clues: the white chrysanthemums; 22 October is her death anniversary; the photo of a girl on the altar in
+   Gondō's room; Sumiko's "父は板前だった" ("my father was a chef"))
 
-### 赤いにしん (ミスリード)
-- 黒井澄子: 21 時ごろ女湯に一人。旧湯殿の場所を知っていた。千鶴の妹 (動機)。白い浴衣の「おゆらさま」。
-- 森下夫妻: 久我山に脅されていた。恵美は 21 時ごろ部屋を出て庭の東屋で泣いていた (泥のついた草履)。
-- 圭介: 売却の借金。久我山と言い争った。
-- 志乃: 旧湯殿を壊されたくない。
-- おゆらさま: 鐘、湯、白い影。
-
----
-
-## 4. 物語の構成 (本編「水明館篇」)
-
-章は自動で区切る (章見出しを出す)。
-
-| 章 | 時刻 | 内容 | 主な選択 |
-|---|---|---|---|
-| 序章 霧見沢 | 16:00 | バスで谷へ。運転手が伝説を冗談めかして話す。霧見橋。到着、菊を置く権藤 | 千尋と話す話題 |
-| 第一章 最後の客 | 17:00–19:45 | 宿の人々、旧湯殿の見学、夕食。志賀の伝説、久我山の泥酔 | 誰と話すか、旧湯殿をどこまで見るか |
-| 第二章 取材 | 20:00–21:40 | 志賀の取材、板場へ茶 (必ず通る)、停電 | 板場でどうするか、停電後どこへ |
-| 第三章 鐘 | 23:02–00:40 | 鐘、旧湯殿の死体、談話室での聞き取り | 誰の話を聞くか、ポラロイドを見るか |
-| 第四章 二度目の鐘 | 01:00–02:40 | 部屋へ戻るか残るか、二度目の鐘、白い影、志賀の死 | 白い影を追うか、千尋と離れるか |
-| 第五章 夜明け前 | 03:00– | 推理、権藤の告白、夜明け | 推理の答え |
-
-### 結末 (本編)
-| ID | 種類 | 名前 | 条件 |
-|---|---|---|---|
-| E01 | 真 | 夜明けの鐘 | 推理を全問正解 |
-| E02 | 通常 | 迷宮 | 推理で動機を答えられない。権藤は夜明けに姿を消し、川で見つかる |
-| E03 | 悪 | 濡れ衣 | 犯人に黒井を名指し。澄子が崩れ落ち、権藤は黙る |
-| E04 | 悪 | 駆け落ちの果て | 森下夫妻を名指し |
-| E05 | 悪 | おゆらさまの夜 | 鐘は伝説だと答える。皆が散り散りになり、僕は湯殿で… |
-| E06 | 悪 | 白い影 | 二度目の鐘のあと一人で白い影を追い、旧湯殿で溺れる (恐怖) |
-| E07 | 悪 | 酒蔵 | 一人で酒蔵へ下り、背後から… (権藤) |
-| E08 | 悪 | ひとりきりの楓の間 | 千尋を一人で部屋に戻らせる。千尋が試し刷りに気づいて殺される |
-| E09 | 悪 | 眠り | 部屋で眠ってしまう。朝、すべては終わっていた |
-| E10 | 悪 | 吊り橋 | 夜中に助けを呼びに橋へ向かう。濁流 |
-| E11 | 悪 | 若旦那 | 圭介を名指し |
-| E12 | 通常 | 告白 | 権藤を名指しするが仕掛けを説明できない。権藤は笑い、夜明けに自ら湯へ |
-| E13 | 悪 | 引き返す | 序章でバスを降りずに引き返す (短い冗談の結末) |
-| E14 | 悪 | 二人目 | 志賀を一人で離れに帰す。志賀が先に殺され、真相の手がかりを失う |
+### Red herrings
+- Kuroi Sumiko: alone in the women's bath around 21:00. Knew where the old bathhouse was. Chizuru's sister (motive). The
+  "Oyura-sama" in a white yukata.
+- The Morishitas: being threatened by Kugayama. Around 21:00 Emi left the room and was crying in the garden arbour
+  (muddy sandals).
+- Keisuke: debts from the sale. Quarrelled with Kugayama.
+- Shino: does not want the old bathhouse torn down.
+- Oyura-sama: the bell, the water, the white figure.
 
 ---
 
-## 5. 解禁されるシナリオ
+## 4. Story structure (main story, 「水明館篇」 "the Suimeikan chapter")
 
-本編の真エンド (E01) を見ると、序章と第四章の選択肢に新しいものが現れる (タイトルのしおりの色が変わる)。
+Chapters break automatically (a chapter heading is shown).
 
-| 解禁条件 | シナリオ | 入口 | 内容 |
+| Chapter | Time | Contents | Main choices |
 |---|---|---|---|
-| E01 | **おゆら篇** (怪異) | 第四章、二度目の鐘のあとの選択に「鐘の音を数える」 | 伝説が本物だった夜。お由良の怨みと、湯に沈んだ者たちの声。恐怖が中心。結末 3 つ |
-| E01 + おゆら篇の結末 1 つ | **千鶴篇** (1969) | 序章のバスで「古い写真のことを聞く」 | 1969 年 10 月 22 日、17 歳の千鶴の最後の一日を、千鶴自身の目で。1 ルート約 1.2 万字 (30 分前後)。結末 2 つ |
-| 結末 10 種以上 | **編集部篇** (おまけ) | タイトルに「おまけ」 | 東京に戻った僕と千尋の後日談、取材記事の行方。軽い |
+| 序章 霧見沢 (Prologue: Kirimizawa) | 16:00 | By bus into the valley. The driver tells the legend half-jokingly. 霧見橋. Arrival; Gondō placing chrysanthemums | What to talk about with Chihiro |
+| 第一章 最後の客 (Chapter 1: The last guests) | 17:00–19:45 | The people of the inn, a look at the old bathhouse, dinner. Shiga's legend, Kugayama drunk | Whom to talk to, how far to look around the old bathhouse |
+| 第二章 取材 (Chapter 2: The interview) | 20:00–21:40 | Interviewing Shiga, tea from the kitchen (always passed), the power failure | What to do in the kitchen, where to go after the power fails |
+| 第三章 鐘 (Chapter 3: The bell) | 23:02–00:40 | The bell, the body in the old bathhouse, questioning in the lounge | Whose story to hear, whether to look at the Polaroid |
+| 第四章 二度目の鐘 (Chapter 4: The second bell) | 01:00–02:40 | Go back to the rooms or stay, the second bell, the white figure, Shiga's death | Whether to follow the white figure, whether to separate from Chihiro |
+| 第五章 夜明け前 (Chapter 5: Before dawn) | 03:00– | Deduction, Gondō's confession, dawn | The answers in the deduction |
+
+### Endings (main story)
+| ID | Kind | Name | Condition |
+|---|---|---|---|
+| E01 | true | 夜明けの鐘 (The bell at dawn) | Every deduction answer correct |
+| E02 | normal | 迷宮 (Unsolved) | Cannot give the motive in the deduction. Gondō disappears at dawn and is found in the river |
+| E03 | bad | 濡れ衣 (False accusation) | Names Kuroi as the killer. Sumiko collapses; Gondō stays silent |
+| E04 | bad | 駆け落ちの果て (The end of the elopement) | Names the Morishitas |
+| E05 | bad | おゆらさまの夜 (Oyura-sama's night) | Answers that the bell was the legend. Everyone scatters, and I, in the bathhouse… |
+| E06 | bad | 白い影 (The white figure) | After the second bell, follows the white figure alone and drowns in the old bathhouse (horror) |
+| E07 | bad | 酒蔵 (The sake cellar) | Goes down into the sake cellar alone, and from behind… (Gondō) |
+| E08 | bad | ひとりきりの楓の間 (Alone in the Maple room) | Lets Chihiro go back to her room alone. Chihiro notices the proof print and is killed |
+| E09 | bad | 眠り (Sleep) | Falls asleep in the room. In the morning it is all over |
+| E10 | bad | 吊り橋 (The suspension bridge) | Heads for the bridge in the night to get help. The flood |
+| E11 | bad | 若旦那 (The young master) | Names Keisuke |
+| E12 | normal | 告白 (Confession) | Names Gondō but cannot explain the device. Gondō laughs and at dawn walks into the water himself |
+| E13 | bad | 引き返す (Turning back) | Stays on the bus in the prologue and goes back (a short joke ending) |
+| E14 | bad | 二人目 (The second victim) | Lets Shiga go back to the annex alone. Shiga is killed first and the clues to the truth are lost |
 
 ---
 
-### 千鶴篇の流れ
+## 5. Unlocked scenarios
 
-| 時刻 | 場面 | 選択 (フラグ) |
+After the main story's true ending (E01), new options appear among the choices in the prologue and chapter 4 (the
+colour of the bookmark on the title screen changes).
+
+| Unlock condition | Scenario | Entry | Contents |
+|---|---|---|---|
+| E01 | **おゆら篇** (the Oyura chapter; supernatural) | Chapter 4: 「鐘の音を数える」 ("count the bell's strokes") in the choice after the second bell | The night the legend was real. Oyura's grudge and the voices of those sunk in the water. Mostly horror. 3 endings |
+| E01 + one ending of おゆら篇 | **千鶴篇** (the Chizuru chapter; 1969) | 「古い写真のことを聞く」 ("ask about the old photo") on the bus in the prologue | 22 October 1969, the last day of 17-year-old Chizuru, through her own eyes. One route of about 12,000 characters (around 30 minutes). 2 endings |
+| 10 or more endings | **編集部篇** (the editorial-office chapter; bonus) | おまけ (bonus) on the title screen | An epilogue with me and Chihiro back in Tokyo; what became of the article. Light |
+
+---
+
+### Flow of 千鶴篇
+
+| Time | Scene | Choice (flag) |
 |---|---|---|
-| 4:30 | 川向こうの借家。母と朝ごはん、看護学校の願書のこと | 母に打ち明ける (`cz_mother`) / ごまかす |
-| 5:00 | 霧見橋を父と渡る。「宿の仕事は好きか」 | — |
-| 朝 | 板場 (誤字のある献立)、湯治客の給仕 (今日はお由良の祥月)、帳場の志乃、日誌をつける大旦那 (源一郎)「何を言われても、はい」 | 掃除を一人で / 澄子と (`cz_sumiko_help`) |
-| 昼 | 庭で七つの圭介 | おゆらさまの話をする (`cz_legend`) / 叱る |
-| 午後 | 旧湯殿の掃除。湯船の底の長い黒髪。澄子と鐘の合図の約束 (`cz_promise`)。宿の前で集合写真 (序章の古い写真) | — |
-| 夕方 | 談話室で願書の下書き、志乃 | 打ち明ける (`cz_dream`) / ごまかす (志乃の娘時代の話) |
-| 夕方 | 玄関先で父と一服。名前の由来 (千羽の鶴、渡り鳥) | — |
-| 夕食 | 県議の一行。階段で達也、旧湯殿のことを話してしまう。圭介が達也に酒をこぼす | 割って入る (`cz_kei_saved`) / 志乃を呼ぶ |
-| 夕食後 | 板場の父 | 打ち明ける (`cz_told`) / なんでもない |
-| 20:00– | 嵐。橋が危なく姉妹は宿に泊まる。廊下の澄子 (母に話していれば看護学校のことを言える)。談話室で県議と大旦那 (建てなおしの金と「せがれを大目に」)。女中部屋で願書に一行書き足す | — |
-| 22:00 | 志乃が湯加減を見に行くよう伝える | (`cz_told` なら) 断る → **C02** / 行く → 旧湯殿 → **C01** |
+| 4:30 | The rented house across the river. Breakfast with her mother; her application to nursing school | Tell her mother (`cz_mother`) / evade |
+| 5:00 | Crossing 霧見橋 with her father. 「宿の仕事は好きか」 ("Do you like working at the inn?") | — |
+| Morning | The kitchen (a menu with a misprint), serving the long-stay bath guests (today is the anniversary of Oyura's death), Shino at the front desk, the old master (Gen'ichirō) keeping his diary: 「何を言われても、はい」 ("whatever you're told, say yes") | Clean alone / with Sumiko (`cz_sumiko_help`) |
+| Noon | Seven-year-old Keisuke in the garden | Tell him about Oyura-sama (`cz_legend`) / scold him |
+| Afternoon | Cleaning the old bathhouse. Long black hair at the bottom of the tub. A promise with Sumiko to use the bell as a signal (`cz_promise`). A group photo in front of the inn (the old photo from the prologue) | — |
+| Evening | Drafting the application in the lounge; Shino | Confide (`cz_dream`) / evade (a story of Shino's girlhood) |
+| Evening | A break with her father at the front entrance. Where her name comes from (a thousand cranes, migratory birds) | — |
+| Dinner | The assemblyman's party. Tatsuya on the stairs; she lets slip about the old bathhouse. Keisuke spills sake on Tatsuya | Step in (`cz_kei_saved`) / call Shino |
+| After dinner | Her father in the kitchen | Confide (`cz_told`) / "it's nothing" |
+| 20:00– | The storm. The bridge is dangerous, so the sisters stay at the inn. Sumiko in the corridor (if she told her mother, she can tell Sumiko about nursing school). The assemblyman and the old master in the lounge (money for rebuilding, and 「せがれを大目に」 ("go easy on my boy")). In the maids' room she adds one line to the application | — |
+| 22:00 | Shino tells her to go and check the bath temperature | (with `cz_told`) refuse → **C02** / go → old bathhouse → **C01** |
 
-フラグは結末の文章に反映する (母の言葉、圭介、お由良への呼びかけ、志乃の推薦状など)。本編との整合: 千鶴は翌朝、父に見つかる (第一章の志賀の話、第五章の権藤の「誰にも見つけてもらえずに」)。願書は女中部屋の机に残り、二十五年後に志賀が見つける。旧湯殿は閉められ、鐘の綱は短く切られる (第四章で澄子が引く「綱の残り」)。
+The flags are reflected in the ending text (her mother's words, Keisuke, her words to Oyura, Shino's letter of
+recommendation, etc.). Consistency with the main story: Chizuru is found by her father the next morning (Shiga's story in
+chapter 1; Gondō's 「誰にも見つけてもらえずに」 ("without anyone finding her") in chapter 5). The application stays on the
+desk in the maids' room, and Shiga finds it twenty-five years later. The old bathhouse is shut and the bell rope cut
+short (the "rest of the rope" that Sumiko pulls in chapter 4).
 
-## 6. 画面と操作
+## 6. Screen and controls
 
-- 背景: 256×192 の写真 (上下 16 ドットは黒の帯)。場面が変わるたびフェード。
-- 人物: 青いシルエット (CPU で背景に合成)。幽霊は白、恐怖の場面は赤も使える。
-- 文章: 画面いっぱいに 12 ドットの文字で 1 行 18 字、最大 12 行。文章を出す間、背景は暗くなる。
-  段落ごとに A を待つ。ページがいっぱいになると次のページへ。
-- 選択肢: 文章の下に並ぶ。上下で選び A で決定。
-- A: 送る / 決める。B (押し続け): 既読の文章を早送り (未読で止まる)。START: メニュー (しおりをはさむ・文字の速さ・タイトルへ)。
-- タイトル: はじめから / しおりから / 結末の一覧 / (解禁後) おまけ。
+- Background: a 256×192 photo (16-dot black bands above and below). Fades on every scene change.
+- Characters: blue silhouettes (composited onto the background by the CPU). Ghosts are white; horror scenes can also
+  use red.
+- Text: 12-dot characters across the whole screen, 18 characters a line, at most 12 lines. The background is dimmed
+  while text is shown. Waits for A after each paragraph. When the page is full, goes to the next page.
+- Choices: listed under the text. Select with up/down, confirm with A.
+- A: advance / confirm. B (held): fast-forward through text already read (stops at unread text). START: menu
+  (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
+- Title: はじめから (new game) / しおりから (continue from a bookmark) / 結末の一覧 (list of endings) / (after unlocking) おまけ (bonus).
 
 ---
 
-## 7. 台本の書式 (`data/yonaki/scenario/*.txt`)
+## 7. Script format (`data/yonaki/scenario/*.txt`)
 
 ```
-# 注釈
-*label                 ラベル (全体で一意)
+# comment
+*label                 label (unique across the whole script)
 @chapter 第一章　最後の客
-@bg lobby [cut|fade|white|mosaic]   背景 (既定 fade)
-@sil chihiro l|c|r|x=NN [blue|white|red]   シルエットを置く (x はタイル列)
-@sil - l|c|r            そこのシルエットを消す
-@silclear               すべて消す
+@bg lobby [cut|fade|white|mosaic]   background (default fade)
+@sil chihiro l|c|r|x=NN [blue|white|red]   place a silhouette (x is a tile column)
+@sil - l|c|r            remove the silhouette there
+@silclear               remove all
 @bgm name | @bgm stop | @bgm fade
 @se name
 @fx shake | flash | redflash | ripple on | ripple off | dark | light | wait N
 @set flag / @clr flag
-@if flag label / @ifnot flag label / @ifg gflag label   (gflag: SRAM に残る全体の旗)
+@if flag label / @ifnot flag label / @ifg gflag label   (gflag: a global flag kept in SRAM)
 @goto label
 @choice
-> 選択肢 -> label
-> {gflag} 解禁後だけ出る選択肢 -> label
-@end E01               結末 (結末の一覧に記録し、「終」を出してタイトルへ)
-@page                  改ページ
-本文                    1 行が 1 段落。自動で折り返し、段落の終わりで A を待つ
-(空行)                  ページの途中なら 1 行あける
+> option text -> label
+> {gflag} option shown only after the unlock -> label
+@end E01               ending (recorded in 結末の一覧, shows 「終」 and returns to the title)
+@page                  page break
+body text              one line is one paragraph; wrapped automatically, waits for A at the end of the paragraph
+(empty line)           adds one blank line when in the middle of a page
 ```
 
 ---
 
-## 8. 技術
+## 8. Technical
 
-- LoROM、最大 4 MiB、8 KiB バッテリー SRAM。
-- 画面: Mode 4。BG1 8bpp 写真 (VRAM $0000–$BFFF の 768 タイル)、BG2 2bpp 文字 (28×24 タイルのビットマップ)。
-  CGRAM 0–15 は文字とシルエット、16–255 は写真 (写真ごとに 240 色に量子化)。
-- 暗転・文章中の減光: カラー演算で BG1 から固定色を減算。
-- 演出: 画面の揺れ (BG1 スクロール)、フラッシュ、モザイク、HDMA の水面のゆらぎ。
-- 音: 潮鳴りの密室の SPC700 ドライバ (6 声の曲 + 効果音) を引き継ぎ、曲と効果音を作り直す。
-- SRAM: しおり 3 つ、既読の印、全体の旗 (結末の一覧、解禁)。
+- LoROM, up to 4 MiB, 8 KiB battery-backed SRAM.
+- Screen: Mode 4. BG1 8bpp photo (768 tiles at VRAM $0000–$BFFF), BG2 2bpp text (a 28×24-tile bitmap).
+  CGRAM 0–15 for text and silhouettes, 16–255 for the photo (each photo quantized to 240 colours).
+- Fade to black and dimming under text: colour math subtracting a fixed colour from BG1.
+- Effects: screen shake (BG1 scroll), flash, mosaic, an HDMA water-surface ripple.
+- Sound: takes over the SPC700 driver of 潮鳴りの密室 (Shionari no Misshitsu) (6-voice music + sound effects) and
+  remakes the songs and sound effects.
+- SRAM: 3 bookmarks, read marks, global flags (list of endings, unlocks).

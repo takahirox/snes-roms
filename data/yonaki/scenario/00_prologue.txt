@@ -1,5 +1,5 @@
-# 夜鳴き鐘 — 序章 霧見沢
-# 本編 (水明館篇) の入口。千鶴篇の入口 ({cleared_oyura}) と E13 もここ。
+# 夜鳴き鐘 — prologue (序章): 霧見沢
+# The way into the main story (the 水明館 arc).  The way into the 千鶴 arc ({cleared_oyura}) and E13 are here too.
 
 *start
 @bgm stop

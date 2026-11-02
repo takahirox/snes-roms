@@ -643,7 +643,7 @@ class Builder:
         d.append('NameGrid:   ; glyph per cell ($FFFF empty), NAME_ROWS x NAME_COLS a page')
         for pg in self.name_pages:
             d.append('    .word ' + ', '.join('$FFFF' if c == '　' else str(enc.index[c]) for c in pg))
-        d.append('NameDefault:   ; length, NAME_MAX glyphs: 主人公の名字, ヒロインの名前')
+        d.append('NameDefault:   ; length, NAME_MAX glyphs: family name of the hero, given name of the heroine')
         for name in sc.NAME_VARS:
             g = [enc.index[c] for c in name] + [0] * (sc.NAME_MAX - len(name))
             d.append(f'    .word {len(name)}, ' + ', '.join(map(str, g)) + f'   ; {name}')

@@ -270,7 +270,7 @@ def sram_case(name, image, expect_status, expect_msg_text):
         assert g.w('msg_text') == g.layout['system']['LOADED'] or g.mode() == M_FADE
         g.settle()
         assert g.mode() == M_CMD and g.w('load_count') == 1
-        assert g.w('msg_text') == g.layout['system']['LOADED'], 'no 再開 message'
+        assert g.w('msg_text') == g.layout['system']['LOADED'], 'no LOADED (resume) message'
     rec = dict(status=st)
     finish(g, rec)
     return rec

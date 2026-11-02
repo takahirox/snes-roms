@@ -1,44 +1,44 @@
-# SFC アドベンチャー 2 作
+# snes-roms
 
-スーパーファミコン用に作った、オリジナルのアドベンチャーゲーム 2 本です。65816 アセンブリのエンジン、SPC700 の音源ドライバ、データを作るツール、エミュレータでの自動テストがそろっています。
+Two original adventure games for the Super Famicom (SNES). The games are in Japanese. The repository holds their 65816 engines, SPC700 sound drivers, data tools and emulator tests.
+
+| | 潮鳴りの密室 (Shionari no Misshitsu) | 夜鳴き鐘 (Yonaki Kane) |
+|---|---|---|
+| Genre | Command-menu mystery adventure | Sound novel |
+| ROM | [`dist/shionari.sfc`](dist/shionari.sfc) (512 KiB) | [`dist/yonaki.sfc`](dist/yonaki.sfc) (4 MiB) |
+| Story | A short case set in Shiomi, a fictional fishing port, in 1987: a death in a warehouse office locked from the inside, to be solved before dawn. 6 places, 6 people, 33 clues, 11 deduction questions | The last night of 水明館, a remote mountain inn cut off by a typhoon, where people die the way a local legend says. About 65,000 characters, 49 choice points, 20 endings |
+| Docs | [docs/adv/README.md](docs/adv/README.md) | [docs/yonaki/README.md](docs/yonaki/README.md) |
+
+Both are headerless LoROM images with 8 KiB of battery SRAM and no special chips. The ROMs' SHA-256 hashes are in `dist/*.sha256`. They have been tested on emulators only (Snes9x 1.63 and bsnes 115), not on real hardware.
+
+## Build
+
+```
+python3 tools/bootstrap.py                  # fetch cc65 2.19 and Pillow / numpy into tools/vendor/
+make                                        # build/adv/shionari.sfc and build/yonaki/yonaki.sfc
+```
+
+The tests also need the emulator cores, which are built from source (a C/C++ compiler is required).
+
+```
+python3 tools/bootstrap.py --with-emulator  # build the Snes9x 1.63 and bsnes 115 libretro cores
+make test                                   # both games: play with pad input only, then replay the same input on bsnes and compare
+make adv-release yonaki-release             # copy the tested ROMs to dist/
+```
+
+External tools are pinned by version and SHA-256 in `tools/dependencies.json`; nothing is installed system-wide. Developed with Python 3.13.
+
+## Layout
 
 | | 潮鳴りの密室 | 夜鳴き鐘 |
 |---|---|---|
-| ジャンル | コマンド選択式の推理アドベンチャー | サウンドノベル |
-| ROM | [`dist/shionari.sfc`](dist/shionari.sfc) (512 KiB) | [`dist/yonaki.sfc`](dist/yonaki.sfc) (4 MiB) |
-| 内容 | 昭和 62 年の架空の漁港「汐見港」で、内側から鍵のかかった倉庫の事務所の死を、夜明けまでに調べる短編。調べる場所 6 か所、人物 6 人、手がかり 33、推理 11 問 | 山奥の一軒宿「水明館」の最後の夜、台風で孤立した宿で伝説をなぞるように人が死ぬ。約 6.5 万字、選択肢 49 か所、結末 20 種 |
-| 資料 | [docs/adv/README.md](docs/adv/README.md) | [docs/yonaki/README.md](docs/yonaki/README.md) |
+| Engine (65816) | `src/adv/` | `src/yonaki/` |
+| Scenario | `data/adv/` | `data/yonaki/` |
+| Art | `assets/adv/` | `assets/yonaki/` |
+| Build tools, music, sound driver | `tools/adv/` | `tools/yonaki/` |
+| Tests | `tests/adv/` | `tests/yonaki/` |
+| Docs | `docs/adv/` | `docs/yonaki/` |
 
-どちらも LoROM、コピアヘッダなし、8 KiB バッテリー SRAM で、特殊チップは使いません。ROM の SHA-256 は `dist/*.sha256` にあります。確認はエミュレータ (Snes9x 1.63 と bsnes 115) だけで、実機では確かめていません。
+Shared: `assets/shinonome/` (text font), `tools/png_codec.py`, `tools/host_libretro_replay.py` (bsnes replay), `tests/harness.py` (Snes9x driver).
 
-## 作る
-
-```
-python3 tools/bootstrap.py                  # cc65 2.19 と Pillow / numpy を tools/vendor/ に取得
-make                                        # build/adv/shionari.sfc と build/yonaki/yonaki.sfc
-```
-
-テストには、エミュレータのコアも取得します (C/C++ コンパイラが必要です)。
-
-```
-python3 tools/bootstrap.py --with-emulator  # Snes9x 1.63 と bsnes 115 の libretro コアをソースからビルド
-make test                                   # 両作のテスト (パッド入力だけで遊び、bsnes で同じ操作を再生して比べる)
-make adv-release yonaki-release             # テストに合格した ROM を dist/ へ
-```
-
-外部ツールは `tools/dependencies.json` に版と SHA-256 を固定しています。システムには何も入れません。Python 3.13 で使っています。
-
-## ディレクトリ
-
-| 場所 | 潮鳴りの密室 | 夜鳴き鐘 |
-|---|---|---|
-| エンジン (65816) | `src/adv/` | `src/yonaki/` |
-| シナリオ | `data/adv/` | `data/yonaki/` |
-| 絵 | `assets/adv/` | `assets/yonaki/` |
-| ビルドツール、作曲、音源ドライバ | `tools/adv/` | `tools/yonaki/` |
-| テスト | `tests/adv/` | `tests/yonaki/` |
-| 資料 | `docs/adv/` | `docs/yonaki/` |
-
-共通: `assets/shinonome/` (本文のフォント)、`tools/png_codec.py`、`tools/host_libretro_replay.py` (bsnes での再生)、`tests/harness.py` (Snes9x での操作)。
-
-素材の出所とライセンスは [THIRD_PARTY.md](THIRD_PARTY.md) にあります。
+Sources and licenses of third-party material are listed in [THIRD_PARTY.md](THIRD_PARTY.md).

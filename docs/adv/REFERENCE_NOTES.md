@@ -1,11 +1,11 @@
-# コマンド選択型ADVの参照メモ
+# Reference notes on command-selection adventure games
 
-原作のシナリオ・素材を使うためではなく、捜査の操作と見せ方を確認する資料。以下の操作資料はファミコン原作のVC説明書であり、SFCリメイクのフレーム計測ではない。
+This is material for checking how investigation is operated and presented, not for using any original scenario or assets. The control references below are the Virtual Console manual of the original Famicom game, not frame measurements of the SFC remake.
 
-- [任天堂公式説明書：探偵倶楽部PART II](https://www.nintendo.co.jp/data/software/manual/man_tb8j.pdf)：p6で上下選択/A決定・送り/B取消、p16–18でメッセージ/コマンド/対象サブコマンド、指定箇所をカーソルで調べる仕組み、推理、ゲーム内セーブを確認。
-- [任天堂公式紹介](https://www.nintendo.com/jp/switch/aw3ca/index.html)：現代版も移動・聞く・呼ぶ・見る/調べるといった操作で進む。これは操作の系統を確認する資料で、SFC版の画面を示すものではない。
-- [PVSnesLib Backgrounds](https://github.com/alekmaul/pvsneslib/wiki/Backgrounds)：Mode3はBG1 8bppとBG2 4bpp。背景の一枚絵とUI文字をPPUの別レイヤーで表示する設計の参照。
+- [Nintendo official manual: 探偵倶楽部PART II (Tantei Club Part II)](https://www.nintendo.co.jp/data/software/manual/man_tb8j.pdf): p6 confirms Up/Down to select, A to confirm/advance, B to cancel; p16–18 confirm messages / commands / target subcommands, examining a spot with a cursor, deduction, and in-game saving.
+- [Nintendo official introduction page](https://www.nintendo.com/jp/switch/aw3ca/index.html): the modern version also progresses with commands such as move, ask, call, look/examine. This is a reference for the lineage of controls, not a depiction of the SFC version's screens.
+- [PVSnesLib Backgrounds](https://github.com/alekmaul/pvsneslib/wiki/Backgrounds): Mode 3 is BG1 8bpp and BG2 4bpp. Reference for the design of showing a single background picture and UI text on separate PPU layers.
 
-本作の設計では、場所・相手・対象を選んで情報を集め、手帳に蓄積し、証拠の提示と推理で進める。無意味な反復や、詰み状態を作る誤選択は避ける。事件の前提や真相はオリジナルで、UIや絵はそのまま複製しない。
+In this game's design, the player selects a place, a person and a target to gather information, accumulates it in the notebook, and progresses by presenting evidence and deducing. Pointless repetition and wrong choices that create unwinnable states are avoided. The premise and solution of the case are original, and UI and artwork are not copied as is.
 
-背景はimagegenスキルのbuiltin image_genによる新規生成。原寸生成画像と生成指示はassets/adv/ART.json、実機向けサイズへの変換はassets/adv/PREPARED.json、ツールはtools/prepare_art.py（このファイルからの相対）に記録した。生成絵の時計や物の形は推理の正しさを保証しないため、ゲーム上の手がかりとして使う部分は別途整合を確認する。
+The backgrounds were newly generated with the imagegen skill's builtin image_gen. The full-size generated images and generation prompts are recorded in assets/adv/ART.json, the conversion to hardware size in assets/adv/PREPARED.json, and the tool in tools/prepare_art.py (relative to this file). Since the clocks and object shapes in the generated pictures do not guarantee correct reasoning, any part used as an in-game clue is checked for consistency separately.

@@ -32,7 +32,7 @@ CHOICE_PX = 188                  # after the cursor and the option letter (src/y
 MAX_CHOICES = 8
 # the names the player sets (はじめから): in the script they are written as the default names, which become
 # the control codes $03 / $04; the engine draws the name in their place, so a line is laid out for the longest
-NAME_VARS = {'結城': '\x03', '千尋': '\x04'}     # 主人公の名字, ヒロインの名前
+NAME_VARS = {'結城': '\x03', '千尋': '\x04'}     # the hero's family name, the heroine's given name
 NAME_MAX = 4
 MAX_CONDS = 4
 SIL_KEYS = ('l', 'c', 'r')

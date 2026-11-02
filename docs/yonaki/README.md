@@ -1,44 +1,44 @@
-# 夜鳴き鐘 (よなきがね)
+# 夜鳴き鐘 (Yonaki Kane)
 
-スーパーファミコン用のオリジナルのサウンドノベル。昭和の面影を残す山奥の一軒宿「水明館」の最後の夜、台風で孤立した宿で、伝説「おゆらさま」をなぞるように人が死ぬ。旅行雑誌の新人記者「僕」が、カメラマンの早瀬千尋と真相を追う。
+An original sound novel for the Super Famicom. On the last night of 水明館 (Suimeikan), a lone inn deep in the mountains that still carries the air of the Shōwa era, a typhoon cuts the inn off, and people die as if re-enacting the legend of おゆらさま (Oyura-sama). "I" (僕), a rookie reporter for a travel magazine, chases the truth with the photographer 早瀬千尋 (Hayase Chihiro).
 
-- ROM: [`dist/yonaki.sfc`](../../dist/yonaki.sfc) (LoROM 4 MiB、8 KiB バッテリー SRAM、コピアヘッダなし)
-- 設計 (ネタバレ): [DESIGN.md](DESIGN.md)。エンジン: [ENGINE.md](ENGINE.md)。音楽: [music/README.md](music/README.md)
+- ROM: [`dist/yonaki.sfc`](../../dist/yonaki.sfc) (LoROM 4 MiB, 8 KiB battery-backed SRAM, no copier header)
+- Design (spoilers): [DESIGN.md](DESIGN.md). Engine: [ENGINE.md](ENGINE.md). Music: [music/README.md](music/README.md)
 
-## 遊び方
-- A: 文章を送る・選ぶ。上下: 選択肢 (頭に A, B, C… の記号がつく)。B 長押し: 既読の文章を早送り (未読で止まる)。START: メニュー (しおりをはさむ・文字の速さ・タイトルへ)。
-- タイトル: はじめから / しおりから / 結末の一覧 / おまけ (解禁後)。
-- はじめから: 主人公の名字 (最初は「結城」。作中で下の名前は出てこない) と、ヒロイン「早瀬○○」の下の名前 (最初は「千尋」。名字の早瀬は固定) を 4 文字まで決める。十字キーで文字を選び A で入力、B で一文字けす、L / R か下の「かな / カナ / 漢字」で文字の種類を変え、START か「決定」で決める。決めた名前は次から最初に出ていて、しおりにも残る。
-- 選び方しだいで物語が分かれ、導きを誤るとバッドエンドになり、真相にたどり着けない。
-- 本編の真の結末を見ると、本編の選択肢に新しいものが現れ、別のシナリオに入れるようになる。
+## How to play
+- A: advance text / select. Up/down: choices (each is prefixed with a letter A, B, C…). Hold B: fast-forward through text already read (stops at unread text). START: menu (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
+- Title: はじめから (new game) / しおりから (continue from a bookmark) / 結末の一覧 (list of endings) / おまけ (bonus; after it is unlocked).
+- はじめから: choose the protagonist's family name (initially 結城 (Yūki); his given name never appears in the story) and the given name of the heroine 早瀬○○ (initially 千尋 (Chihiro); the family name 早瀬 is fixed), up to 4 characters each. Pick a character with the D-pad and enter it with A; B erases one character; L / R or the かな / カナ / 漢字 (hiragana / katakana / kanji) buttons below switch the character set; START or 決定 (confirm) decides. The chosen names are pre-filled from then on and are also stored in bookmarks.
+- The story branches on your choices; guide it badly and you reach a bad ending without getting to the truth.
+- After you see the true ending of the main story, new options appear among the main story's choices and lead into other scenarios.
 
-## 中身
+## Contents
 | | |
 |---|---|
-| シナリオ | 本編 (序章〜第五章)、おゆら篇 (怪異)、千鶴篇 (昭和四十四年)、おまけ 編集部篇。約 6.5 万字、2,400 段落あまり、選択肢 49 か所 |
-| 結末 | 20 種 (本編 14、おゆら篇 3、千鶴篇 2、おまけ 1) |
-| 背景 | 写真風の背景 43 枚 (Codex CLI の画像生成で作成、出所と指示は [ART.json](../../assets/yonaki/ART.json)) |
-| 人物 | 場面ごとのシルエット 100 通りあまり (背景の写真に合わせて、座席に座る・膳の前で正座する・湯船に立つなどの姿で生成。[stage.json](../../assets/yonaki/stage.json)。青・白・赤で表示) |
-| 音 | オリジナル曲 18 曲、効果音 32 種、雨と嵐の環境音 (SPC700 用に数式で合成) |
+| Scenario | Main story (prologue to chapter 5), おゆら篇 (the Oyura chapter; supernatural), 千鶴篇 (the Chizuru chapter; Shōwa 44 = 1969), bonus 編集部篇 (the editorial-office chapter). About 65,000 characters, about 2,400 paragraphs, 49 choice points |
+| Endings | 20 (main story 14, おゆら篇 3, 千鶴篇 2, bonus 1) |
+| Backgrounds | 43 photo-like backgrounds (made with Codex CLI image generation; sources and prompts in [ART.json](../../assets/yonaki/ART.json)) |
+| Characters | 100-odd per-scene silhouettes (generated to match each background photo, in poses such as sitting in a seat, kneeling formally before a meal tray, or standing in the bath. [stage.json](../../assets/yonaki/stage.json). Shown in blue, white or red) |
+| Sound | 18 original songs, 32 sound effects, rain and storm ambience (synthesized from formulas for the SPC700) |
 
-## 作る・確かめる
+## Build and test
 ```
 make yonaki          # build/yonaki/yonaki.sfc
-make yonaki-test     # Snes9x 1.63 でパッドだけで全 20 結末まで遊ぶテスト + bsnes 115 の再生
-make yonaki-release  # テストに合格した ROM を dist/ へ
-python3 -I tests/yonaki/shots.py LABEL --follow    # 台本のラベルから画面を撮る
-python3 -I tests/yonaki/routes.py                  # 各結末への選択肢の道すじ
-python3 -I tests/yonaki/music_review.py            # 曲と効果音の録音 (docs/yonaki/music/review/)
+make yonaki-test     # test playing to all 20 endings with pad input only on Snes9x 1.63 + replay on bsnes 115
+make yonaki-release  # copy the ROM that passed the tests to dist/
+python3 -I tests/yonaki/shots.py LABEL --follow    # take screenshots from a script label
+python3 -I tests/yonaki/routes.py                  # the path of choices to each ending
+python3 -I tests/yonaki/music_review.py            # recordings of the songs and sound effects (docs/yonaki/music/review/)
 ```
 
-## 素材とライセンス
-- 背景・シルエット: Codex CLI の組み込み画像生成で新たに作ったもの。シルエットは背景の写真に人物を書き加えさせ、その形を切り抜いている (`tools/yonaki/gen_stage.py`)。実在の写真や既存作品の絵は使っていない。
-- タイトルの文字「夜鳴き鐘」と「終」: Noto Serif CJK JP (SIL Open Font License 1.1) から描いた画像 ([assets/yonaki/logo/](../../assets/yonaki/logo/))。
-- 本文の字形: 東雲ビットマップフォント 12 ドット (パブリックドメイン)。
-- 曲・効果音・物語・人物: すべてこのリポジトリで新たに作ったもの。既存作品の物語・人物・台詞・曲は使っていない。
+## Assets and licenses
+- Backgrounds and silhouettes: newly made with Codex CLI's built-in image generation. For the silhouettes, a person was painted into the background photo and that shape was cut out (`tools/yonaki/gen_stage.py`). No real photographs or artwork from existing works are used.
+- The title lettering 夜鳴き鐘 and 終 ("The End"): images rendered from Noto Serif CJK JP (SIL Open Font License 1.1) ([assets/yonaki/logo/](../../assets/yonaki/logo/)).
+- Body text glyphs: Shinonome bitmap font, 12 dots (public domain).
+- Songs, sound effects, story and characters: all newly made in this repository. No story, characters, lines or music from existing works are used.
 
-## 制限
-- 実機では未確認 (エミュレータ Snes9x 1.63 と bsnes 115 のみ)。
-- 曲と効果音は波形と数値で確かめたが、人の耳で聴いた評価はしていない。
-- 文章量は約 6.5 万字。商業作品の大作と比べると少ない。
-- メニューの操作音はない。
+## Limitations
+- Not tested on real hardware (only on the emulators Snes9x 1.63 and bsnes 115).
+- The songs and sound effects were checked through waveforms and numbers, but have not been evaluated by human listening.
+- The text is about 65,000 characters, which is short compared with large commercial titles.
+- There are no menu sounds.

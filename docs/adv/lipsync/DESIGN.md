@@ -1,47 +1,47 @@
-# 潮鳴りの密室 — 口パク (候補 B) の設計
+# 潮鳴りの密室 (Shionari no Misshitsu) — Lip sync (candidate B) design
 
-対象: 候補 A (`dist/shionari.sfc`, SHA-256 `cf3f89b9…`) に、会話中の肖像の口の動きを足す。音声はないので、音素には合わせない。**本文の文字送りに合わせた会話アニメーション**である。物語、台詞、場面、フラグ、SRAM の形式は変えない。表情、瞬き、声は対象外。
+Scope: add mouth movement to the portraits during dialogue on top of candidate A (`dist/shionari.sfc`, SHA-256 `cf3f89b9…`). There is no voice, so the motion is not matched to phonemes. It is **a dialogue animation that follows the typing of the body text**. The story, dialogue, scenes, flags and SRAM format do not change. Facial expressions, blinking and voice are out of scope.
 
-## 1. 何が動くか (停止条件)
-口が動くのは、次の全部が成り立つフレームだけ。どれか 1 つでも外れれば、そのフレームで「閉」を求める。
-1. `mode = M_MSG` で `msg_state = 0` (本文を打っている途中)。ページ待ち (▼)・文末待ちになった時点で閉じる。
-2. そのページに **話者コード** があり、その人物 ID が、いま画面に出ている肖像の人物 ID と同じ (`mouth_actor = MouthTable[por_shown-1].person`)。話者コードは名前 (黄色) の後、本文の前に置かれるので、名前を描いている間は閉じたまま。
-3. 肖像が出ていて (`por_shown ≠ 0`)、肖像の転送が終わっている (`por_rows = 0`)。
-4. 句読点などの「間」の最中ではない (`mouth_pause = 0`)。
+## 1. What moves (stop conditions)
+The mouth moves only in frames where all of the following hold. If any one of them fails, "closed" is requested for that frame.
+1. `mode = M_MSG` and `msg_state = 0` (in the middle of typing the body text). The mouth closes as soon as the page wait (▼) or end-of-text wait begins.
+2. The page has a **speaker code**, and its person ID equals the person ID of the portrait currently on screen (`mouth_actor = MouthTable[por_shown-1].person`). The speaker code is placed after the name (yellow) and before the body text, so the mouth stays closed while the name is being drawn.
+3. A portrait is shown (`por_shown ≠ 0`) and its transfer has finished (`por_rows = 0`).
+4. Not in the middle of a pause for punctuation and the like (`mouth_pause = 0`).
 
-したがって次の場合は動かない: 地の文 (話者なし)、主人公「わたし」(話者コード $E、肖像なし)、手帳の証拠説明や「手帳に書きとめた」「ヒント」「記録しました」などの見出し (話者コードなし)、メニュー・一覧・タイトル・エンディング (mode が M_MSG でない)、別の人物の台詞 (例: 汐見署で修一の肖像が出ているときの波多野の台詞。`mouth_other` に数える)、肖像 Off、場面移動 (フェードで `por_shown = 0`)。A/B でページを送る・B で一覧へ戻る・場面を移る、はすべて 1 か 2 で閉になる。音の設定は見ない (音 OFF でも動く)。
+So the mouth does not move for: narration (no speaker); the protagonist 「わたし」 ("I"; speaker code $E, no portrait); headings such as notebook evidence descriptions, 「手帳に書きとめた」 (noted in the notebook), 「ヒント」 (hint) and 「記録しました」 (saved) (no speaker code); menus, lists, the title and the ending (mode is not M_MSG); another person's lines (e.g. 波多野 (Hatano)'s lines at 汐見署 (Shiomi police station) while 修一 (Shuichi)'s portrait is shown; counted in `mouth_other`); portrait off; scene changes (`por_shown = 0` during the fade). Advancing a page with A/B, returning to a list with B, and changing scenes all close the mouth through condition 1 or 2. The sound setting is not consulted (the mouth moves even with sound off).
 
-## 2. 台本 → ROM の話者情報
-- `Texts.message()` は 1 ページ 1 話者 (話者が変わると改ページ) なので、ページごとに制御する。
-- 新しい本文制御コード `$FFE0 | id` (1 ワード)。`id` 1..6 = `@person` の並び順 + 1 (波多野 1、古賀 2、辰巳 3、ゆき子 4、大河内 5、修一 6)、`$E` = わたし (肖像なしの話者)。名前の `$FFFE, $FFFC 2` の直後、本文の最初の字の前に置く。字形番号は 588 未満なので衝突しない。既存の `$FFFC..$FFFF` は変えない。
-- コードを付けるのは台本の `名前> 本文` の行だけ。名前は人物名か「わたし」でなければビルドエラー (打ち間違いで黙って口が止まることを防ぐ)。手帳の見出し (`古賀「表戸に誰も」` など)、ヒント、システムの見出しは人物名を含んでいてもコードを付けない。
-- 実行時は名前の文字列を比べない。`MsgNewPage` で `mouth_actor = 0`、コードで `mouth_actor = id`。`layout.json` の各ページに `speaker_id` を出し、テストは ROM の本文を読んでコードの位置も確かめる。
-- 一覧のラベル (`DrawText`/`TextWidth`) にはコードが入らないことをビルドで検査する。
+## 2. Script → speaker information in the ROM
+- `Texts.message()` makes one page per speaker (a page break when the speaker changes), so control is per page.
+- A new body-text control code `$FFE0 | id` (one word). `id` 1..6 = order of `@person` + 1 (波多野 (Hatano) 1, 古賀 (Koga) 2, 辰巳 (Tatsumi) 3, ゆき子 (Yukiko) 4, 大河内 (Ookouchi) 5, 修一 (Shuichi) 6), `$E` = わたし (a speaker without a portrait). It is placed right after the name's `$FFFE, $FFFC 2` and before the first character of the body text. Glyph numbers are below 588, so there is no collision. The existing `$FFFC..$FFFF` are unchanged.
+- The code is added only to script lines of the form `名前> 本文` (`NAME> text`). If the name is not a person's name or 「わたし」, the build fails (so that a typo cannot silently stop the mouth). Notebook headings (such as `古賀「表戸に誰も」`), hints and system headings get no code even if they contain a person's name.
+- At run time, name strings are not compared. `MsgNewPage` sets `mouth_actor = 0`, and the code sets `mouth_actor = id`. `speaker_id` is emitted for every page in `layout.json`, and the tests read the body text in the ROM to also check the position of the code.
+- The build checks that no code appears in list labels (`DrawText`/`TextWidth`).
 
-## 3. 口の形のデータ (`data/adv/mouths.txt`)
-- 既存の肖像 PNG (`assets/adv/portrait-*-72.png`) と元画像は変えない。**閉 = 元の肖像そのもの**。半開と開だけを、口のまわりの小さな矩形 (パッチ) として自作する。
-- 書式: `@mouth 肖像PNG x y w h` (肖像の画素座標)、`colors: 文字=RRGGBB ...` (その口の色: 口の中など)、`half:` と `open:` に h 行 × w 字。`.` = 元の画素のまま、`1` = 元の 1 画素上の画素 (下唇とその影を 1 画素下げる)、`2` = 2 画素上、英字 = `colors` の色。顎の輪郭、鼻、髭、眼鏡、背景には触れない (パッチは口と下唇の数画素だけ)。
-- 大きな黒い穴にしない: 口の中は暗い赤茶 (人物ごとに唇の色から選ぶ) で、半開は 1 画素、開は 2 画素。下唇と影は元の画素を下にずらして使う。
+## 3. Mouth shape data (`data/adv/mouths.txt`)
+- The existing portrait PNGs (`assets/adv/portrait-*-72.png`) and the original images are not changed. **Closed = the original portrait itself**. Only half-open and open are hand-made, as small rectangles (patches) around the mouth.
+- Format: `@mouth <portrait PNG> x y w h` (pixel coordinates in the portrait), `colors: <char>=RRGGBB ...` (that mouth's colors: inside of the mouth, etc.), and h lines × w characters under `half:` and `open:`. `.` = keep the original pixel, `1` = the original pixel one row above (shifts the lower lip and its shadow down by 1 pixel), `2` = two rows above, letters = colors from `colors`. The jaw outline, nose, mustache, glasses and background are not touched (the patch covers only the mouth and a few pixels of the lower lip).
+- No big black hole: the inside of the mouth is a dark reddish brown (chosen per person from the lip color), 1 pixel for half-open and 2 pixels for open. The lower lip and shadow reuse the original pixels shifted down.
 
-## 4. ビルド (`tools/adv/quantize.py`, `tools/adv/build.py`)
-- 肖像は従来どおり背景絵に合成し、絵と一緒に 240 色へ量子化する。半開・開のパッチを当てた合成画像の **パッチ部分の画素も同じヒストグラムに入れる** (共同量子化)。パレットは場面ごとに 1 つで、口のために実行時にパレットを変えることはない。
-- パッチが触れるタイル (絵のタイル座標で矩形、1〜4 タイル) を、閉 (元の合成と同一であることをビルドで検査)・半開・開の 3 枚ずつ 8bpp で出す (`build/adv/mouth.bin`、bank 0)。
-- `MouthTable` (肖像ごとに 8 ワード): 人物 ID、VRAM のワードアドレス (タイル行の先頭)、1 タイル行のバイト数、タイル行数、閉・半開・開のデータアドレス、バンク。
-- `GlyphPause` (字形ごとに 1 バイト): その字を書いた後に口を閉じておくフレーム数。`、，・」』）` と全角空白は 4、`。．！？…‥` は 8。
-- ビルドが検査するもの: パッチが肖像の不透明な画素の中にある、タイルが 4 枚以下、各フレームが閉と異なる、閉のタイルが肖像の差し替えタイルの該当部分とバイト単位で同じ、VRAM の範囲が `$0000-$3FFF` (BG1 絵)。
+## 4. Build (`tools/adv/quantize.py`, `tools/adv/build.py`)
+- Portraits are composited onto the background picture as before and quantized to 240 colors together with the picture. The **pixels of the patch areas** of the composites with the half-open and open patches applied are **added to the same histogram** (joint quantization). There is one palette per scene, and the palette is never changed at run time for the mouth.
+- The tiles touched by a patch (a rectangle in picture tile coordinates, 1–4 tiles) are emitted at 8bpp as three sets each: closed (the build checks it is identical to the original composite), half-open and open (`build/adv/mouth.bin`, bank 0).
+- `MouthTable` (8 words per portrait): person ID, VRAM word address (start of the tile row), bytes per tile row, number of tile rows, data addresses for closed / half-open / open, bank.
+- `GlyphPause` (1 byte per glyph): number of frames to keep the mouth closed after that character is written. `、，・」』）` and the full-width space are 4; `。．！？…‥` are 8.
+- What the build checks: the patch lies within the portrait's opaque pixels, at most 4 tiles, each frame differs from closed, the closed tiles are byte-identical to the corresponding part of the portrait's replacement tiles, and the VRAM range is `$0000-$3FFF` (BG1 picture).
 
-## 5. 実行時 (65816)
-- 変数 (BSS の末尾に追加。既存のラベルは名前を変えない): `mouth_actor` (このページの話者 id)、`mouth_want` (求める形 0 閉 1 半開 2 開)、`mouth_shown` (最後にキューへ積んだ形。実画面は最大 1 フレーム遅れる)、`mouth_timer`、`mouth_pause`、`mouth_talk` (このフレームで動かしている 1)、`mouth_uploads` (口の転送回数)、`mouth_other` (肖像の人物と違う人物が話していたフレーム数)。
-- `UpdateMsg`: コード `$FFE0|id` で `mouth_actor` を設定。字を書くたびに `GlyphPause` を見て、そのフレームの最大値を `mouth_pause` に入れる (早送りの 6 字/フレームでも 1 フレームに 1 つの値)。
-- `MouthUpdate` (毎フレーム、`Update` の後): 1 の条件で `mouth_want` を決める。話している間は 13 フレーム周期の表 `半開×3, 開×4, 半開×3, 閉×3`。間 (`mouth_pause`) の間は閉で、明けたら周期の頭 (半開) から。条件が外れたら即座に閉、周期と間をリセット。
-- `MouthPump` (`PumpUploads` の **最初**): `por_shown = 0` か `por_rows ≠ 0` (肖像を書き込み中・外し中) なら、肖像の転送が元の絵/閉じた口でタイルを上書きするので、`mouth_shown = 0` とするだけで何も積まない。そうでなく `mouth_want ≠ mouth_shown` のときだけ、そのフレームの口のタイル (1 タイル行 = 1 ジョブ、最大 2 ジョブ・256 バイト) を積む。変化がなければ何も送らない (毎フレームの再送はしない)。
-- ジョブキューの先頭に入るので、NMI は予算 (4096 バイト/VBlank、`DMA_BUDGET`) の判定より先に必ず取る (先頭のジョブは常に取る作り)。閉じる転送が文字の行や肖像の転送の後回しになることはない。予算から口の分を引いてから、従来の順 (パレット、絵、肖像、文字の行) に積む。
-- 転送先は BG1 の絵のタイル (`$0000-$3FFF`) だけ。パレット、タイルマップ、文字層は触らない。肖像の外し (`PortraitOff`) やフェードは従来どおり元の絵のタイル行を書き戻すので、口のタイルも元に戻る。
+## 5. Run time (65816)
+- Variables (appended at the end of BSS; existing labels are not renamed): `mouth_actor` (speaker id of this page), `mouth_want` (requested shape: 0 closed, 1 half-open, 2 open), `mouth_shown` (last shape queued; the actual screen lags by at most 1 frame), `mouth_timer`, `mouth_pause`, `mouth_talk` (1 when moving in this frame), `mouth_uploads` (number of mouth transfers), `mouth_other` (number of frames in which someone other than the portrait's person was speaking).
+- `UpdateMsg`: the code `$FFE0|id` sets `mouth_actor`. Each time a character is written, it looks up `GlyphPause` and stores the maximum for that frame in `mouth_pause` (one value per frame even at the fast-forward rate of 6 characters/frame).
+- `MouthUpdate` (every frame, after `Update`): decides `mouth_want` from the conditions in section 1. While talking, it follows a 13-frame cycle `half-open×3, open×4, half-open×3, closed×3`. During a pause (`mouth_pause`) it is closed, and when the pause ends it restarts at the head of the cycle (half-open). When the conditions fail, it closes immediately and resets the cycle and the pause.
+- `MouthPump` (the **first** thing in `PumpUploads`): if `por_shown = 0` or `por_rows ≠ 0` (a portrait is being written or removed), the portrait transfer overwrites the tiles with the original picture / closed mouth, so it only sets `mouth_shown = 0` and queues nothing. Otherwise, only when `mouth_want ≠ mouth_shown`, it queues that frame's mouth tiles (1 tile row = 1 job, at most 2 jobs / 256 bytes). If nothing changed, nothing is sent (no per-frame resend).
+- These jobs go at the head of the job queue, so the NMI always takes them before checking the budget (4096 bytes/VBlank, `DMA_BUDGET`) (the head job is always taken by design). A closing transfer is never pushed behind text rows or portrait transfers. After subtracting the mouth's share from the budget, the rest is queued in the usual order (palette, picture, portrait, text rows).
+- The only destination is the BG1 picture tiles (`$0000-$3FFF`). Palettes, tilemaps and the text layer are not touched. Removing a portrait (`PortraitOff`) and fades write back the original picture's tile rows as before, so the mouth tiles are restored too.
 
-## 6. 検証 (`tests/adv/lipsync.py`、パッド入力のみ)
-- 6 人それぞれが話す場面: 普通送り・早送り (A)・句読点の間・ページ待ち・文末・地の文・わたし・他人の台詞 (肖像の人と違う話者)・肖像 Off・場面移動・音 OFF・タイトル・エンディング。
-- 毎フレーム、WRAM を読むだけで (`mouth_*`, `msg_*`, `por_*`)、ROM の本文を `msg_ptr` から解析して「いまのページの話者コード」を求め、`mouth_talk` と一致すること、BG1 への転送がキューに残っていないフレームで、VRAM の口のタイルが `mouth_shown` のフレームのデータとバイト単位で一致すること (タイルの外側は元の合成と一致) を確かめる。
-- 実画面: ページの途中で話している状態を連続フレームで撮り、閉 → 半開 → 開 → 閉の切り抜き (原寸と拡大) と短い動画を作る。出所 (ROM、フレーム、操作記録、話者 id、切り抜き位置) は JSON に残す。
-- 本番の物語では、肖像が出ているのは「はなす」「みせる」でその人の話題・反応を読むときだけで (しらべる・推理・結末では肖像を外す)、別の人物や「わたし」が肖像の前で話す台詞はない。本番で到達できる場面 (肖像なしの波多野、肖像の前の地の文、推理のわたし) は本番 ROM で確かめる。到達できない「肖像の前で別の人が話す」規則だけは、**別の fixture ROM** で確かめる: リポジトリのソースを `build/adv-lipfixture/tree` に写し、修一の話題に 3 行 (波多野、わたし、修一) を足してそこでビルドする。SHA-256、ソース一覧、手順、操作記録は `build/adv-lipfixture/` に別に置き、本番の記録や候補の ROM とは混ぜない。リポジトリの `story.txt` は変えない。
-- 回帰: 既存の `make adv-test` (捜査、手帳、誤答、保存、SRAM、押しっぱなし、音、VRAM) と bsnes 115 での再生。A の 8 KiB バッテリーで「つづきから」が B でも同じ状態になること。
-- ハードウェア: `vblank_overrun_count` 0、`dma_deferred` 0、`dma_bytes_max` ≤ 4096、口の転送は 1 フレームに 1 回以下。
+## 6. Verification (`tests/adv/lipsync.py`, pad input only)
+- Scenes where each of the six people speaks: normal speed, fast-forward (A), punctuation pauses, page wait, end of text, narration, わたし, someone else's lines (a speaker different from the portrait's person), portrait off, scene change, sound off, title, ending.
+- Every frame, by only reading WRAM (`mouth_*`, `msg_*`, `por_*`), the test parses the ROM body text from `msg_ptr` to find "the speaker code of the current page" and checks that it agrees with `mouth_talk`; and, in frames with no BG1 transfer left in the queue, that the mouth tiles in VRAM are byte-identical to the data for the `mouth_shown` frame (and outside the tiles, identical to the original composite).
+- Actual screen: capture consecutive frames of a speaker mid-page and produce crops (original size and enlarged) of closed → half-open → open → closed, plus a short video. The provenance (ROM, frame, input recording, speaker id, crop position) is kept in JSON.
+- In the real story, a portrait is shown only while reading a person's topics or reactions via 「はなす」 (talk) or 「みせる」 (show) (portraits are removed for しらべる (examine), deduction and the ending), and there are no lines in which another person or 「わたし」 speaks in front of a portrait. Situations reachable in the real story (Hatano without a portrait, narration in front of a portrait, わたし during the deduction) are checked with the real ROM. Only the unreachable rule "another person speaks in front of a portrait" is checked with **a separate fixture ROM**: the repository source is copied to `build/adv-lipfixture/tree`, three lines (Hatano, わたし, Shuichi) are added to one of Shuichi's topics, and it is built there. Its SHA-256, source list, procedure and input recordings are kept separately in `build/adv-lipfixture/`, not mixed with the real recordings or the candidate ROMs. The repository's `story.txt` is not changed.
+- Regression: the existing `make adv-test` (investigation, notebook, wrong answers, saving, SRAM, held buttons, sound, VRAM) and replay on bsnes 115. A's 8 KiB battery save resumes into the same state with 「つづきから」 (continue) on B as well.
+- Hardware: `vblank_overrun_count` 0, `dma_deferred` 0, `dma_bytes_max` ≤ 4096, at most one mouth transfer per frame.

@@ -1,4 +1,4 @@
-# 夜鳴き鐘 — engine
+# 夜鳴き鐘 (Yonaki Kane) — engine
 
 The scenario format and the story are in `DESIGN.md`; this file is the engine: the ROM (`src/yonaki/`), the
 build (`tools/yonaki/`) and the tests (`tests/yonaki/`).
@@ -21,7 +21,7 @@ shows it.  Python needs Pillow and numpy: `python3 -m pip install --target tools
 (the tools add that directory to `sys.path`, so `python3 -I` works).
 
 Review tools:
-- `python3 -I tests/yonaki/shots.py LABEL ...` — pages from a label (review ROM, はじめから starts there);
+- `python3 -I tests/yonaki/shots.py LABEL ...` — pages from a label (review ROM, はじめから (new game) starts there);
   `--ending E05` follows the route to that ending; `--follow`, `--pages N`, `--all-labels`.  PNGs and an
   `index.png` contact sheet under `build/yonaki-shots/<label>/`.
 - `python3 -I tests/yonaki/routes.py [build/yonaki]` — the choice path to every ending (exact VM rules), in an
@@ -42,7 +42,7 @@ Review tools:
 | `src/yonaki/text.inc` | 2bpp text bitmap: glyphs with shadow, strings, highlight |
 | `src/yonaki/pic.inc` | colour math / effects (Tick), fades, picture loads, silhouette compositing |
 | `src/yonaki/vm.inc` | the script VM (all ops), typewriter, waits, choices |
-| `src/yonaki/ui.inc` | title, START menu, bookmarks screen, 結末の一覧, chapter card, ending |
+| `src/yonaki/ui.inc` | title, START menu, bookmarks screen, 結末の一覧 (list of endings), chapter card, ending |
 | `src/yonaki/save.inc` | battery SRAM |
 | `src/yonaki/audio.inc` | SPC700 upload and commands |
 
@@ -130,7 +130,7 @@ Ops (byte code, `tools/yonaki/build.py`): `TEXT id16 lines8 <string>`, `BLANK`, 
 `GOTO addr24`, `CHOICE id16 n {nconds conds… addr24 lines8 <string>}`, `END ending`, `CHAPTER ch`, `HALT`.
 A condition word: bit 15 negated, bit 14 global (index < 32 a global flag, 32 + e ending e seen), else a local flag.
 Strings: `$00` end, `$01` new line, `$02` next page chunk (+ line count), `$03` / `$04` the player's names (主人公の
-名字 / ヒロインの名前: the script writes the default names 結城 / 千尋, `script.NAME_VARS`; lines are laid out as if
+名字 "the protagonist's family name" / ヒロインの名前 "the heroine's given name": the script writes the default names 結城 / 千尋, `script.NAME_VARS`; lines are laid out as if
 each were `NAME_MAX` = 4 characters; `ReadCode` hands out the name's glyphs from `names`), `$10-$EF` the 224 most frequent
 glyphs, `$F0-$FF xx` the others (up to 4320 glyphs).
 
@@ -138,24 +138,24 @@ Text flow: a paragraph that does not fit the rest of the page starts a new page;
 split into page chunks at build time.  After each paragraph the VM waits for A with a blinking mark: ▽-like
 (paragraph) or a double mark when the next paragraph will start a new page (it looks ahead over silhouette /
 sound / flag ops and jumps).  An empty line in the script adds a blank line when the page is not empty.
-Speeds (START menu): 遅い 1 glyph / 2 frames, 普通 1, 速い 2, 瞬間 all.  A finishes the paragraph at once.
+Speeds (START menu): 遅い (slow) 1 glyph / 2 frames, 普通 (normal) 1, 速い (fast) 2, 瞬間 (instant) all.  A finishes the paragraph at once.
 B held: read paragraphs (read marks in SRAM) are shown at once and passed after 2 frames; it stops at the first
 unread one.  Choices are drawn under the text (a blank line first), each after its letter Ａ, Ｂ, … in the order shown, up / down / A; after a choice the page
-clears.  START at a paragraph wait or a choice: しおりをはさむ / 文字の速さ / タイトルへ / もどる.
+clears.  START at a paragraph wait or a choice: しおりをはさむ (insert a bookmark) / 文字の速さ (text speed) / タイトルへ (to the title) / もどる (back).
 A bookmark resumes at the paragraph (shown again on a fresh page) or at the choice (the paragraph before it
 is redrawn first).
 
 Name entry (`NameEntry`, ui.inc, state `ST_NAME`): はじめから asks for 主人公の名字 and ヒロインの名前 (1-4 glyphs each,
-shown with ＿ for the free places, the fixed family name 早瀬 grey before the heroine's name and （名字） /
-（名前） after them) on a dark screen: 8 rows of 10 characters a page (かな, カナ, 3 pages of name
-kanji, `NameGrid` from build.py `NAME_PAGES` / `NAME_KANJI`) and the commands かな カナ 漢字 けす 決定.  Arrows move
+shown with ＿ for the free places, the fixed family name 早瀬 grey before the heroine's name and （名字） ("family name") /
+（名前） ("given name") after them) on a dark screen: 8 rows of 10 characters a page (かな, カナ, 3 pages of name
+kanji, `NameGrid` from build.py `NAME_PAGES` / `NAME_KANJI`) and the commands かな カナ 漢字 けす 決定 (hiragana, katakana, kanji, erase, confirm).  Arrows move
 (wrapping), A types / runs the command, B deletes the last character (on an empty name: the first name again, or
 back to the title), L / R change the page, START decides.  The names are checked at power-on and at a bookmark load
 (length and glyph range; a broken one becomes its default) and saved in the global block when both are decided.
 
 Endings: `@end ID` records the ending (and `cleared_<scenario>`: main only by a `true` ending, the other
-scenarios by any of theirs), shows 終 (Noto Serif rendering), the title and its kind over the darkened picture,
-waits for A and returns to the title.  The title shows おまけ (jumps to `*omake`) once `--omake-endings`
+scenarios by any of theirs), shows 終 ("The End"; Noto Serif rendering), the title and its kind over the darkened picture,
+waits for A and returns to the title.  The title shows おまけ (bonus; jumps to `*omake`) once `--omake-endings`
 endings (10) have been seen.  Chapter cards: `@chapter 序章　霧見沢` — black screen, the part before the first
 full-width space letter-spaced, the rest below; the old picture comes back unless a `@bg` follows.
 

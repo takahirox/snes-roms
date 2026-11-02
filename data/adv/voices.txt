@@ -31,7 +31,7 @@ harmonics: 1.0 0.22 0.05
 @timbre soft
 harmonics: 1.0 0.45 0.20 0.08 0.03
 
-# 汐見署の刑事: 落ち着いた中くらいの声
+# 汐見署の刑事 (the detective of 汐見署): a calm, medium voice
 @voice 波多野
 timbre: round
 pitch: 370
@@ -41,7 +41,7 @@ attack: 3
 volume: 55
 gap: 4
 
-# 古賀: 年配、低く丸い
+# 古賀: elderly, low and round
 @voice 古賀
 timbre: dark
 pitch: 300
@@ -51,7 +51,7 @@ attack: 3.5
 volume: 60
 gap: 4
 
-# 辰巳: やや明るい男声
+# 辰巳: a slightly bright male voice
 @voice 辰巳
 timbre: soft
 pitch: 345
@@ -61,7 +61,7 @@ attack: 3
 volume: 50
 gap: 4
 
-# ゆき子: 高めでやわらかい
+# ゆき子: rather high and soft
 @voice ゆき子
 timbre: soft
 pitch: 540
@@ -71,7 +71,7 @@ attack: 2.5
 volume: 56
 gap: 4
 
-# 大河内: 低めでかたい
+# 大河内: rather low and hard
 @voice 大河内
 timbre: dark
 pitch: 325
@@ -81,7 +81,7 @@ attack: 3
 volume: 58
 gap: 4
 
-# 修一: 若い男声
+# 修一: a young male voice
 @voice 修一
 timbre: round
 pitch: 420
@@ -91,7 +91,7 @@ attack: 3
 volume: 62
 gap: 4
 
-# わたし: 中性的で控えめ
+# わたし: gender-neutral and restrained
 @voice わたし
 timbre: round
 pitch: 455

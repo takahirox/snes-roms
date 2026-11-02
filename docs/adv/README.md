@@ -1,39 +1,39 @@
-# 潮鳴りの密室 (しおなりのみっしつ)
+# 潮鳴りの密室 (Shionari no Misshitsu)
 
-スーパーファミコン用の、コマンドを選んで進めるオリジナルの推理アドベンチャー。昭和 62 年 11 月、時化の明けた夜の架空の漁港「汐見港」で、海運会社の会長が、内側から鍵のかかった倉庫の事務所で死んでいた。県警の刑事「わたし」が、汐見署の波多野と夜明けまでに真相を確かめる。
+An original command-selection mystery adventure for the Super Famicom. In November of Showa 62 (1987), on the night a storm has just cleared at the fictional fishing port 汐見港 (Shiomi Harbor), the chairman of a shipping company is found dead in his warehouse office, locked from the inside. A detective from the prefectural police, 「わたし」 ("I", the player), works with 波多野 (Hatano) of the 汐見署 (Shiomi police station) to establish the truth before dawn.
 
-- ROM: [`dist/shionari.sfc`](../../dist/shionari.sfc) (LoROM 512 KiB、コピアヘッダなし、8 KiB バッテリー SRAM)。SHA-256 は [`dist/shionari.sfc.sha256`](../../dist/shionari.sfc.sha256)。ラベル、マップ、manifest は `dist/shionari.*`。
-- 音楽とオープニング: 電源を入れると、フィクションの断り書き → 港・灯台・信号所・倉庫の 4 枚の絵と字幕 → タイトル。場面ごとに曲を鳴らし (捜査・夜の海・喫茶・推理・夜明け)、会話中は曲を 10 dB 下げる。資料: [music/README.md](music/README.md)。
-- 会話音: 人物 (6 人と「わたし」) が話すページの本文を打つ間、2 文字に 1 回ほど、20 数 ms の丸い発声風の音を話し手ごとに少し違う高さと音色で鳴らす。地の文・名前・見出し・メニュー・句読点・待ち・「おと：なし」では鳴らない。読み上げの声ではない。設計: [speech-sound/DESIGN.md](speech-sound/DESIGN.md)。
-- 口パク: 肖像が出ている人物本人が話しているページの本文を打つ間だけ、口が 閉・半開・開 に動き、句読点で一息おき、ページ待ちで閉じる。文字送りに合わせた動きで、音素には合わせていない。設計: [lipsync/DESIGN.md](lipsync/DESIGN.md)。
-- 確認はエミュレータ (Snes9x 1.63 と bsnes 115) だけで、実機では未確認。
+- ROM: [`dist/shionari.sfc`](../../dist/shionari.sfc) (LoROM 512 KiB, no copier header, 8 KiB battery-backed SRAM). The SHA-256 is in [`dist/shionari.sfc.sha256`](../../dist/shionari.sfc.sha256). Labels, map and manifest are `dist/shionari.*`.
+- Music and opening: at power-on, a fiction disclaimer → four pictures with captions (harbor, lighthouse, signal station, warehouse) → title. Each scene plays its own song (investigation, night sea, café, deduction, dawn), and the music is lowered by 10 dB during dialogue. Notes: [music/README.md](music/README.md).
+- Speech sound: while the body text of a page spoken by a character (the six people and 「わたし」) is being typed out, a round, voice-like blip of twenty-odd ms plays about once every two characters, with a slightly different pitch and timbre per speaker. It does not play for narration, names, headings, menus, punctuation, waits, or when 「おと：なし」 (sound: off) is set. It is not a reading voice. Design: [speech-sound/DESIGN.md](speech-sound/DESIGN.md).
+- Lip sync: only while typing the body text of a page spoken by the person whose portrait is on screen, the mouth moves closed / half-open / open, pauses briefly at punctuation, and closes at the page wait. The motion follows the text speed, not phonemes. Design: [lipsync/DESIGN.md](lipsync/DESIGN.md).
+- Verified only on emulators (Snes9x 1.63 and bsnes 115); not verified on real hardware.
 
-## 遊び方
-- 上下で選び、A で決める。B で一つ前にもどる (メッセージ中は A と同じく送り)。L/R (左右) で一覧のページを送る。
-- はなす: その場の人に話を聞く。しらべる: その場を調べる。みせる: 手帳の手がかり (物と証言) を見せる。いどう: ほかの場所へ。てちょう: しょうこ、しょうげん、ヒント、すいりする、きろくする、おと。
-- 手がかりがそろったら、「てちょう」の「すいりする」で筋道を答える。間違えても何度でもやり直せる。
-- 記録は「てちょう」の「きろくする」から。タイトルの「つづきから」で再開できる。
+## How to play
+- Up/Down to select, A to confirm. B goes back one step (during a message it advances, like A). L/R (or Left/Right) pages through lists.
+- はなす (talk): ask the person here. しらべる (examine): examine this place. みせる (show): show a clue from the notebook (items and testimony). いどう (move): go somewhere else. てちょう (notebook): しょうこ (evidence), しょうげん (testimony), ヒント (hint), すいりする (deduce), きろくする (save), おと (sound).
+- Once you have the clues, answer the chain of reasoning with 「すいりする」 in 「てちょう」. Wrong answers can be retried any number of times.
+- Save from 「きろくする」 in 「てちょう」. Resume with 「つづきから」 (continue) on the title screen.
 
-## 作る・確かめる
+## Build and test
 ```
-make adv            # build/adv/shionari.sfc (データ、cc65 2.19、チェックサム)
-make adv-test       # Snes9x 1.63 でのパッド入力のみのテスト、口パクのテスト、会話音のテスト (実際の出音の PCM) + 同じ操作記録の bsnes 115 再生
-make adv-release    # テストに合格した ROM を build/adv-clean で作り直して一致を確かめ、dist/ へ
+make adv            # build/adv/shionari.sfc (data, cc65 2.19, checksum)
+make adv-test       # pad-input-only tests on Snes9x 1.63, lip-sync test, speech-sound test (PCM of the actual audio output) + bsnes 115 replay of the same input recordings
+make adv-release    # rebuild the test-passing ROM in build/adv-clean, confirm it matches, and copy to dist/
 ```
 
-## ファイル
-- `src/adv/` 65816 のエンジン (`shionari.s` に ブート / NMI / DMA / パッド、`text.inc` 字形の描画、`ui.inc` 画面の部品とメッセージ、`mouth.inc` 口パク、`voice.inc` 会話音、`game.inc` モード、一覧、推理、フェード、肖像、タイトル、エンディング、`vm.inc` 台本の VM、`save.inc` SRAM、`audio.inc` SPC700 との通信)、`adv.cfg` (ld65)
-- `data/adv/story.txt` 台本 (場面、人物、手がかり、調べる項目、話題、見せたときの反応、ヒント、推理、結末)。書き方は先頭の説明を参照
-- `data/adv/mouths.txt` 6 人の口の半開・開 (口のまわりの小さなパッチ。閉は元の肖像のまま)
-- `data/adv/voices.txt` 会話音の声 (話し手ごとの音色・音高・長さ・音量・間隔、無音文字、句の抑揚)
-- `tools/adv/` `build.py` (台本 → 表と台本の機械語、テキストの割り付けと検査、到達性の検査)、`story.py`、`quantize.py` (背景の量子化、肖像と口の形の合成、文字層の雛形、タイトルのロゴ)、`mouth.py` (口のデータの読み込みと検査、拡大プレビュー)、`spc.py` (SPC700 ドライバ)、`voice.py` (会話音の波形の合成と BRR 変換)、`romfix.py`、`preview.py`、`release.py`、`music.py` / `songs.py` (曲)
-- `tests/adv/` `run.py` (テスト)、`drive.py` / `emu.py` (パッドだけで操作するドライバ)、`routes.py` (捜査の手順)、`bsnes.py` (bsnes での再生と比較)、`lipsync.py` (口パクのテスト)、`speech.py` / `pcm.py` / `wavesheet.py` (会話音のテスト、PCM の解析、波形の図)、`devshot.py` / `clipfind.py` (開発用)、`compat/` (古い版の ROM と記録。古い記録から「つづきから」で続けられるかのテストに使う)
-- `docs/adv/` `DESIGN.md` (物語の真相、手がかりの依存図、画面、VRAM、SRAM、データ)、`WALKTHROUGH.md` (ネタバレ)、`REFERENCE_NOTES.md` (参考にした資料)、`lipsync/` と `speech-sound/` (口パクと会話音の設計)、`music/` (曲の資料と録音)
+## Files
+- `src/adv/` the 65816 engine (`shionari.s`: boot / NMI / DMA / pad; `text.inc` glyph drawing; `ui.inc` screen parts and messages; `mouth.inc` lip sync; `voice.inc` speech sound; `game.inc` modes, lists, deduction, fades, portraits, title, ending; `vm.inc` script VM; `save.inc` SRAM; `audio.inc` communication with the SPC700), `adv.cfg` (ld65)
+- `data/adv/story.txt` the script (scenes, people, clues, examinable items, topics, reactions to shown clues, hints, deduction, ending). See the explanation at the top of the file for the format
+- `data/adv/mouths.txt` half-open and open mouths for the six people (small patches around the mouth; closed is the original portrait unchanged)
+- `data/adv/voices.txt` speech-sound voices (per-speaker timbre, pitch, length, volume and interval; silent characters; phrase intonation)
+- `tools/adv/` `build.py` (script → tables and script bytecode, text layout and checks, reachability checks), `story.py`, `quantize.py` (background quantization, compositing portraits and mouth shapes, text-layer template, title logo), `mouth.py` (loading and checking mouth data, enlarged preview), `spc.py` (SPC700 driver), `voice.py` (speech-sound waveform synthesis and BRR conversion), `romfix.py`, `preview.py`, `release.py`, `music.py` / `songs.py` (music)
+- `tests/adv/` `run.py` (tests), `drive.py` / `emu.py` (driver that operates only through the pad), `routes.py` (investigation routes), `bsnes.py` (replay and comparison on bsnes), `lipsync.py` (lip-sync test), `speech.py` / `pcm.py` / `wavesheet.py` (speech-sound test, PCM analysis, waveform sheets), `devshot.py` / `clipfind.py` (development aids), `compat/` (ROMs and saves from older versions, used to test that an old save can be resumed with 「つづきから」)
+- `docs/adv/` `DESIGN.md` (the truth of the story, clue dependency graph, screen, VRAM, SRAM, data), `WALKTHROUGH.md` (spoilers), `REFERENCE_NOTES.md` (reference material consulted), `lipsync/` and `speech-sound/` (lip-sync and speech-sound design), `music/` (music notes and recordings)
 
-## 素材とライセンス
-- 背景と肖像: 画像生成で新たに作ったもの。出所と生成指示は [ART.json](../../assets/adv/ART.json)、元画像から実機用サイズへの縮小の記録は [PREPARED.json](../../assets/adv/PREPARED.json) にある。ビルドの入力は縮小済みのファイル (`assets/adv/{harbor-night,warehouse,signal,cafe,lighthouse,station,harbor}-256.png` と `portrait-*-72.png`) で、ビルド時に 240 色へ量子化する。既存の作品の絵、音楽、事件、台詞は使っていない。
+## Assets and licenses
+- Backgrounds and portraits: newly created with image generation. Their sources and generation prompts are in [ART.json](../../assets/adv/ART.json), and the record of downscaling the originals to hardware size is in [PREPARED.json](../../assets/adv/PREPARED.json). The build inputs are the downscaled files (`assets/adv/{harbor-night,warehouse,signal,cafe,lighthouse,station,harbor}-256.png` and `portrait-*-72.png`), quantized to 240 colors at build time. No artwork, music, cases or dialogue from existing works are used.
 
-## 制限 (リリース時点)
-実機では未確認。会話音は実際の出音を波形と数値で確かめたが、耳で聴いた評価はしていない。画面全体を描き直すとき、最大 6〜7 フレームの処理待ちがある (VBlank の超過は 0)。読み上げの声、表情・瞬きのアニメーションはない (口パクは文字送りに合わせたもの)。推理が何問目まで進んだかは保存されない。人が遊んだときの所要時間は測っていない (15〜25 分は見積り)。
-- フォント: 東雲ビットマップフォント 12 ドット (パブリックドメイン、`assets/shinonome/`)。カーソルの ▶ は自作。
-- 曲・効果音: `tools/adv/music.py`・`songs.py`・`spc.py` で作った自作の音色・楽譜・ドライバ。会話音: `tools/adv/voice.py` が数式から作った自作の波形 (市販ゲームの音・録音は使っていない)。
+## Limitations (at release)
+Not verified on real hardware. The speech sound was checked on the actual audio output via waveforms and numbers, but has not been evaluated by listening. Redrawing the whole screen can take up to 6–7 frames of processing wait (VBlank overruns: 0). There is no reading voice and no facial-expression or blinking animation (the lip sync follows the text speed). Progress through the deduction questions is not saved. Play time by a human has not been measured (15–25 minutes is an estimate).
+- Font: Shinonome bitmap font, 12 dots (public domain, `assets/shinonome/`). The ▶ cursor is original.
+- Music and sound effects: original instruments, scores and driver made with `tools/adv/music.py`, `songs.py` and `spc.py`. Speech sound: original waveforms generated from formulas by `tools/adv/voice.py` (no sounds or recordings from commercial games are used).

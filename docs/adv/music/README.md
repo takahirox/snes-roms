@@ -1,97 +1,97 @@
-# 音楽とオープニング (候補 F)
+# Music and opening (candidate F)
 
-候補 E までの『潮鳴りの密室』の音は次の3つだけでした。
+Up to candidate E, the only sounds in 『潮鳴りの密室』 (Shionari no Misshitsu) were these three:
 
-- 効果音
-- 会話音
-- 屋外とタイトルの「波音」。DSP のホワイトノイズの音量をゆっくり上下させていたもので、風かノイズにしか聞こえないものでした。
+- sound effects
+- speech sounds
+- the "wave sound" outdoors and on the title. It slowly raised and lowered the volume of the DSP's white noise, and sounded like nothing but wind or noise.
 
-候補 F で、この波音をやめました。代わりにオリジナルの6曲（＋タイトル用の入口）を SPC700 の上で鳴らしています。オープニングも、市販のスーパーファミコンのソフトにならった流れに作り直しました。
+Candidate F drops this wave sound. Instead, six original songs (plus an intro for the title) play on the SPC700. The opening was also rebuilt to follow the flow of commercial Super Famicom software.
 
-- 確認用の録音: [オープニングの動画（音つき、52.8秒）](review/opening.mp4)・[各曲 (songs/)](review/songs/)。Snes9x 1.63 で ROM を実際に動かして録ったもので、入力はパッドだけです。
-- 音色・曲・ドライバのソース: [`tools/adv/music.py`](../../../tools/adv/music.py)（楽器と楽譜コンパイラ）、[`tools/adv/songs.py`](../../../tools/adv/songs.py)（楽譜）、[`tools/adv/spc.py`](../../../tools/adv/spc.py)（ドライバ）
-- オープニング: [`src/adv/opening.inc`](../../../src/adv/opening.inc)
+- Review recordings: [the opening video (with sound, 52.8 s)](review/opening.mp4) and [each song (songs/)](review/songs/). Recorded by actually running the ROM on Snes9x 1.63, with pad input only.
+- Instrument, song and driver sources: [`tools/adv/music.py`](../../../tools/adv/music.py) (instruments and score compiler), [`tools/adv/songs.py`](../../../tools/adv/songs.py) (scores), [`tools/adv/spc.py`](../../../tools/adv/spc.py) (driver)
+- Opening: [`src/adv/opening.inc`](../../../src/adv/opening.inc)
 
-## オープニング
+## Opening
 
-電源を入れると、画面は次のように進みます。拍は曲（80 bpm）のもので、1拍は0.75秒です。
+At power-on the screen proceeds as follows. Beats are those of the song (80 bpm); one beat is 0.75 s.
 
-| 拍 | 画面 | 曲 |
+| Beats | Screen | Music |
 |---|---|---|
-| 0–7 | 黒地に「この物語はフィクションです。／実在の人物・団体とは関係ありません。」 | 遠くの鐘と弦がゆっくりふくらむ |
-| 8–15 | 夜の港の絵と「昭和六十二年　十一月十四日／時化の夜の　汐見港」 | ハープの分散和音とティンパニ |
-| 16–23 | 灯台と「灯台の光が　くりかえし／暗い海をなでていく」 | 同上 |
-| 24–31 | 信号所と「時化は　夜半すぎに去った／港の灯が　ひとつずつ消えていく」 | フルートの対旋律が入る |
-| 32–39 | 第三倉庫と「第三倉庫の二階／内側から鍵のかかった部屋で……」 | 同上 |
-| 40–47 | 暗転 | ティンパニのロールで盛り上げる（B♭→A7） |
-| 48– | タイトル（港の絵・ロゴ・上に「昭和六十二年　汐見港」）。PUSH START BUTTON が点滅 | 主題（16小節で一巡） |
+| 0–7 | On black: 「この物語はフィクションです。／実在の人物・団体とは関係ありません。」 ("This story is fiction. / It has no relation to real persons or organizations.") | A distant bell and strings slowly swell |
+| 8–15 | Night harbor picture and 「昭和六十二年　十一月十四日／時化の夜の　汐見港」 ("November 14, Showa 62 / 汐見港 (Shiomi Harbor) on a stormy night") | Harp arpeggios and timpani |
+| 16–23 | Lighthouse and 「灯台の光が　くりかえし／暗い海をなでていく」 ("The lighthouse beam, again and again, / strokes the dark sea") | Same as above |
+| 24–31 | Signal station and 「時化は　夜半すぎに去った／港の灯が　ひとつずつ消えていく」 ("The storm passed after midnight / the harbor lights go out one by one") | A flute countermelody enters |
+| 32–39 | Warehouse No. 3 and 「第三倉庫の二階／内側から鍵のかかった部屋で……」 ("Upstairs in Warehouse No. 3 / in a room locked from the inside……") | Same as above |
+| 40–47 | Fade to black | A timpani roll builds up (B♭→A7) |
+| 48– | Title (harbor picture, logo, and 「昭和六十二年　汐見港」 ("Showa 62, Shiomi Harbor") above). PUSH START BUTTON blinks | Main theme (one cycle is 16 bars) |
 
-- 絵と字幕は、それぞれ別にゆっくりフェードします（絵は約0.5秒で暗転し、次の絵がフェードインします）。
-- 絵の切り替えは、ドライバが報告する拍数に合わせています。ポート3の拍カウンタを読み、テストでは8拍ちょうど（360フレーム）ごとに切り替わることを確かめました。サウンドドライバが応答しないときは、45フレームを1拍として数えます。
-- プロローグ中に A か START を押すと、すぐタイトルになり、曲も主題から始まります。
-- タイトルで A か START を押すとメニュー（はじめから／つづきから）が開き、B で PUSH START に戻ります。
-- タイトルで何もせずに主題が一巡すると（約48秒）、画面と曲がフェードアウトしてオープニングに戻ります。ゲームが店頭で流すアトラクトの形です。
-- エンディングで A を押すと、テキストが消えてからタイトル画面へ戻り、主題が流れます。
+- Pictures and captions fade slowly and independently (a picture fades to black in about 0.5 s, and the next picture fades in).
+- Picture changes follow the beat count reported by the driver. The game reads the beat counter on port 3, and the tests confirm that the picture changes exactly every 8 beats (360 frames). If the sound driver does not respond, 45 frames are counted as one beat.
+- Pressing A or START during the prologue goes straight to the title, and the music starts from the main theme.
+- Pressing A or START on the title opens the menu (はじめから (new game) / つづきから (continue)); B returns to PUSH START.
+- If nothing is pressed on the title for one cycle of the main theme (about 48 s), the screen and music fade out and the opening starts again — the attract mode a game shows in a store.
+- Pressing A at the ending clears the text, then returns to the title screen with the main theme.
 
-### 参考にしたこと
+### What was referenced
 
-Web で調べた範囲では、スーパーファミコンのオープニングの並べ方を体系的に説明した資料は見つかりませんでした。次のような共通の型と、推理ドラマの決まりごとを組み合わせています。
+Within what could be found on the web, there was no material that systematically explains how Super Famicom openings are arranged. The opening combines the following common patterns with the conventions of mystery dramas:
 
-- 会社ロゴ → 導入デモ → タイトルと PUSH START → 放置するとデモに戻る
-- 黒地にクレジットやロゴがフェードで出入りし、曲と画面が同時に盛り上がる
+- company logo → intro demo → title and PUSH START → returns to the demo if left idle
+- credits and logos fade in and out on black, and music and screen build up together
 
-ただし、実在する会社のロゴは使わず、冒頭はフィクションの断り書きにしました。どの作品の絵・曲・文も使っていません。
+However, no real company's logo is used; the opening starts with a fiction disclaimer instead. No artwork, music or text from any work is used.
 
-## 曲 (`tools/adv/songs.py`)
+## Songs (`tools/adv/songs.py`)
 
-| 番号 | 曲 | 場面 | 内容 |
+| No. | Song | Scenes | Content |
 |---|---|---|---|
-| 0 | 潮鳴り（オープニング） | 起動時 | ニ短調 80 bpm、28小節。13小節目からの主題をループ |
-| 1 | 潮鳴り（タイトル） | タイトル | 0 の主題から始める |
-| 2 | 捜査 | 倉庫・信号所・汐見署 | イ短調 96 bpm。ウッドブロックが時計のように刻み（夜明けまでの時間）、ベースの反復とクラリネット |
-| 3 | 夜の海 | 第二桟橋・灯台 | 3拍子 63 bpm。ハープ・パッド・ブイの鐘・フルート |
-| 4 | 浮標 | 喫茶店 | ヘ長調 100 bpm。エレピの3度と7度のコンピング、ボサノバのベース、シェイカー、フルート |
-| 5 | 推理 | 推理パート | ニ短調 72 bpm。D のペダルの上で内声が D–C#–C–B と下がる。心音のようなティンパニ、オーボエ |
-| 6 | 夜明け | 真相〜エンディング | 主題をニ長調で再現 |
+| 0 | 潮鳴り (Shionari, opening) | At startup | D minor, 80 bpm, 28 bars. Loops the main theme from bar 13 |
+| 1 | 潮鳴り (title) | Title | Starts from the main theme of 0 |
+| 2 | 捜査 (Investigation) | Warehouse, signal station, police station | A minor, 96 bpm. A wood block ticks like a clock (the time until dawn), a repeating bass line and clarinet |
+| 3 | 夜の海 (Night Sea) | Pier No. 2, lighthouse | Triple meter, 63 bpm. Harp, pad, buoy bell, flute |
+| 4 | 浮標 (Buoy) | Café | F major, 100 bpm. Electric piano comping on 3rds and 7ths, bossa nova bass, shaker, flute |
+| 5 | 推理 (Deduction) | Deduction part | D minor, 72 bpm. Over a D pedal, an inner voice descends D–C#–C–B. Heartbeat-like timpani, oboe |
+| 6 | 夜明け (Dawn) | Truth to ending | The main theme restated in D major |
 
-- 曲は場面ごとに指定します（`data/adv/story.txt` の `music:`）。同じ曲の場面へ移るときは、曲は途切れずに続きます。
-- 推理（`music: deduce`）と夜明け（`music: dawn`）はスクリプトから指定します。推理を途中でやめると、場面の曲に戻ります。
+- The song is specified per scene (`music:` in `data/adv/story.txt`). Moving to a scene with the same song keeps the music going without a break.
+- Deduction (`music: deduce`) and dawn (`music: dawn`) are specified from scripts. Quitting the deduction midway returns to the scene's song.
 
-## 音作り
+## Sound design
 
-- **楽器（13種）**: すべて数式で合成しています。
-  - 正弦波の倍音を足し、少しずつ音程をずらした3つの複製を1つのループに収めて、合奏の厚みを出しています（弦とパッド）。
-  - 打鍵の瞬間だけ倍音が多く、すぐ丸い音になるよう、減衰するアタックの後にループを置きました（エレピ・ハープ・ベース・チェレスタ・フルート）。
-  - 打楽器（ティンパニ・シェイカー・ウッドブロック）はノイズと正弦波から作りました。
-  - BRR 圧縮は、実機と同じ復号を使って4種のフィルタとレンジを探すエンコーダで行いました。単一周期の音は8周期ぶんをループにして、良いフィルタを使える余地を作っています。
-- **ドライバ**:
-  - 6声のシーケンサです（DSP の声2〜7）。声0は効果音、声1は会話音のままです。
-  - 音の終わりは KOF（キーオフ）ではありません。ADSR から指数減衰の GAIN に切り替え、余韻が自然に消えるようにしています。
-  - 音色ごとにビブラート（ディレイ付き）をかけています。
-  - 曲のフェードアウトがあります。
-  - エコー（80 ms、帰還 $38、FIR は穏やかなローパス）は音楽の声だけにかけています。エコーのバッファは書き込みを始める前にゼロで埋めます。
-- **会話中のミックス**:
-  - メッセージが開いている間、曲を10 dB下げます（約0.2秒で下げ、約0.7秒かけて戻す）。
-  - 会話音は 2.5〜3.1 倍に上げました。
-  - 測定では、各会話音の音量（250 Hz 以上の帯域、同じ区間の曲との比）は中央値 +5 dB、下位10%でも 0 dB 以上です。
-- **大きさ**:
-  - ドライバ一式は 31.6 KB です。ROM のバンク13に置き、起動時に約1.1秒かけて転送します。
-  - 起動は96フレームの固定長にしたので、どのエミュレータでも最初の入力は同じフレームになります。
-  - 音割れはありません（録音のピーク 15012 / 32767）。
-  - 「おと：なし」では、曲もエコーも含めて出力が完全に0になります。
+- **Instruments (13)**: all synthesized from formulas.
+  - Sine harmonics are added, and three slightly detuned copies are fitted into a single loop to give an ensemble thickness (strings and pad).
+  - So that only the instant of the attack is rich in harmonics and it quickly becomes a round tone, a decaying attack is followed by the loop (electric piano, harp, bass, celesta, flute).
+  - Percussion (timpani, shaker, wood block) is made from noise and sine waves.
+  - BRR compression was done with an encoder that searches the 4 filters and ranges using the same decoding as the hardware. Single-cycle tones loop 8 cycles to leave room for using better filters.
+- **Driver**:
+  - A 6-voice sequencer (DSP voices 2–7). Voice 0 remains sound effects and voice 1 speech sounds.
+  - Notes do not end with KOF (key-off). They switch from ADSR to exponential-decay GAIN so the tail fades naturally.
+  - Each instrument has vibrato (with delay).
+  - Songs can fade out.
+  - Echo (80 ms, feedback $38, a gentle low-pass FIR) applies only to the music voices. The echo buffer is filled with zeros before writing starts.
+- **Mix during dialogue**:
+  - While a message is open, the music is lowered by 10 dB (lowered in about 0.2 s, restored over about 0.7 s).
+  - Speech sounds were raised 2.5–3.1×.
+  - In measurements, the level of each speech sound (band above 250 Hz, relative to the music over the same interval) has a median of +5 dB and is 0 dB or more even at the bottom 10%.
+- **Size**:
+  - The whole driver is 31.6 KB. It is placed in ROM bank 13 and transferred in about 1.1 s at startup.
+  - Startup has a fixed length of 96 frames, so the first input lands on the same frame on every emulator.
+  - No clipping (recorded peak 15012 / 32767).
+  - With 「おと：なし」 (sound: off), the output, including music and echo, is exactly 0.
 
-## 確認したこと
+## What was verified
 
-| テスト | 内容 |
+| Test | Content |
 |---|---|
-| `tests/adv/run.py opening`（新規） | 字幕と絵の順番、8拍ごとの絵の切り替え（360フレーム）、拍48でのタイトル、点滅、メニューの開閉、放置で戻ること、スキップで主題から始まること |
-| `tests/adv/run.py audio` | 各場面で正しい曲が鳴ること、おと：なしで出力が完全に0、戻すと鳴ること |
-| `tests/adv/speech.py` | 波音の代わりに曲を背景として扱うようにしました。会話音を消した対照 ROM との差が、会話音の波形そのものであり、それ以外は完全に0であること（曲も同じに鳴っていることの証明）。曲が会話中に下がっていることと、会話音が聞こえる音量であること |
-| 和音の確認（作業中の解析） | 録音を楽譜のコード表に合わせ、各小節の音のエネルギーのうち和音の構成音が占める割合を見ました。捜査 0.71、夜の海 0.93、浮標 0.81、推理 0.79、夜明け 0.88。残りは旋律の経過音や和音のテンションです |
+| `tests/adv/run.py opening` (new) | Order of captions and pictures, picture change every 8 beats (360 frames), title at beat 48, blinking, opening and closing the menu, returning when idle, skipping starts from the main theme |
+| `tests/adv/run.py audio` | The correct song plays in each scene; with おと：なし the output is exactly 0; it plays again when turned back on |
+| `tests/adv/speech.py` | Now treats the music instead of the wave sound as the background. The difference from the control ROM with speech sounds muted is exactly the speech-sound waveform, and everything else is exactly 0 (proof that the music also plays identically). The music is lowered during dialogue, and speech sounds are at an audible level |
+| Chord check (analysis during development) | Matched the recordings to the chord charts of the scores and looked at the share of each bar's energy taken by chord tones. Investigation 0.71, Night Sea 0.93, Buoy 0.81, Deduction 0.79, Dawn 0.88. The rest is melodic passing tones and chord tensions |
 
-## 未確認と制限
+## Unverified and limitations
 
-- 曲は、波形と数値（音程・和音・音量・音割れ）で確かめました。人が耳で聴いた評価はしていません。実機でも未確認です。
-- 曲は6曲で、それぞれ40〜55秒で一巡します。事件の山場などの専用曲、ジングル（解決・失敗）、効果音の作り直しはありません。
-- オープニングに動き（スクロールや拡大縮小）はなく、フェードだけです。絵は既存の背景を使い回しています。
-- 録音での確認は、エミュレータ（Snes9x 1.63、bsnes 115）だけです。
+- The music was checked by waveforms and numbers (pitch, chords, volume, clipping). It has not been evaluated by human listening. It is also unverified on real hardware.
+- There are six songs, each cycling in 40–55 s. There are no dedicated songs for climaxes of the case, no jingles (solved / failed), and the sound effects were not remade.
+- The opening has no motion (scrolling or scaling), only fades. The pictures reuse existing backgrounds.
+- Recordings were checked only on emulators (Snes9x 1.63, bsnes 115).

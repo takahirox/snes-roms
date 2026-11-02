@@ -1,50 +1,50 @@
-# 夜鳴き鐘 の音（曲・効果音・環境音・サウンドドライバ）
+# The sound of 夜鳴き鐘 (Yonaki Kane) (music, sound effects, ambience, sound driver)
 
-『夜鳴き鐘』の音はすべてこのリポジトリの中で作っています。18曲、効果音32種（うち時計の打数違いが13）、環境音2種、SPC700 のサウンドドライバです。どの作品の曲・音・サンプルも使っていません。楽器の音はすべて数式で合成しています（正弦波の倍音、デチューンした複製、減衰するアタック、フィルタをかけたノイズ、共鳴器）。
+All of the sound in 『夜鳴き鐘』 is made inside this repository: 18 songs, 32 sound effects (13 of them clock chimes that differ only in the number of strokes), 2 ambiences, and the SPC700 sound driver. No music, sounds or samples from any other work are used. Every instrument sound is synthesized from formulas (sine-wave partials, detuned copies, decaying attacks, filtered noise, resonators).
 
-- 確認用の録音: [`review/`](review/)（[曲](review/songs/)・[効果音](review/sfx/)・[環境音](review/amb/)・[数値 RESULT.json](review/RESULT.json)）。Snes9x 1.63（libretro、無改造）で実際に鳴らして録ったものです。
-- ソース:
-  - [`tools/yonaki/audio.py`](../../../tools/yonaki/audio.py): エンジンが使う入口（`build()`）。CPU とのやりとりの仕様もここに書いてあります。
-  - [`tools/yonaki/spc.py`](../../../tools/yonaki/spc.py): ドライバ（SPC700 のアセンブラを Python で書いています）
-  - [`tools/yonaki/music.py`](../../../tools/yonaki/music.py): 音の合成、BRR エンコーダ、MML、楽譜のコンパイラ
-  - [`tools/yonaki/songs.py`](../../../tools/yonaki/songs.py): 楽譜
-  - [`tools/yonaki/sfx.py`](../../../tools/yonaki/sfx.py): 効果音と環境音
-- 確認スクリプト: [`tests/yonaki/music_review.py`](../../../tests/yonaki/music_review.py)
+- Review recordings: [`review/`](review/) ([songs](review/songs/), [sound effects](review/sfx/), [ambience](review/amb/), [figures RESULT.json](review/RESULT.json)). Recorded by actually playing them on Snes9x 1.63 (libretro, unmodified).
+- Sources:
+  - [`tools/yonaki/audio.py`](../../../tools/yonaki/audio.py): the entry point the engine uses (`build()`). The specification of the CPU interface is also written here.
+  - [`tools/yonaki/spc.py`](../../../tools/yonaki/spc.py): the driver (SPC700 assembly written in Python)
+  - [`tools/yonaki/music.py`](../../../tools/yonaki/music.py): sound synthesis, BRR encoder, MML, score compiler
+  - [`tools/yonaki/songs.py`](../../../tools/yonaki/songs.py): the scores
+  - [`tools/yonaki/sfx.py`](../../../tools/yonaki/sfx.py): sound effects and ambience
+- Review script: [`tests/yonaki/music_review.py`](../../../tests/yonaki/music_review.py)
 
-## エンジンからの使い方
+## Use from the engine
 
 ```python
 import audio                      # tools/yonaki/audio.py
-a = audio.build()                 # 約1秒。BRR は build/yonaki-audio/brr-cache/ にキャッシュします
-a['image']                        # 48,523 バイト。IPL で $0200 に転送し、$0200 から実行する
-a['songs'], a['sfx'], a['amb']    # 名前 → 番号
+a = audio.build()                 # about 1 s. BRR is cached in build/yonaki-audio/brr-cache/
+a['image']                        # 48,523 bytes. Transfer to $0200 with the IPL and run from $0200
+a['songs'], a['sfx'], a['amb']    # name -> number
 ```
 
-`python3 -I tools/yonaki/audio.py` を実行すると、`build/yonaki-audio/spc.bin` と `info.json` を書き出します。
+Running `python3 -I tools/yonaki/audio.py` writes `build/yonaki-audio/spc.bin` and `info.json`.
 
-### CPU とのやりとり（ポート $2140-$2143）
+### CPU interface (ports $2140-$2143)
 
-潮鳴りの密室と同じ形です。「ポート0にコマンドを書き、ポート1を違う値に変える」の繰り返しです。
+The same scheme as 潮鳴りの密室 (Shionari no Misshitsu): repeatedly "write a command to port 0, then change port 1 to a different value".
 
-| コマンド | 内容 |
+| Command | Meaning |
 |---|---|
-| （起動） | 転送して実行したあと、ポート0が `$5A` になれば準備完了 |
-| `$01`-`$2F` | 効果音 n（下の表）。消音中は無視します。効果音のスロットは2つあり、空いているほう（A が先）を使います。両方ふさがっていれば A を置き換えます |
-| `$30` / `$31` | 消音（曲・効果音・環境音・エコーとも出力が0になります）／解除 |
-| `$40`+n | 曲 n を頭から鳴らす（鳴っている曲は素早くリリースして切ります） |
-| `$60` | 曲をフェードアウトして（約0.85秒）止める |
-| `$61` | 曲をすぐ止める（約0.2秒で -40 dB） |
-| `$62` / `$63` | 曲を下げる（約 -8 dB）／元に戻す（ゆっくり） |
-| `$64` | 効果音をすべて止める |
-| `$70`+k | 環境音 k を鳴らす（約0.4秒でフェードイン） |
-| `$7F` | 環境音を止める（フェードアウト） |
+| (startup) | After the transfer and start, ready once port 0 reads `$5A` |
+| `$01`-`$2F` | Sound effect n (table below). Ignored while muted. There are two sound-effect slots; the free one is used (A first). If both are busy, A is replaced |
+| `$30` / `$31` | Mute (music, sound effects, ambience and echo all output 0) / unmute |
+| `$40`+n | Play song n from the start (a song already playing is cut with a quick release) |
+| `$60` | Fade the song out (about 0.85 s) and stop |
+| `$61` | Stop the song immediately (-40 dB in about 0.2 s) |
+| `$62` / `$63` | Duck the song (about -8 dB) / restore it (slowly) |
+| `$64` | Stop all sound effects |
+| `$70`+k | Play ambience k (fades in over about 0.4 s) |
+| `$7F` | Stop the ambience (fade out) |
 
-- コマンドは1フレームに1つまでにしてください。同じフレームで2つ書くと、前のほうが上書きされます。
-- ポート2は、曲が鳴っている間「曲番号+1」です。止まっているとき、ループしない曲が終わったときは0です。ポート3は、曲が始まってからの拍数です（4分音符で数え、256で一周します）。
+- Send at most one command per frame. If two are written in the same frame, the first is overwritten.
+- While a song is playing, port 2 holds "song number + 1". It is 0 when stopped and when a non-looping song has ended. Port 3 is the number of beats since the song started (counted in quarter notes, wrapping at 256).
 
-### 番号
+### Numbers
 
-| 曲 | n | 曲 | n | 曲 | n |
+| Song | n | Song | n | Song | n |
 |---|---|---|---|---|---|
 | title | 0 | unease | 6 | dawn | 12 |
 | journey | 1 | horror | 7 | badend | 13 |
@@ -53,120 +53,120 @@ a['songs'], a['sfx'], a['amb']    # 名前 → 番号
 | night | 4 | deduce | 10 | chizuru | 16 |
 | legend | 5 | sorrow | 11 | omake | 17 |
 
-効果音: bell 1, bell_far 2, thunder 3, rumble 4, door 5, door_bang 6, steps 7, knock 8, water 9, drip 10, heart 11, shock 12, glass 13, clock 14（3打）, tick 15, match 16, camera 17, radio 18, thud 19, wind 20, clock1 21 … clock12 32（N 打）。scream は、サンプルなしでは説得力のある声にならないので作っていません。
+Sound effects: bell 1, bell_far 2, thunder 3, rumble 4, door 5, door_bang 6, steps 7, knock 8, water 9, drip 10, heart 11, shock 12, glass 13, clock 14 (3 strokes), tick 15, match 16, camera 17, radio 18, thud 19, wind 20, clock1 21 … clock12 32 (N strokes). scream is not made, because without samples it does not become a convincing voice.
 
-環境音: rain 0（`$70`）、storm 1（`$71`。雨に、遠い雷が6〜16秒おきに混ざります）。
+Ambience: rain 0 (`$70`), storm 1 (`$71`; rain with distant thunder mixed in every 6 to 16 seconds).
 
-### DSP の声と SPC の RAM
+### DSP voices and SPC RAM
 
-- 声0: 効果音スロット A。声1: 効果音スロット B。スロット B が空いている間は、雨にも使います。声2〜7: 曲の6チャンネル。
-- 雨が鳴っていてスロット B が使われると、その効果音が終わるまで雨の粒は止まります。thunder・door・water・glass・camera・radio・thud・shock は2スロットを使います。
+- Voice 0: sound-effect slot A. Voice 1: sound-effect slot B; while slot B is free it is also used for the rain. Voices 2–7: the song's 6 channels.
+- If slot B is used while the rain is playing, the raindrops stop until that sound effect ends. thunder, door, water, glass, camera, radio, thud and shock use both slots.
 
-| 範囲 | 内容 |
+| Range | Contents |
 |---|---|
-| `$0000-$00EF` | ドライバの変数 |
-| `$0100-$01FF` | チャンネルの配列（`$0100-$0117`）とスタック |
-| `$0200-$1049` | ドライバのコードと表（3,657 バイト。音程表96音、楽器表、雨の表） |
-| `$1100-$11FF` | サンプルの DIR（64枠） |
-| `$1200-` | サンプル 32,229 バイト（36個）、効果音 1,284 バイト、楽譜 10,608 バイト（18曲） |
-| `-$BF8A` | イメージの終わり（48,523 バイト）。`$BF8B-$DFFF` の 8,309 バイトは空き |
-| `$E000-$FFFF` | エコーバッファ（EDL 4、64 ms、8 KiB。書き込みを始める前に0で埋めます） |
+| `$0000-$00EF` | Driver variables |
+| `$0100-$01FF` | Channel array (`$0100-$0117`) and stack |
+| `$0200-$1049` | Driver code and tables (3,657 bytes: a 96-note pitch table, the instrument table, the rain tables) |
+| `$1100-$11FF` | Sample DIR (64 entries) |
+| `$1200-` | Samples 32,229 bytes (36 of them), sound effects 1,284 bytes, scores 10,608 bytes (18 songs) |
+| `-$BF8A` | End of the image (48,523 bytes). The 8,309 bytes at `$BF8B-$DFFF` are free |
+| `$E000-$FFFF` | Echo buffer (EDL 4, 64 ms, 8 KiB; filled with 0 before writing is enabled) |
 
-サンプルの大きい順: 鐘 5,400、ティンパニ 2,718、弦 2,304、尺八 1,728、不協和のスタブ 1,728、太鼓 1,530 …（`info.json` に全部あります）。
+Largest samples first: bell 5,400, timpani 2,718, strings 2,304, shakuhachi 1,728, dissonant stab 1,728, taiko 1,530 … (all are listed in `info.json`).
 
-## ドライバ（潮鳴りの密室のドライバを写して拡張）
+## Driver (copied from the 潮鳴りの密室 driver and extended)
 
-元のファイル（`tools/adv/spc.py` ほか）は変えていません。次を加えたり、変えたりしました。
+The original files (`tools/adv/spc.py` and others) are unchanged. The following was added or changed.
 
-- **楽譜の形式を詰めました**: 音符は1バイトで、直前の長さを使います。長さは変わるときだけ書きます。反復（1段）とサブルーチン呼び出しを使えます。コンパイラが、同じ小節（1〜4小節のまとまり）の繰り返しを自動で反復にまとめます。18曲で10.6 KB です。
-- **音程**: 96音の音程表、楽器ごとの基準音、微調整（1/1024 単位）で音程を出します。Python 側で、ドライバと同じ計算で全音符の音程を確かめています。
-- **ベンド**（尺八の「すくい上げ」、ホラーの低弦のグリッサンド、亡霊の合唱）と、曲ごとのビブラートの速さを加えました。
-- **曲ごとのエコー**（帰還量と音量）。エコーをかけるのは曲の声と、エコー付きの効果音（鐘・時計・ドア・ショック・ガラス・しずく）です。
-- **効果音を段の並びで書けるようにしました**: サンプルまたはノイズ発生器、ADSR または GAIN、音量の移り、ピッチスライド、他の効果音へのジャンプ（clock1〜12 は1本の打音の列を共有）。相方の効果音を、もう一方のスロットで同時に鳴らせます。
-- **雨の環境音**（下で説明）を加えました。
-- **時間の扱い**: フェード・ダッキング・効果音・雨は 100 Hz の固定の時計で動きます。曲のテンポには左右されません。
-- 停止とリリースは、従来どおり KOF を使わず GAIN の指数減衰で行います。
+- **A more compact score format**: a note is one byte and reuses the previous length; a length is written only when it changes. Repeats (one level) and subroutine calls are available. The compiler automatically folds repetitions of the same bars (groups of 1 to 4 bars) into repeats. 18 songs take 10.6 KB.
+- **Pitch**: from a 96-note pitch table, a base note per instrument and fine tuning (in units of 1/1024). On the Python side every note's pitch is checked with the same arithmetic as the driver.
+- Added **bends** (the shakuhachi's upward scoop, the horror low strings' glissando, the ghostly choir) and a per-song vibrato speed.
+- **Per-song echo** (feedback and volume). Echo is applied to the song voices and to the sound effects that have it (bell, clock, door, shock, glass, drip).
+- **Sound effects written as a sequence of steps**: sample or noise generator, ADSR or GAIN, volume changes, pitch slides, jumps to other sound effects (clock1–12 share one sequence of strokes). A partner sound effect can be played at the same time in the other slot.
+- Added the **rain ambience** (described below).
+- **Timing**: fades, ducking, sound effects and rain run on a fixed 100 Hz clock, independent of the song's tempo.
+- Stopping and release are, as before, done with GAIN exponential decay rather than KOF.
 
-## 曲
+## Songs
 
-主題「夜鳴き鐘」は二短調です。都節の色（E♭）を入れました。冒頭の**鐘の動機** D–A–B♭–A は、鐘のように長い D、下がる4度、B♭→A の溜め息からできています。この動機は legend（尺八）、unease（半音ずれてチェレスタ）、sorrow、dawn（ニ長調）、badend（合唱）、staff に出てきます。oyura では D–E♭–D–A の形で応えます。
+The main theme 「夜鳴き鐘」 is in D minor, with a touch of the miyako-bushi scale (E♭). The opening **bell motif** D–A–B♭–A is made of a long, bell-like D, a falling fourth, and a B♭→A sigh. The motif appears in legend (shakuhachi), unease (a semitone off, on celesta), sorrow, dawn (D major), badend (choir) and staff. oyura answers it in the form D–E♭–D–A.
 
-| 曲 | 場面 | 調・速さ | 作り |
+| Song | Scene | Key, tempo | Construction |
 |---|---|---|---|
-| title | タイトル | ニ短調 66 | 鐘と箏の2小節のあと、主題16小節。前半はオルゴール、後半は尺八。弦のパッドと、平調子の色（9度・短6度）をもつ箏の分散和音。フレーズの頭で鐘。2小節目のあとからループ |
-| journey | バスで谷へ | イ短調 92 | ハープの「車輪」の8分音符、クラリネット。終わりで B♭→E（三全音）の影 |
-| inn | 宿（昼・夕） | ヘ長調 3/4 80 | フルート、余韻を残す箏、弦。B♭m（借用和音）が寂しさ。24小節 |
-| dinner | 夕食 | ト長調 104 | クラリネットと箏、拍木。陽気な表の下で、低い弦が半音ずつ下がり続けます（B–A♯–A–G♯…） |
-| night | 雨の夜 | イ短調 3/4 60 | まばらなピアノ、薄い弦、ハープ、軒のしずくのようなチェレスタ。24小節（72秒） |
-| legend | 伝説を語る | 都節（D E♭ G A B♭） 54 | 尺八（息の音とすくい上げ）、笙の持続音、まばらな箏、太鼓、遠い鐘 |
-| unease | 何かがおかしい | ハ短調 96 | ピチカートの反復、太鼓の拍、三全音の弦、半音ずれた鐘の動機。後半8小節で盛り上がり、ティンパニのロール |
-| horror | 恐怖 | 72 | 32分音符のトレモロの半音クラスタ（E5/F5 付近。高くしすぎない）、グリッサンドで下がる低弦、すべる亡霊の合唱、心音（ドクン・ドクン）、クラスタの一撃 |
-| chase | 逃げる | ニ短調 160 | リードの旋律、弦の刻み、箏の16分音符、太鼓とスネア、ティンパニ |
-| investigate | 推理・手がかり | イ短調 100 | 拍木の時計、ピチカート、ハープの16分音符、クラリネット。後半は5度圏の進行 |
-| deduce | 最後の推理 | ハ短調 116 | 弦の8分の刻み、ティンパニ、オーボエ。下の弦がだんだん強くなります |
-| sorrow | 真相・告白 | ニ短調 54 | 主題を遅く。弦から尺八へ、ハープ、鐘 |
-| dawn | 真エンド | ニ長調 72 | 主題を長調で。フルート、弦、ハープ、チェレスタ |
-| badend | バッドエンド | ニ短調 50 | 8小節で、ループしません。合唱と低弦、ティンパニ、1オクターブ下の鐘で静かに終わります（ポート2が0になります） |
-| staff | スタッフロール | | 箏の主題 → 宿の旋律 → 長調の主題（137秒）。そのあとは長調の主題をループ |
-| oyura | おゆら篇 | 63 | 儀式: 太鼓、拍子木、笙のクラスタ（E/A と E♭/B♭ の衝突）、亡霊の合唱、尺八、4小節ごとの鐘 |
-| chizuru | 千鶴篇（1969） | イ短調 92 | 昭和の歌謡曲: ヨナ抜き短音階の色の弦の旋律、ガットギター、オルガン、ベース、ブラシ風スネアとシェイカー。後半8小節は1オクターブ上の「サビ」 |
-| omake | 編集部篇 | ハ長調 132 | オーボエの旋律、ピチカートの「ズン・チャッ」、ピアノの裏拍、拍木、チェレスタ |
+| title | Title | D minor 66 | Two bars of bell and koto, then the 16-bar theme: music box in the first half, shakuhachi in the second. A string pad and koto arpeggios coloured by the hirajōshi scale (9th, minor 6th). A bell at the head of each phrase. Loops from after bar 2 |
+| journey | By bus into the valley | A minor 92 | Harp eighth notes as the "wheels", clarinet. A shadow of B♭→E (tritone) at the end |
+| inn | The inn (day, evening) | F major 3/4 80 | Flute, lingering koto, strings. B♭m (a borrowed chord) gives loneliness. 24 bars |
+| dinner | Dinner | G major 104 | Clarinet and koto, woodblock. Under the cheerful surface, the low strings keep descending by semitones (B–A♯–A–G♯…) |
+| night | Rainy night | A minor 3/4 60 | Sparse piano, thin strings, harp, celesta like drips from the eaves. 24 bars (72 s) |
+| legend | Telling the legend | miyako-bushi (D E♭ G A B♭) 54 | Shakuhachi (breath noise and scoops), sustained shō, sparse koto, taiko, distant bell |
+| unease | Something is wrong | C minor 96 | Repeated pizzicato, taiko beats, tritone strings, the bell motif a semitone off. Builds in the last 8 bars with a timpani roll |
+| horror | Horror | 72 | Semitone clusters in 32nd-note tremolo (around E5/F5; not too high), low strings sliding down in glissando, a sliding ghostly choir, a heartbeat (thump, thump), cluster hits |
+| chase | Running | D minor 160 | Reed melody, string ostinato, koto 16th notes, taiko and snare, timpani |
+| investigate | Investigation, clues | A minor 100 | Woodblock clock, pizzicato, harp 16th notes, clarinet. Circle-of-fifths progression in the second half |
+| deduce | The final deduction | C minor 116 | String eighth-note ostinato, timpani, oboe. The lower strings grow steadily stronger |
+| sorrow | The truth, the confession | D minor 54 | The theme, slowed. Strings handing over to shakuhachi, harp, bell |
+| dawn | True ending | D major 72 | The theme in major. Flute, strings, harp, celesta |
+| badend | Bad ending | D minor 50 | 8 bars, no loop. Choir and low strings, timpani; ends quietly with the bell an octave lower (port 2 goes to 0) |
+| staff | Staff roll | | Koto theme → the inn melody → the theme in major (137 s). Then loops the major theme |
+| oyura | おゆら篇 (the Oyura chapter) | 63 | A ritual: taiko, hyōshigi clappers, shō clusters (E/A clashing with E♭/B♭), ghostly choir, shakuhachi, a bell every 4 bars |
+| chizuru | 千鶴篇 (the Chizuru chapter; 1969) | A minor 92 | Shōwa-era kayōkyoku pop: a string melody coloured by the yonanuki minor scale, nylon-string guitar, organ, bass, brush-like snare and shaker. The last 8 bars are an octave-up "chorus" |
+| omake | 編集部篇 (the editorial-office chapter) | C major 132 | Oboe melody, pizzicato "oom-pah", off-beat piano, woodblock, celesta |
 
-楽器（27種。曲用のサンプルは21個）: オルゴール、箏（はじいた直後に音程が少し落ち着く）、ハープ／ガットギター、ピアノ、ベース／ピチカート、弦（3本をデチューン）、合唱「ウー」、オルガン、笙／リード、クラリネット、オーボエ、フルート、尺八（ループの中にも息の音）、チェレスタ、鐘、ティンパニ、太鼓、スネア、シェイカー、拍木、不協和スタブ。
+Instruments (27 kinds; 21 samples for the songs): music box, koto (the pitch settles slightly just after the pluck), harp / nylon guitar, piano, bass / pizzicato, strings (3 detuned copies), choir "oo", organ, shō / reed, clarinet, oboe, flute, shakuhachi (breath noise inside the loop too), celesta, bell, timpani, taiko, snare, shaker, woodblock, dissonant stab.
 
-## 効果音
+## Sound effects
 
-| 名前 | 作り |
+| Name | Construction |
 |---|---|
-| bell | 小さな青銅の鐘（もっとも大事な音）。うなり（0.5）、基音、短3度（1.19）、5度、ナミナル（2.0）と、2.54・2.67・3.27・4.21… の非整数倍音。高い倍音ほど早く消えます。基音とナミナルは2.5 Hz ずれた2本の組で、ゆっくりうなります。エコーをかけ、-40 dB まで約5.3秒 |
-| bell_far | 同じ鐘を少し低く、小さく、反対側に定位。エコーの比率が高く、遠く聞こえます |
-| thunder | スロット A: ノイズ発生器の「裂ける」音（周波数を下げながら連打）。スロット B: 低いブラウンノイズのループの「ゴロゴロ」（音量がうねり、ピッチがゆっくり下がる）。約3.4秒 |
-| rumble | 遠雷。低く小さく、ゆっくり立ち上がる |
-| door | 引き戸「ガラガラ…トン」: 木の小さな当たり8回（高さと強さはランダム）と、敷居をこする共鳴ノイズ、最後に枠に当たる音 |
-| door_bang | 大きな木の当たりと、低い胴鳴り（エコー） |
-| steps | 古い床を5歩。鈍い足音2〜3回のあと、木のきしみ（スティックスリップのパルスを2つの木の共鳴に通し、ピッチを上下させる）。左から右へ移動 |
-| knock | 戸を3回叩く |
-| water | ザバッ（ノイズの立ち上がりと減衰）と、跳ねたしずく10粒 |
-| drip | 上がっていく短い「ピチョン」と、小さなもう1滴（エコー） |
-| heart | ドクン・ドクン（80 bpm）を4回 |
-| shock | サウンドノベルの「ジャーン」: 3オクターブにまたがる半音の衝突のクラスタ（息の混じった頭つき）と、低い一撃。エコーあり |
-| glass | 割れる音（ノイズ）のあと、非整数倍音の破片が両スロットで散らばる |
-| clock, clock1–12 | 振り子時計の打鐘（鐘のサンプルを1オクターブ下げたもの）を1.5秒おきに N 回。clock は3回 |
-| tick | 時計のチク・タク、6回 |
-| match | マッチを擦る音（短いノイズ2つ）と、燃え上がる音（低いノイズ） |
-| camera | ポラロイド: シャッター「カシャ」と、フィルムを送るモーターの音（矩形波のうなりとギアのノイズ） |
-| radio | 業務用無線: 揺れる空電、ヘテロダインの笛音、最後に「プツッ」 |
-| thud | 人が倒れる音: 低く重い当たりと、小さく弾む音 |
-| wind | 一陣の風: 2つの共鳴をもつノイズのループ。音量がふくらみ、ピッチが上がってから下がる |
+| bell | A small bronze bell (the most important sound). Hum (0.5), fundamental, minor third (1.19), fifth, nominal (2.0), and inharmonic partials at 2.54, 2.67, 3.27, 4.21…; higher partials die away faster. The fundamental and the nominal are each a pair detuned by 2.5 Hz, so they beat slowly. With echo; about 5.3 s to -40 dB |
+| bell_far | The same bell slightly lower, quieter, panned to the other side. A higher echo ratio makes it sound distant |
+| thunder | Slot A: a "crack" from the noise generator (rapid hits with falling frequency). Slot B: a low looping brown-noise "rumble" (swelling volume, slowly falling pitch). About 3.4 s |
+| rumble | Distant thunder. Low, quiet, slow to rise |
+| door | A sliding door, "rattle… thunk": 8 small wooden knocks (random pitch and strength), resonant noise of scraping along the sill, and finally the hit against the frame |
+| door_bang | A big wooden hit with a low body resonance (echo) |
+| steps | 5 steps on an old floor. After 2–3 dull footfalls, a creak of wood (stick-slip pulses through two wooden resonances, with pitch going up and down). Moves from left to right |
+| knock | 3 knocks on a door |
+| water | A splash (noise attack and decay) and 10 scattered droplets |
+| drip | A short rising "plink" and one more small drop (echo) |
+| heart | Thump-thump (80 bpm), 4 times |
+| shock | The sound-novel "jaaan" sting: a cluster of semitone clashes over 3 octaves (with a breathy attack) and a low hit. With echo |
+| glass | A breaking sound (noise), then inharmonic shards scattered over both slots |
+| clock, clock1–12 | Pendulum clock strikes (the bell sample an octave lower), N strokes 1.5 s apart. clock is 3 strokes |
+| tick | Clock tick-tock, 6 times |
+| match | Striking a match (two short noises) and the flare (low noise) |
+| camera | Polaroid: the shutter "click" and the film-ejecting motor (square-wave whine and gear noise) |
+| radio | Business radio: wavering static, a heterodyne whistle, and a final "click" |
+| thud | A person falling: a low, heavy hit and a small bounce |
+| wind | A gust of wind: a noise loop with two resonances; the volume swells and the pitch rises, then falls |
 
-### 雨（前作の「ただのノイズ」への対策）
+### Rain (the fix for the previous game's "just noise")
 
-前作の波音は、ホワイトノイズの音量をゆっくり上下させただけのもので、「ノイズにしか聞こえない」と指摘されました。今回の雨は、ドライバがその場で粒を作ります。
+The previous game's surf was only white noise with its volume slowly going up and down, and it was criticized as "sounding like nothing but noise". This time the driver generates the rain drop by drop on the fly.
 
-- 雨の粒は4種類あります。高い「チッ」（葉や砂利に当たる音: 4.2 kHz の共鳴ノイズを 2.5 ms で減衰）、中くらいの「チッ」、水たまりに落ちる「ポッ」（上がる音程）、軒の木を打つ鈍い「トッ」です。
-- 粒は 10 ms ごとにランダムに選びます。間隔（10〜60 ms、平均でおよそ毎秒40粒）、種類、高さ（16段）、強さ（ほとんどが小さく、ときどき近い粒）、左右の位置をランダムにしています。同じ形が繰り返されることはありません。
-- 粒の終わりは、帯域を絞った柔らかいノイズのループ（共有）につながります。次の粒が来るまで、それが静かな地の音になります。
-- 音量は控えめです。いちばん静かな曲（night）より 14.8 dB 下です。ほかの曲の下では、さらに小さくなります。
-- 使いどころを絞るため、曲の側で雨の音を作ることはしていません。夜の場面の雰囲気は、曲（night、legend、unease）で作ります。
+- There are 4 kinds of raindrop: a high "tick" (hitting leaves or gravel: 4.2 kHz resonant noise decaying in 2.5 ms), a medium "tick", a "plop" into a puddle (rising pitch), and a dull "tok" on the wooden eaves.
+- A drop is chosen at random every 10 ms. The interval (10–60 ms, on average about 40 drops a second), kind, pitch (16 steps), strength (mostly soft, occasionally a close drop) and left-right position are all random, so no pattern repeats.
+- The end of each drop runs into a soft band-limited noise loop (shared). Until the next drop comes, that is the quiet background.
+- The volume is restrained: 14.8 dB below the quietest song (night), and lower still under other songs.
+- To keep its use focused, the songs do not produce rain sounds themselves. The mood of the night scenes comes from the songs (night, legend, unease).
 
-数値（雨だけの20秒、最初の2秒を除く）:
+Figures (20 s of rain alone, excluding the first 2 s):
 
-| | 雨 | 嵐 | 比較: ホワイトノイズ |
+| | Rain | Storm | For comparison: white noise |
 |---|---|---|---|
-| 粒の立ち上がり（1秒あたり） | 36.4 | 35.5 | 0 |
-| スペクトルの平坦度（0〜1。白色雑音は約0.56） | 0.078 | 0.049 | 0.565 |
-| 10 ms ごとの音量の揺れ（標準偏差/平均） | 1.11 | 1.07 | 0.03 |
-| RMS | -43.6 dBFS | -32.6 dBFS（遠雷を含む） | |
+| Drop onsets (per second) | 36.4 | 35.5 | 0 |
+| Spectral flatness (0–1; white noise is about 0.56) | 0.078 | 0.049 | 0.565 |
+| Volume fluctuation per 10 ms (standard deviation / mean) | 1.11 | 1.07 | 0.03 |
+| RMS | -43.6 dBFS | -32.6 dBFS (including distant thunder) | |
 
-平坦で一様なノイズではなく、帯域を絞った地の上に、粒がはっきり立ち上がっていることが数値からわかります。スペクトログラムでも、広い帯域の縦線（粒）がランダムな間隔で並んでいるのを確かめました。
+The figures show that this is not flat, uniform noise but distinct drops rising above a band-limited background. A spectrogram also confirmed broadband vertical lines (drops) at random intervals.
 
-## 確かめたこと（`tests/yonaki/music_review.py`）
+## What was checked (`tests/yonaki/music_review.py`)
 
-テスト用の小さな ROM（65816 のコードをスクリプトの中で組み立てます）を使いました。この ROM は、ゲームと同じく IPL でイメージを転送し、`$5A` を待ってから、WRAM のメールボックスに書かれたコマンドを1フレームに1つ、ポート0/1で送ります。無改造の Snes9x 1.63 で動かし、その音声出力を録音して解析しました。全部で約75秒かかります。曲は「ループ1回分＋9秒」、効果音は「長さ＋1.5秒」録りました。
+A small test ROM was used (its 65816 code is assembled inside the script). Like the game, this ROM transfers the image with the IPL, waits for `$5A`, then sends the commands written in a WRAM mailbox through ports 0/1, one per frame. It was run on unmodified Snes9x 1.63, and its audio output was recorded and analysed. The whole run takes about 75 s. Songs were recorded for "one loop + 9 s", sound effects for "length + 1.5 s".
 
-### 曲（`RESULT.json` の `songs`）
+### Songs (`songs` in `RESULT.json`)
 
-| 曲 | 長さ s | ループ s | ピーク | 音割れ | RMS dBFS | 音程の合う割合 | 楽譜の音の割合 | 和音の音の割合 | 2周目の一致 |
+| Song | Length s | Loop s | Peak | Clipping | RMS dBFS | In-tune ratio | Score-note ratio | Chord-tone ratio | Second-loop match |
 |---|---|---|---|---|---|---|---|---|---|
 | title | 65.7 | 58.4 | 14917 | 0 | -22.5 | 0.994 | 0.979 | 0.891 | 0.996 |
 | journey | 41.9 | 41.9 | 12266 | 0 | -23.7 | 0.993 | 0.850 | 0.758 | 0.999 |
@@ -187,45 +187,45 @@ a['songs'], a['sfx'], a['amb']    # 名前 → 番号
 | chizuru | 62.8 | 62.8 | 11752 | 0 | -24.4 | 0.978 | 0.948 | 0.855 | 1.000 |
 | omake | 29.2 | 29.2 | 12895 | 0 | -26.0 | 0.971 | 0.842 | 0.807 | 1.000 |
 
-各列の意味:
+What the columns mean:
 
-- **音程の合う割合**: 180 Hz〜2.5 kHz のスペクトルのピーク（4096点 FFT、8 kHz）のエネルギーのうち、平均律の半音から ±30 セント以内にある割合です。
-- **楽譜の音の割合**: 小節ごとに、録音した音高クラスのエネルギーのうち、楽譜がその小節で鳴らしている音高クラスに入る割合です。打楽器は楽譜の側から除いています。
-- **和音の音の割合**: 同じく、コード記号の構成音に入る割合です。
-- **2周目の一致**: ループの頭から5秒後（短い曲はループの40%の位置）の4秒間で、1周目と2周目の 10 ms ごとの音量の包絡がどれだけ一致するか（相関）です。
-- 打楽器（太鼓・スネア・拍木・ティンパニ・スタブ）が多い曲は、録音側に音程のないエネルギーが入るので、楽譜の音の割合が下がります（chase 0.70、oyura 0.72）。和音の音の割合が低いのは、わざと不協和にした曲です（horror のクラスタ 0.38、oyura の笙のクラスタ 0.37）。旋律の経過音とテンションも、和音の外として数えています。
+- **In-tune ratio**: of the energy in spectral peaks between 180 Hz and 2.5 kHz (4096-point FFT at 8 kHz), the share lying within ±30 cents of an equal-tempered semitone.
+- **Score-note ratio**: per bar, the share of the recorded pitch-class energy that falls in the pitch classes the score plays in that bar. Percussion is excluded on the score side.
+- **Chord-tone ratio**: likewise, the share falling in the tones of the chord symbol.
+- **Second-loop match**: over 4 s starting 5 s after the loop point (at 40% of the loop for short songs), how well the 10 ms volume envelopes of the first and second passes agree (correlation).
+- Songs with a lot of percussion (taiko, snare, woodblock, timpani, stab) put unpitched energy into the recording, which lowers the score-note ratio (chase 0.70, oyura 0.72). Low chord-tone ratios belong to the deliberately dissonant songs (horror's clusters 0.38, oyura's shō clusters 0.37). Passing tones and tensions in the melodies are also counted as outside the chord.
 
-その他の確認:
+Other checks:
 
-- 伴奏とのバランス: チャンネルを1つずつ鳴らした録音（作業中の解析）で各声部の音量を比べ、主旋律が埋もれないように直しました。最初は、night のピアノが弦より 4 dB 小さく、chase と staff ではベースが旋律より大きくなっていました。
-- ポート: 曲が鳴っている間、ポート2は「曲番号+1」でした。ポート3の拍数は、録音の長さから計算した値と ±1 で一致しました（badend は曲が終わると数えるのをやめるので、計算値より小さくなります）。
-- ループ: ドライバのループは、DSP のサンプル単位で正確です。horror では、2周目の位置が「ティック数×分周値×4 サンプル」（854,016）と1サンプルの違いで一致しました。包絡は、legend 以外は 0.996 以上一致しました。波形そのものの相関が低い曲があるのは、長い持続音の位相がずれるためです。100 Hz の時計とテンポの時計の重なり方で、キーオンが数サンプル（1 ms 未満）前後します。聞いてわかる違いではありません。継ぎ目の音の段差は、1周目にループの頭へ来たときと同じ程度で、無音にはなりません。
+- Balance against the accompaniment: the level of each part was compared using recordings with one channel at a time (analysis during the work) and fixed so that the main melody is not buried. At first, night's piano was 4 dB quieter than the strings, and in chase and staff the bass was louder than the melody.
+- Ports: while a song played, port 2 was "song number + 1". The beat count on port 3 matched the value computed from the recording length within ±1 (badend stops counting when the song ends, so it is lower than the computed value).
+- Loops: the driver's loop is exact to the DSP sample. In horror, the position of the second pass matched "ticks × divider × 4 samples" (854,016) to within 1 sample. The envelopes matched at 0.996 or better for every song except legend. Some songs have a low correlation of the raw waveform because the phase of long sustained notes drifts: depending on how the 100 Hz clock and the tempo clock line up, key-ons move by a few samples (under 1 ms). This is not an audible difference. The step in the sound at the seam is about the same as when the loop point is first reached on the first pass, and it never goes silent.
 
-### 効果音（`sfx`）
+### Sound effects (`sfx`)
 
-すべて音割れはありません。立ち上がりはコマンドから約1 ms です。ピークは thunder 23,554、thud 23,258 が最大です。鐘は -40 dB まで5.3秒で、うなり・基音・短3度・5度・ナミナルとその2本組が、設計どおりの比（0.5 / 1.0 / 1.007 / 1.19 / 1.51 / 2.0）で出ていました。打音の時刻は、heart が 0 / 0.74 / 1.49 / 2.24 秒、knock が 0 / 0.15 / 0.31 秒、tick が0.5秒おきで、楽譜どおりでした。
+None of them clip. Onset is about 1 ms after the command. The largest peaks are thunder 23,554 and thud 23,258. The bell takes 5.3 s to reach -40 dB, and the hum, fundamental, minor third, fifth, nominal and their pairs came out at the designed ratios (0.5 / 1.0 / 1.007 / 1.19 / 1.51 / 2.0). The stroke times were as written: heart 0 / 0.74 / 1.49 / 2.24 s, knock 0 / 0.15 / 0.31 s, tick every 0.5 s.
 
-もっとも大きい曲（chase・deduce・unease）に、大きい効果音（thunder・thud・shock・door_bang・heart）をいろいろな時刻で重ねても、音割れしませんでした（最大ピーク 26,672 = -1.8 dBFS）。
+Layering loud sound effects (thunder, thud, shock, door_bang, heart) at various times over the loudest songs (chase, deduce, unease) did not clip (maximum peak 26,672 = -1.8 dBFS).
 
-### やりとりの確認（`protocol`、すべて合格）
+### Interface checks (`protocol`, all passed)
 
-| 項目 | 結果 |
+| Item | Result |
 |---|---|
-| `$60` フェード | 0.85秒でポート2が0になり、その後は無音 |
-| `$61` 停止 | ポート2が0。0.5秒後の RMS は 7 |
-| `$30` 消音 | 曲・雨・効果音（消音中に送ったもの）とも、ピークがちょうど0。`$31` で戻る |
-| `$62` ダッキング | -8.1 dB |
-| 毎フレーム曲を切り替え（18回） | 最後の曲が正しく鳴り、ポート2も正しい |
-| 重ねがけ | 曲＋嵐＋雷＋鐘＋ショックを重ねても音割れなし、曲も止まらない |
-| `$64` 効果音停止 | 0.8秒でエコーの余韻まで消える |
-| `$7F` 環境音停止 | 1.5秒後に無音 |
-| badend | 終わるとポート2が0になる |
+| `$60` fade | Port 2 goes to 0 in 0.85 s, silent afterwards |
+| `$61` stop | Port 2 is 0. RMS 0.5 s later is 7 |
+| `$30` mute | Song, rain and sound effects (sent while muted) all peak at exactly 0. `$31` restores |
+| `$62` ducking | -8.1 dB |
+| Switching songs every frame (18 times) | The last song plays correctly and port 2 is correct |
+| Layering | Song + storm + thunder + bell + shock together: no clipping, and the song keeps playing |
+| `$64` stop sound effects | Gone, including the echo tail, in 0.8 s |
+| `$7F` stop ambience | Silent after 1.5 s |
+| badend | Port 2 goes to 0 when it ends |
 
-## 未確認と制限
+## Not checked, and limitations
 
-- **人の耳では聴いていません。** 確かめたのは波形と数値（音程・和音・音量・音割れ・ループ・やりとり）と、スペクトログラムを目で見たことだけです。曲として良いか、雨が雨らしく聞こえるか、鐘が不気味かは、実際に聴いて判断してください。数値で確かめられるのは「設計どおりに鳴っている」ところまでです。
-- 実機では確かめていません。エミュレータは Snes9x 1.63 だけです。
-- 雨はスロット B と声を共有しています。2スロットを使う効果音（雷など）が鳴っている間、雨の粒は止まります（雷の音にほぼ隠れます）。雨と曲とで声を分けると、曲を5声にする必要があるため、こうしました。
-- 曲のループは24〜72秒です（staff はループの前に82秒）。長く読む場面では、何度も繰り返されます。空きは 8.3 KB あり、曲を伸ばすのに使えます。
-- 効果音の scream は作っていません。
-- 「楽譜の音の割合」「和音の音の割合」は、打楽器と不協和音を含む曲では低く出ます。評価の目安であって、合否の基準ではありません。
+- **Not listened to by human ears.** What was checked is only the waveforms and figures (pitch, harmony, volume, clipping, loops, interface) and a visual look at spectrograms. Whether the songs are good as music, whether the rain sounds like rain, and whether the bell is eerie must be judged by actually listening. Figures can only confirm that things "sound as designed".
+- Not checked on real hardware. The only emulator used is Snes9x 1.63.
+- The rain shares a voice with slot B. While a two-slot sound effect (thunder etc.) plays, the raindrops stop (mostly masked by the thunder). Giving the rain and the songs separate voices would have meant cutting the songs to 5 voices, so this was the choice.
+- Song loops are 24 to 72 s (staff has 82 s before its loop). In long reading scenes they repeat many times. 8.3 KB is free and can be used to lengthen the songs.
+- The scream sound effect is not made.
+- The "score-note ratio" and "chord-tone ratio" come out low for songs with percussion and dissonance. They are rough guides, not pass/fail criteria.

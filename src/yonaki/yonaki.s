@@ -348,7 +348,7 @@ loads_done: .res 2
 saves_done: .res 2
 sram_resets: .res 2            ; bit 0 global, bit 1 read marks were reset at boot
 save_buf:  .res 256
-; the names the player set (NameEntry): 主人公の名字 at +0, ヒロインの名前 at +10, each a length word and NAME_MAX glyphs
+; the names the player set (NameEntry): the hero's family name at +0, the heroine's given name at +10, each a length word and NAME_MAX glyphs
 names:     .res 20
 name_left: .res 2              ; glyphs of a name still to come from ReadCode
 name_pos:  .res 2              ; offset in names of the next one

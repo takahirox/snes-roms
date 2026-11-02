@@ -1,254 +1,254 @@
-# 潮鳴りの密室 — 設計 (SFC コマンド選択式アドベンチャー)
+# 潮鳴りの密室 (Shionari no Misshitsu) — Design (SFC command-selection adventure)
 
-ターゲット: `dist/shionari.sfc` (LoROM, コピアヘッダなし, 512 KiB = 16 バンク, 8 KiB バッテリーSRAM)。
-ソース: `src/adv/` (65816, ca65/ld65), `tools/adv/` (ビルド), `data/adv/` (シナリオ), `tests/adv/`, `build/adv/`。
+Target: `dist/shionari.sfc` (LoROM, no copier header, 512 KiB = 16 banks, 8 KiB battery-backed SRAM).
+Sources: `src/adv/` (65816, ca65/ld65), `tools/adv/` (build), `data/adv/` (scenario), `tests/adv/`, `build/adv/`.
 
-状態: これは設計文書。実装と検証の状況は `docs/adv/STATUS.md` にある。実機 (SFC 本体) では動作を確認していない。
+Status: this is a design document. The state of implementation and verification is in `docs/adv/STATUS.md`. Behavior has not been verified on real hardware (an SFC console).
 
 ---
 
-## 1. 物語
+## 1. Story
 
-### 1.1 舞台
-- 昭和62年 (1987年) 11月14日 (土) の夜から15日 (日) の夜明けまで。架空の漁港「汐見港 (しおみこう)」。
-- 前日から時化 (しけ)。14日の午後3時に漁協が出港禁止を出し、漁船はすべて陸揚げ、または鍵を漁協に預けて係留した。雨は21時ちょうどに止んだ。風と波は残った。
-- **港内電話**: 港の施設 (信号所・各倉庫・第二桟橋詰所) を結ぶ構内専用の有線電話。交換盤は信号所にあり、そこを通らないと内線どうしはつながらない。外の電話 (電電公社 = NTT の一般回線) とは別系統。第二桟橋の詰所には港内電話しかない。14日 21:00〜23:00 は交換盤の保守で全部止められていた (信号所に貼り紙、13日に関係先へ回覧板)。
-- **第三倉庫**: 浜崎海運の古い倉庫。二階が会長の事務所。陸側の「表戸」は内側のつまみで施錠する。海側には船から荷を吊り上げる「荷揚げ口」があり、内側のかんぬきで閉める。荷揚げ口の下の鉄梯子は下の部分が朽ちて切れていて、船から手が届くのは満潮の前後およそ1時間だけ (14日の満潮は 21:18)。
-- 現実との整合: 停電や、NTT の電話が止まるといった現実にそぐわない仕掛けは使わない。止まった時計の表示から死亡時刻を決めることはしない (時計は「細工された」ことを示すだけ)。検視の推定 (21〜23時) は幅のある値として扱う。
+### 1.1 Setting
+- From the night of Saturday, November 14, Showa 62 (1987), to the dawn of Sunday the 15th. The fictional fishing port 汐見港 (Shiomi Harbor, しおみこう).
+- Stormy weather (時化, shike) since the previous day. At 3 p.m. on the 14th the fishermen's cooperative banned departures; every fishing boat was either hauled ashore or moored with its key left with the cooperative. The rain stopped at exactly 21:00. Wind and waves remained.
+- **Harbor phone (港内電話)**: a private wired phone system linking the harbor facilities (signal station, each warehouse, the Pier No. 2 watch hut). The switchboard is in the signal station, and extensions cannot reach each other without going through it. It is separate from outside phones (Denden Kosha = NTT public lines). The Pier No. 2 watch hut has only the harbor phone. From 21:00 to 23:00 on the 14th the whole system was shut down for switchboard maintenance (a notice posted at the signal station, and a circular sent around to the parties concerned on the 13th).
+- **Warehouse No. 3 (第三倉庫)**: an old warehouse of 浜崎海運 (Hamasaki Kaiun, Hamasaki Shipping). Upstairs is the chairman's office. The landward "front door" (表戸) locks with a knob on the inside. On the sea side is a "loading hatch" (荷揚げ口) for hoisting cargo up from boats, closed with a bolt (かんぬき) on the inside. The lower part of the iron ladder below the hatch has rotted away, so it can be reached from a boat only for about an hour either side of high tide (high tide on the 14th: 21:18).
+- Consistency with reality: no unrealistic devices such as a power outage or NTT phones going dead. The time of death is never determined from the reading of the stopped clock (the clock only shows that it was "tampered with"). The autopsy estimate (21:00–23:00) is treated as a range.
 
-### 1.2 人物 (容姿は root の肖像画に合わせた)
-| ID | 名前 | 年齢・立場 | 容姿 | 居場所 | 肖像 |
+### 1.2 People (appearance matched to the host's portraits)
+| ID | Name | Age / position | Appearance | Location | Portrait |
 |---|---|---|---|---|---|
-| — | わたし | 県警本部 捜査一課の刑事 (名前は出ない、プレイヤー) | 出ない | — | なし |
-| hatano | 波多野 夏子 (はたの なつこ) | 35, 汐見署 刑事課。相棒 | 短い暗茶髪、ベージュのブレザー | 現場 | detective |
-| shuichi | 浜崎 修一 (はまさき しゅういち) | 47, 浜崎海運 社長。被害者の長男。第一発見者の一人 | 黒髪、チャコールのスーツ、えんじのネクタイ | 汐見署 | director |
-| yukiko | 潮田 ゆき子 (しおた ゆきこ) | 52, 喫茶「浮標 (ブイ)」のママ | まとめ髪、赤茶のカーディガンとエプロン | 喫茶店 | owner |
-| ookouchi | 大河内 正 (おおこうち ただし) | 63, 汐見灯台の灯台技師。時化の夜は港を見張って当直日誌をつける | 白髪まじり、口ひげ、紺の作業ジャンパー | 灯台 | keeper |
-| koga | 古賀 勇 (こが いさむ) | 58, 港の信号所の通信係。港内電話の交換盤も受け持つ | (root に依頼) 短い白髪の角刈り、日焼け、灰色の作業服 | 信号所 | 未 |
-| tatsumi | 辰巳 透 (たつみ とおる) | 38, 浜崎海運の経理係。**犯人** | (root に依頼) 痩せ型、七三の黒髪、銀縁眼鏡、紺の防寒ジャンパーの下に白シャツ | 第二桟橋 詰所 | 未 |
-| (被害者) | 浜崎 剛造 (はまさき ごうぞう) | 71, 浜崎海運 会長・創業者 | 登場しない | — | — |
+| — | わたし ("I") | Detective, First Investigation Division, prefectural police HQ (name never shown; the player) | Not shown | — | none |
+| hatano | 波多野 夏子 (はたの なつこ, Hatano Natsuko) | 35, criminal affairs section of 汐見署 (Shiomi police station). Partner | Short dark-brown hair, beige blazer | Crime scene | detective |
+| shuichi | 浜崎 修一 (はまさき しゅういち, Hamasaki Shuichi) | 47, president of Hamasaki Shipping. The victim's eldest son. One of those who found the body | Black hair, charcoal suit, maroon tie | Police station | director |
+| yukiko | 潮田 ゆき子 (しおた ゆきこ, Shiota Yukiko) | 52, proprietress ("mama") of the café 「浮標 (ブイ)」 ("Buoy") | Hair tied up, russet cardigan and apron | Café | owner |
+| ookouchi | 大河内 正 (おおこうち ただし, Ookouchi Tadashi) | 63, lighthouse engineer at 汐見灯台 (Shiomi Lighthouse). On stormy nights he watches the harbor and keeps a watch log | Graying hair, mustache, navy work jacket | Lighthouse | keeper |
+| koga | 古賀 勇 (こが いさむ, Koga Isamu) | 58, communications officer at the harbor signal station. Also in charge of the harbor phone switchboard | (requested from the host) Short white crew cut, tanned, gray work clothes | Signal station | not yet |
+| tatsumi | 辰巳 透 (たつみ とおる, Tatsumi Tooru) | 38, accountant at Hamasaki Shipping. **The culprit** | (requested from the host) Thin, black hair parted 7:3, silver-rimmed glasses, white shirt under a navy padded jacket | Pier No. 2 watch hut | not yet |
+| (victim) | 浜崎 剛造 (はまさき ごうぞう, Hamasaki Gouzou) | 71, chairman and founder of Hamasaki Shipping | Does not appear | — | — |
 
-### 1.3 真相
-- 辰巳は競艇の借金を埋めるために、会社が預かる「共済積立金」(船員の積立金) を約300万円使い込んでいた。会長は裏帳簿 (黒い表紙の積立金台帳) でそれに気づいた。
-- 14日の昼、喫茶「浮標」で会長は台帳を叩き、「今夜九時半、裏から来い。月曜には署へ行く」と辰巳に言った (ゆき子が一部を聞いている)。会長は辰巳を突き出すつもりではなく、**一緒に署へ行って自首させ、自分も頭を下げる**つもりだった (机のメモ「月曜 署へ 辰巳と」。終盤で意味が反転する)。「裏から」は人目を避けるため。
-- 辰巳は 12〜13日に県庁へ出張しており、13日に回ってきた港内電話保守の回覧を見ていない (回覧板の辰巳の欄だけ判がない)。
-- 当夜の流れ (確定した時刻表):
+### 1.3 The truth
+- To cover his boat-racing debts, Tatsumi had embezzled about 3 million yen of the "mutual aid reserve" (共済積立金, the sailors' savings) held by the company. The chairman noticed it through a secret ledger (the reserve ledger with a black cover).
+- At noon on the 14th, at the café 「浮標」, the chairman slapped the ledger and told Tatsumi, 「今夜九時半、裏から来い。月曜には署へ行く」 ("Tonight at half past nine, come round the back. On Monday I'm going to the police") (Yukiko overheard part of it). The chairman did not mean to turn Tatsumi in, but **to go to the police together so that Tatsumi could turn himself in, and to bow his own head as well** (the memo on the desk, 「月曜 署へ 辰巳と」 ("Monday, police, with Tatsumi"), whose meaning flips near the end). "Round the back" was to avoid being seen.
+- Tatsumi was on a business trip to the prefectural office on the 12th–13th and did not see the circular about the harbor phone maintenance that went around on the 13th (only Tatsumi's box on the circular has no seal).
+- The course of the night (established timeline):
 
-| 時刻 | 出来事 | 誰が知っているか / 手がかり |
+| Time | Event | Who knows / clue |
 |---|---|---|
-| 20:30 | 辰巳が詰所の作業艇の鍵を「見回り」で借りる | 鍵帳 |
-| 21:00 | 雨が止む。古賀が交換盤を止め、信号所の窓際 (第三倉庫の表戸が外灯の下に見える) で作業を始める | 貼り紙・回覧・古賀・大河内 |
-| 21:18 | 満潮 | 潮見表 |
-| 21:25 | 会長が外の電話で自宅の修一に「遅くなる」と電話。向こうでコンコンと叩く音がし、「来たか」と言って切った | 修一 |
-| 21:30 | 灯台から、事務所の窓に人影が二つ | 当直日誌 |
-| 21:35頃 | 口論。辰巳が突き飛ばし、会長は金庫の角で後頭部を打って死亡 (時刻は自白による。証拠から言えるのは「21:25 来客、21:30 二人、21:40 消灯」まで) | 自白 (+ 検視の傷) |
-| 21:35〜21:40 | 辰巳は台帳を持ち出し、錆で汚れた軍手のまま柱時計の針を 10:15 に回して振り子を止め、21:40 に灯りを消して、荷揚げ口から梯子で作業艇へ。かんぬきは外からは掛けられない | 時計の赤い粉・外れたかんぬき・梯子の錆あと・当直日誌 (21:40 消灯) |
-| 21:50 | 無灯火の小舟が第三倉庫の方から第二桟橋へ | 当直日誌 |
-| 〜22:00 | 作業艇を舫い、台帳を物入れに隠す。軍手を片方甲板に落とす | 作業艇・軍手・台帳 |
-| 22:12 | 喫茶「浮標」に来て「ママ、今何時?」と時刻を確かめる。上着が潮で濡れている (雨は 21:00 に止んでいる) | ゆき子・大河内 (雨) |
-| 23:00 | 交換盤の保守が終わる。辰巳が鍵帳に作業艇の鍵の返却を書く | 鍵帳 |
-| 23:30 | 父が帰らないので修一が古賀を呼び、表戸のガラスを割って入り、発見 | 修一・古賀・波多野 |
-| 0:40 | わたしが到着。署長は「内側から鍵、転倒による事故」と見ている | 導入 |
+| 20:30 | Tatsumi borrows the work boat's key from the watch hut "for patrol" | Key log |
+| 21:00 | The rain stops. Koga shuts down the switchboard and starts working by the signal station window (from which Warehouse No. 3's front door is visible under the outdoor light) | Notice, circular, Koga, Ookouchi |
+| 21:18 | High tide | Tide table |
+| 21:25 | The chairman calls Shuichi at home on the outside phone to say he'll be late. On his end there is a knock-knock, he says 「来たか」 ("You came"), and hangs up | Shuichi |
+| 21:30 | From the lighthouse, two figures in the office window | Watch log |
+| about 21:35 | An argument. Tatsumi shoves the chairman, who hits the back of his head on the corner of the safe and dies (the time comes from the confession; the evidence supports only "21:25 visitor, 21:30 two people, 21:40 lights out") | Confession (+ the autopsy injury) |
+| 21:35–21:40 | Tatsumi takes the ledger, and still wearing rust-stained work gloves, turns the clock hands to 10:15 and stops the pendulum, puts out the light at 21:40, and climbs down the ladder from the loading hatch to the work boat. The bolt cannot be set from outside | Red powder on the clock, unbarred bolt, rust marks on the ladder, watch log (21:40 lights out) |
+| 21:50 | An unlit small boat goes from the direction of Warehouse No. 3 to Pier No. 2 | Watch log |
+| to 22:00 | Moors the work boat, hides the ledger in the locker. Drops one glove on the deck | Work boat, glove, ledger |
+| 22:12 | Comes to the café 「浮標」 and checks the time: 「ママ、今何時?」 ("Mama, what time is it?"). His jacket is wet with seawater (the rain stopped at 21:00) | Yukiko, Ookouchi (rain) |
+| 23:00 | Switchboard maintenance ends. Tatsumi writes the return of the work boat key in the key log | Key log |
+| 23:30 | His father not coming home, Shuichi calls Koga; they break the glass of the front door, go in, and find him | Shuichi, Koga, Hatano |
+| 0:40 | わたし arrives. The station chief sees it as "locked from the inside, an accidental fall" | Introduction |
 
-- 辰巳の偽アリバイ: 「十時ごろ、詰所の港内電話に会長から『帳簿の件は明日話そう』と電話があった」と証言する。これと 10:15 で止まった時計を合わせれば、会長は 22時過ぎまで生きていて、自分は 22:12 から喫茶店にいた、という筋書きになる。
-- **密室の実体**: (a) 表戸は会長が自分で内側から施錠 (夜はそうするくせ)。事務所の鍵束は机の上。合鍵は信号所の鍵箱にあり、持ち出しの記録はない。表戸は 21〜23時、古賀が外灯の下を見ていた。(b) 海側の荷揚げ口は、満潮の前後しか船から届かない梯子の上にある。発見時 (23:30) は満潮から2時間あまり過ぎて梯子に届かず、皆が「出入りできない」と思い込んだ。実際には辰巳は満潮直後に作業艇で出入りし、外からは掛けられないかんぬきが外れたまま残った。
-- 根拠の独立性: 死亡時刻は検視の幅 (21〜23時) のまま扱い、推理では断定しない。推理で示すのは「21:25 に海側から来客があり (修一への電話の叩く音と『来たか』)、21:30 に事務所に二人、21:40 に消灯し、その後ずっと暗かった (灯台の日誌。灯台の窓からは事務所の窓と第二桟橋が見通せると大河内が話す)」こと。したがって「22時過ぎまで会長が生きていた」と言えるものは辰巳の証言と止まった時計だけで、どちらも崩れる。時計と関係のない根拠である。辰巳の電話の証言が嘘だという根拠は、交換盤の停止 (貼り紙・古賀の作業)、詰所に港内電話しかないこと、辰巳が回覧を見ていないこと。海に出たことの根拠は鍵帳・日誌・軍手。動機は台帳と昼の約束。自白は結末の説明のためで、推理はそれに頼らない。
+- Tatsumi's false alibi: he testifies, 「十時ごろ、詰所の港内電話に会長から『帳簿の件は明日話そう』と電話があった」 ("Around ten, the chairman called the hut's harbor phone and said, 'Let's talk about the ledger tomorrow'"). Combined with the clock stopped at 10:15, this makes a story in which the chairman was alive after 22:00 and Tatsumi himself was at the café from 22:12.
+- **What the locked room really is**: (a) The chairman locked the front door himself from the inside (his habit at night). The office key ring is on the desk. The duplicate key is in the key box at the signal station, with no record of it being taken out. From 21:00 to 23:00, Koga was watching the front door under the outdoor light. (b) The loading hatch on the sea side is at the top of a ladder that can be reached from a boat only around high tide. At the time of discovery (23:30), more than two hours past high tide, the ladder was out of reach, and everyone assumed "no one could get in or out". In fact Tatsumi came and went by work boat just after high tide, and the bolt, which cannot be set from outside, was left unbarred.
+- Independence of the evidence: the time of death is kept as the autopsy range (21:00–23:00) and not asserted in the deduction. What the deduction shows is that "at 21:25 a visitor came from the sea side (the knocking and 『来たか』 in the call to Shuichi), at 21:30 there were two people in the office, at 21:40 the lights went out and it stayed dark from then on (the lighthouse log; Ookouchi says the office window and Pier No. 2 are in plain view from the lighthouse window)". Therefore the only things that say "the chairman was alive after 22:00" are Tatsumi's testimony and the stopped clock, and both collapse. This evidence does not depend on the clock. The evidence that Tatsumi's phone testimony is a lie is the switchboard shutdown (notice, Koga's work), the fact that the hut has only the harbor phone, and the fact that Tatsumi did not see the circular. The evidence that he went out to sea is the key log, the watch log and the glove. The motive is the ledger and the noon appointment. The confession is for explaining the ending; the deduction does not rely on it.
 
-### 1.4 疑わしく見える人 (ミスリード)
-- 修一: 第三倉庫をリゾート開発の会社に売る話で父ともめていた (昭和62年のリゾート法の頃)。ただし 21:25 には自宅で父の電話を受けており、表戸は古賀が見張っていて、作業艇の鍵もない。
-- 古賀: 合鍵を管理していて一人で作業していた。しかし表戸の外灯の下には誰も来ていない、という証言は灯台の日誌の内容と食い違わず、交換盤を止めた跡も残っている。
-- 「事故」説: 金庫の角の傷は転倒でも説明がつく。しかし空になった金庫の棚、細工された時計、外れたかんぬきの説明がつかない。
+### 1.4 People who look suspicious (misdirection)
+- Shuichi: was quarrelling with his father over selling Warehouse No. 3 to a resort development company (around the time of the 1987 Resort Law, Showa 62). But at 21:25 he was at home taking his father's call, Koga was watching the front door, and he has no work boat key.
+- Koga: manages the duplicate key and was working alone. But his testimony that no one came to the front door under the outdoor light does not contradict the lighthouse log, and traces of his shutting down the switchboard remain.
+- The "accident" theory: the injury from the safe's corner could be explained by a fall. But it cannot explain the emptied shelf of the safe, the tampered clock, or the unbarred bolt.
 
 ---
 
-## 2. 場面 (6) と調べられるもの
+## 2. Scenes (6) and what can be examined
 
-`*` は条件付きで現れる項目。`→` は手に入る手がかり。
+`*` marks items that appear conditionally. `→` is the clue obtained. In-game labels are given in Japanese.
 
-| ID | 場面 | 背景 | 人物 |
+| ID | Scene | Background | Person |
 |---|---|---|---|
-| warehouse | 第三倉庫 二階事務所 (現場) | warehouse | 波多野 |
-| signal | 汐見港 信号所 | signal | 古賀 |
-| pier | 第二桟橋 詰所 | harbor (夜版を依頼中) | 辰巳 |
-| cafe | 喫茶「浮標」 | cafe | ゆき子 |
-| lighthouse | 汐見灯台 (最初は行けない) | lighthouse | 大河内 |
-| station | 汐見署 | station | 修一 |
+| warehouse | 第三倉庫 二階事務所 (Warehouse No. 3, upstairs office) (crime scene) | warehouse | Hatano |
+| signal | 汐見港 信号所 (Shiomi Harbor signal station) | signal | Koga |
+| pier | 第二桟橋 詰所 (Pier No. 2 watch hut) | harbor (night version requested) | Tatsumi |
+| cafe | 喫茶「浮標」 (café "Buoy") | cafe | Yukiko |
+| lighthouse | 汐見灯台 (Shiomi Lighthouse) (not reachable at first) | lighthouse | Ookouchi |
+| station | 汐見署 (Shiomi police station) | station | Shuichi |
 
-- 現場 しらべる: 柱時計 → K_CLOCK / *振り子の窓 (柱時計の後) → K_RUST / 金庫 → K_SAFE / 鍵束 → K_KEYS / 赤い帳面 (ふつうの出納帳、数字は合っている) / 電話 (外の黒電話と港内電話の灰色の受話器が並ぶ) / メモ → K_MEMO / 表戸 / 荷揚げ口 → K_BAR / *鉄梯子 (荷揚げ口の後) → K_LADDER
-- 現場 はなす (波多野): 検視 → T_AUTOPSY / 発見のようす / 署長の見立て / 鍵のこと / *相談 (今どうすべきかを、手帳のヒントと同じ内容で話す)
-- 信号所 しらべる: 掲示板 → K_NOTICE / *潮見表 (掲示板の後) → K_TIDE / *回覧板 (K_NOTICE の後) → K_CIRC / 交換盤 / 鍵箱 → K_SPARE / 窓
-- 信号所 はなす (古賀): 事件のこと / ゆうべのこと → T_KOGA / 港内電話 → T_LINE / 会長のこと / 灯台 → 灯台へ行けるようになる / *梯子 (K_BAR または K_LADDER の後) → T_LADDER / *舟 (T_LADDER または K_LOG の後) → T_BOATS / *物入れの鍵 (作業艇を調べた後) → 予備鍵 (フラグ)
-- 第二桟橋 しらべる: 詰所の電話 → K_PHONE / 鍵帳 → K_BOATLOG / 作業艇 → K_GLOVE (物入れには鍵) / *物入れ (予備鍵の後) → K_LEDGER / 海
-- 第二桟橋 はなす (辰巳): 事件のこと / ゆうべのこと → T_TATSUMI / 会長のこと / *出張 (回覧板の後) → T_TRIP / *帳簿 (K_SAFE の後)
-- 喫茶 しらべる: 壁の時計 (毎朝ラジオの時報で合わせる) / 窓 / カウンター
-- 喫茶 はなす (ゆき子): ゆうべのこと → T_YUKIKO / *辰巳のようす (T_YUKIKO の後) → T_WET / 会長のこと / *辰巳のこと → T_BOATRACE / 修一のこと (ミスリード) / 灯台 → 灯台へ行けるようになる
-- 灯台 しらべる: 当直日誌 → K_LOG / 双眼鏡 / 灯
-- 灯台 はなす (大河内): ゆうべのこと / 雨 → T_RAIN / *人影 (K_LOG の後) / *小舟 (K_LOG の後)
-- 汐見署 しらべる: 遺品の上着 / 署長の書類 (「転倒による事故の見込み」) / 掲示 (指名手配など、雰囲気づけ)
-- 汐見署 はなす (修一): ゆうべのこと → T_SHUICHI / 発見のこと / 父の戸じまり → T_HABIT / *時計のこと (K_CLOCK の後) → T_WIND / リゾートの話 (ミスリード)
+- Crime scene, しらべる (examine): 柱時計 (pendulum clock) → K_CLOCK / *振り子の窓 (pendulum window) (after the clock) → K_RUST / 金庫 (safe) → K_SAFE / 鍵束 (key ring) → K_KEYS / 赤い帳面 (red account book) (an ordinary cash book; the figures add up) / 電話 (phone) (the black outside phone and the gray harbor-phone receiver side by side) / メモ (memo) → K_MEMO / 表戸 (front door) / 荷揚げ口 (loading hatch) → K_BAR / *鉄梯子 (iron ladder) (after the loading hatch) → K_LADDER
+- Crime scene, はなす (talk) (Hatano): 検視 (autopsy) → T_AUTOPSY / 発見のようす (how he was found) / 署長の見立て (the station chief's view) / 鍵のこと (about the keys) / *相談 (consult) (tells what to do now, with the same content as the notebook hint)
+- Signal station, しらべる: 掲示板 (notice board) → K_NOTICE / *潮見表 (tide table) (after the notice board) → K_TIDE / *回覧板 (circular) (after K_NOTICE) → K_CIRC / 交換盤 (switchboard) / 鍵箱 (key box) → K_SPARE / 窓 (window)
+- Signal station, はなす (Koga): 事件のこと (about the case) / ゆうべのこと (last night) → T_KOGA / 港内電話 (harbor phone) → T_LINE / 会長のこと (about the chairman) / 灯台 (lighthouse) → makes the lighthouse reachable / *梯子 (ladder) (after K_BAR or K_LADDER) → T_LADDER / *舟 (boats) (after T_LADDER or K_LOG) → T_BOATS / *物入れの鍵 (locker key) (after examining the work boat) → spare key (flag)
+- Pier No. 2, しらべる: 詰所の電話 (hut phone) → K_PHONE / 鍵帳 (key log) → K_BOATLOG / 作業艇 (work boat) → K_GLOVE (the locker is locked) / *物入れ (locker) (after the spare key) → K_LEDGER / 海 (sea)
+- Pier No. 2, はなす (Tatsumi): 事件のこと / ゆうべのこと → T_TATSUMI / 会長のこと / *出張 (business trip) (after the circular) → T_TRIP / *帳簿 (ledger) (after K_SAFE)
+- Café, しらべる: 壁の時計 (wall clock) (set every morning by the radio time signal) / 窓 / カウンター (counter)
+- Café, はなす (Yukiko): ゆうべのこと → T_YUKIKO / *辰巳のようす (how Tatsumi seemed) (after T_YUKIKO) → T_WET / 会長のこと / *辰巳のこと (about Tatsumi) → T_BOATRACE / 修一のこと (about Shuichi) (misdirection) / 灯台 → makes the lighthouse reachable
+- Lighthouse, しらべる: 当直日誌 (watch log) → K_LOG / 双眼鏡 (binoculars) / 灯 (the light)
+- Lighthouse, はなす (Ookouchi): ゆうべのこと / 雨 (rain) → T_RAIN / *人影 (figures) (after K_LOG) / *小舟 (small boat) (after K_LOG)
+- Police station, しらべる: 遺品の上着 (the deceased's jacket) / 署長の書類 (the station chief's papers) (「転倒による事故の見込み」, "probably an accidental fall") / 掲示 (notices) (wanted posters and the like, for atmosphere)
+- Police station, はなす (Shuichi): ゆうべのこと → T_SHUICHI / 発見のこと (about the discovery) / 父の戸じまり (father's locking-up habit) → T_HABIT / *時計のこと (about the clock) (after K_CLOCK) → T_WIND / リゾートの話 (the resort deal) (misdirection)
 
-### 2.1 みせる で起きる大事な反応
-| 相手 | 見せるもの | 反応 |
+### 2.1 Important reactions to みせる (show)
+| Person | Shown | Reaction |
 |---|---|---|
-| 辰巳 | K_NOTICE / T_LINE / K_CIRC | 「外の電話だったかも」と言い直す → T_TATSUMI2 |
-| 辰巳 | K_PHONE (言い直しの後) | 「……記憶ちがいでした」 → F_TATSUMI_BROKE |
-| 辰巳 | K_LOG | 「見回りで作業艇を出していた。灯りはつけ忘れた」 → T_TATSUMI3 |
-| 辰巳 | K_LEDGER | 動揺して黙る |
-| 古賀 | T_TATSUMI | 「十時に港内電話? ありえん、盤を止めとった」 |
-| 古賀 | K_LADDER | 梯子の話 → T_LADDER |
-| 古賀 | K_GLOVE | 作業艇に積んである軍手だ |
-| ゆき子 | K_LEDGER | 「この帳面よ! 今夜九時半、裏から来い、月曜には署へ…」 → T_APPOINT |
-| ゆき子 | T_TATSUMI | 「電話? 店ではそんな話してなかったわ」 |
-| 大河内 | K_CLOCK | 「十時十五分? 二階は九時四十分から真っ暗だった」 |
-| 大河内 | T_TATSUMI | 「真っ暗な部屋で電話をかけたのかね」 |
-| 修一 | K_CLOCK | T_WIND (毎月1日にねじを巻く。止まるはずがない) |
-| 修一 | K_SAFE / K_LEDGER | 「父の積立金台帳です」 |
-| 波多野 | 何でも | その手がかりについての短い意見 (詰まり防止) |
-上の表にない組み合わせは、相手ごとの決まった返事。
+| Tatsumi | K_NOTICE / T_LINE / K_CIRC | Revises: 「外の電話だったかも」 ("Maybe it was the outside phone") → T_TATSUMI2 |
+| Tatsumi | K_PHONE (after the revision) | 「……記憶ちがいでした」 ("……I misremembered") → F_TATSUMI_BROKE |
+| Tatsumi | K_LOG | 「見回りで作業艇を出していた。灯りはつけ忘れた」 ("I had the work boat out on patrol. I forgot to turn on the light") → T_TATSUMI3 |
+| Tatsumi | K_LEDGER | Shaken, falls silent |
+| Koga | T_TATSUMI | 「十時に港内電話? ありえん、盤を止めとった」 ("The harbor phone at ten? Impossible, I had the board shut down") |
+| Koga | K_LADDER | Talk about the ladder → T_LADDER |
+| Koga | K_GLOVE | It's a glove kept on the work boat |
+| Yukiko | K_LEDGER | 「この帳面よ! 今夜九時半、裏から来い、月曜には署へ…」 ("That's the book! Tonight at half past nine, come round the back, on Monday to the police…") → T_APPOINT |
+| Yukiko | T_TATSUMI | 「電話? 店ではそんな話してなかったわ」 ("A phone call? He said nothing like that in the café") |
+| Ookouchi | K_CLOCK | 「十時十五分? 二階は九時四十分から真っ暗だった」 ("Quarter past ten? The upstairs was pitch dark from 9:40") |
+| Ookouchi | T_TATSUMI | 「真っ暗な部屋で電話をかけたのかね」 ("He made a phone call in a pitch-dark room, did he?") |
+| Shuichi | K_CLOCK | T_WIND (he winds it on the 1st of every month; it shouldn't stop) |
+| Shuichi | K_SAFE / K_LEDGER | 「父の積立金台帳です」 ("That's my father's reserve ledger") |
+| Hatano | anything | A short opinion on that clue (to prevent getting stuck) |
+Combinations not in the table above get each person's fixed default reply.
 
-### 2.2 手がかりの依存図
+### 2.2 Clue dependency graph
 ```
-導入 ─┬─ 現場:柱時計 K_CLOCK ── 振り子の窓 K_RUST ─────────────────┐(時計の細工)
-      │        └─(見せる 修一)─ T_WIND ─────────────────────────────┘
-      ├─ 現場:荷揚げ口 K_BAR ── 鉄梯子 K_LADDER ─(古賀)─ T_LADDER ─┐(出入り口)
-      │                                信号所:掲示板 ─ 潮見表 K_TIDE ┘
-      ├─ 桟橋:辰巳 ゆうべ T_TATSUMI ─┐
-      │  信号所:掲示板 K_NOTICE ──────┼─(見せる 辰巳)─ T_TATSUMI2 ─ 詰所の電話 K_PHONE ─(見せる)─ 崩れる
-      │  信号所:古賀 港内電話 T_LINE ─┘   回覧板 K_CIRC ─ 辰巳:出張 T_TRIP
-      ├─ 喫茶:ゆき子 / 信号所:古賀 ─ 灯台が開く ─ 当直日誌 K_LOG ─(見せる 辰巳)─ T_TATSUMI3
-      │                                         └─ 古賀:舟 T_BOATS
-      ├─ 署:修一 ゆうべ T_SHUICHI (21:25 の電話)
-      └─ 桟橋:作業艇 K_GLOVE ─ 古賀:物入れの鍵 ─ 物入れ K_LEDGER ─(見せる ゆき子)─ T_APPOINT
-         桟橋:鍵帳 K_BOATLOG
+intro ─┬─ scene: clock K_CLOCK ── pendulum window K_RUST ──────────────────────┐ (clock tampering)
+       │        └─(show Shuichi)─ T_WIND ──────────────────────────────────────┘
+       ├─ scene: loading hatch K_BAR ── iron ladder K_LADDER ─(Koga)─ T_LADDER ─┐ (way in and out)
+       │                  signal station: notice board ─ tide table K_TIDE ─────┘
+       ├─ pier: Tatsumi, last night T_TATSUMI ───────┐
+       │  signal station: notice board K_NOTICE ─────┼─(show Tatsumi)─ T_TATSUMI2 ─ hut phone K_PHONE ─(show)─ breaks down
+       │  signal station: Koga, harbor phone T_LINE ─┘   circular K_CIRC ─ Tatsumi: business trip T_TRIP
+       ├─ café: Yukiko / signal station: Koga ─ lighthouse opens ─ watch log K_LOG ─(show Tatsumi)─ T_TATSUMI3
+       │                                                           └─ Koga: boats T_BOATS
+       ├─ station: Shuichi, last night T_SHUICHI (the 21:25 call)
+       └─ pier: work boat K_GLOVE ─ Koga: locker key ─ locker K_LEDGER ─(show Yukiko)─ T_APPOINT
+          pier: key log K_BOATLOG
 ```
-最初から行ける場所は 5 か所。どの順番で調べてもよく、条件付きの項目はすべて、最初から行ける場所の操作で開く。
+Five places are reachable from the start. They can be examined in any order, and every conditional item is unlocked by actions at places reachable from the start.
 
-### 2.3 推理 (手帳 → すいりする)
-始めるには、筋道の要になる組み合わせがすべてそろっている必要がある (root の指摘を受けて、単独では弱い項目だけでは始められないようにした)。
-- 海から: K_BAR (外れたかんぬき) **と** T_HABIT (会長は毎晩かんぬきを掛ける) **と** K_LADDER (切れた梯子と新しい錆) **と** K_TIDE (満潮 21:18) **と** T_LADDER (満潮の前後しか届かない)
-- 時間帯: T_SHUICHI (21:25 の叩く音と『来たか』) **と** K_LOG (21:30 に二人、21:40 に消灯、21:50 に無灯火の舟)
-- 時計: K_RUST (振り子の窓の取っ手に錆の粉)
-- 電話: T_TATSUMI **と** (K_NOTICE または T_LINE) **と** K_PHONE (詰所には港内電話しかない)
-- 舟: K_BOATLOG (20:30 に辰巳が鍵を借りた) **と** K_LOG
-- 動機と約束: K_LEDGER **と** T_APPOINT
-足りないときは、欠けている最初の条件について、何が足りないかを具体的に言って捜査に戻る (ヒントの表と同じ順番)。
+### 2.3 Deduction (notebook → すいりする (deduce))
+To start, every key combination in the chain of reasoning must be in hand (following the host's review, the deduction cannot start with only items that are weak on their own).
+- From the sea: K_BAR (unbarred bolt) **and** T_HABIT (the chairman sets the bolt every night) **and** K_LADDER (broken ladder and fresh rust) **and** K_TIDE (high tide 21:18) **and** T_LADDER (reachable only around high tide)
+- Time window: T_SHUICHI (the knocking at 21:25 and 『来たか』) **and** K_LOG (two people at 21:30, lights out at 21:40, an unlit boat at 21:50)
+- Clock: K_RUST (rust powder on the handle of the pendulum window)
+- Phone: T_TATSUMI **and** (K_NOTICE or T_LINE) **and** K_PHONE (the hut has only the harbor phone)
+- Boat: K_BOATLOG (Tatsumi borrowed the key at 20:30) **and** K_LOG
+- Motive and appointment: K_LEDGER **and** T_APPOINT
+If something is missing, the game says concretely what is missing for the first unmet condition and returns to the investigation (in the same order as the hint table).
 
-| # | 問い | 形式 | 正解 | 間違えやすい選択への反論 |
+| # | Question | Form | Answer | Rebuttal to tempting wrong choices |
 |---|---|---|---|---|
-| 1 | 犯人はどこから出入りしたか | 選択肢 (表戸/荷揚げ口/窓/天井裏) | 荷揚げ口 | 表戸は古賀が見ていて鍵束は机の上、窓ははめ殺し |
-| 2 | 荷揚げ口が使われたと言える手がかり | 手がかり | K_BAR, K_LADDER | T_HABIT だけでは、外れていたことは言えない |
-| 3 | 舟から梯子に届いた時間を示す手がかり | 手がかり | K_TIDE, T_LADDER | — |
-| 4 | 来客が会長と会っていたのは何時ごろか | 選択肢 (九時半ごろ/十時ごろ/十時十五分ごろ/十一時半ごろ) | 九時半ごろ | 十時ごろの根拠は辰巳の話だけ、十時十五分は時計だけ |
-| 5 | 来客が着いた時刻を示す手がかり | 手がかり | T_SHUICHI | — |
-| 6 | そのあと部屋で起きたことを示す手がかり | 手がかり | K_LOG | T_AUTOPSY は幅が広すぎる |
-| 7 | 10:15 の柱時計はあてにならないと言える手がかり | 手がかり | K_RUST | T_WIND は止まりにくいことを言うだけで、ぶつかって止まった可能性は残る |
-| 8 | 嘘の証言をしたのは誰か | 選択肢 (5人) | 辰巳 | 一人ずつ、既に得た情報で反論 |
-| 9 | その嘘を崩す手がかり | 手がかり | K_NOTICE, T_LINE, K_PHONE, K_CIRC (正解のあと、相棒が三つを結んで説明する) | — |
-| 10 | 辰巳が舟を出したと言える手がかり | 手がかり | K_BOATLOG, T_TATSUMI3 | K_GLOVE は作業艇の備品なので、誰が使ったかまでは言えない |
-| 11 | 辰巳が九時半に訪ねたわけを示す手がかり | 手がかり | T_APPOINT, K_LEDGER | — |
+| 1 | Where did the culprit get in and out? | Choice (front door / loading hatch / window / attic) | Loading hatch | Koga was watching the front door and the key ring is on the desk; the window is fixed shut |
+| 2 | Clues showing the loading hatch was used | Clues | K_BAR, K_LADDER | T_HABIT alone does not show the bolt was unbarred |
+| 3 | Clues showing when the ladder was reachable from a boat | Clues | K_TIDE, T_LADDER | — |
+| 4 | Around what time was the visitor with the chairman? | Choice (around half past nine / around ten / around quarter past ten / around half past eleven) | Around half past nine | The only basis for around ten is Tatsumi's word; for quarter past ten, only the clock |
+| 5 | Clue showing when the visitor arrived | Clues | T_SHUICHI | — |
+| 6 | Clue showing what happened in the room after that | Clues | K_LOG | T_AUTOPSY is too broad |
+| 7 | Clue showing the pendulum clock at 10:15 cannot be trusted | Clues | K_RUST | T_WIND only says it rarely stops; it could still have stopped from being bumped |
+| 8 | Who gave false testimony? | Choice (5 people) | Tatsumi | Each is rebutted with information already obtained |
+| 9 | Clues that break that lie | Clues | K_NOTICE, T_LINE, K_PHONE, K_CIRC (after the correct answer, the partner ties the three together and explains) | — |
+| 10 | Clues showing Tatsumi took the boat out | Clues | K_BOATLOG, T_TATSUMI3 | K_GLOVE is equipment of the work boat, so it does not show who used it |
+| 11 | Clues showing why Tatsumi visited at half past nine | Clues | T_APPOINT, K_LEDGER | — |
 
-死亡時刻は推理の中でも断定しない (「十時過ぎに生きていたと言えるものは何もない」と言うだけ)。
+The time of death is not asserted even in the deduction (it only says 「十時過ぎに生きていたと言えるものは何もない」, "nothing shows he was alive after ten").
 
-間違えたら、選んだものに合わせて相棒が反論して同じ問いに戻る (ゲームオーバーなし。間違えた回数は数える)。B で推理をやめて捜査に戻れる。全問正解で対決、自白、メモの意味、夜明けのエピローグ、「おわり」と記録表示 (操作回数と推理で間違えた回数)、タイトルへ。
+On a wrong answer, the partner rebuts according to what was chosen and returns to the same question (no game over; wrong answers are counted). B quits the deduction and returns to the investigation. Answering all questions correctly leads to the confrontation, the confession, the meaning of the memo, the dawn epilogue, 「おわり」 ("The End") with the record display (number of actions and number of wrong answers in the deduction), and the title.
 
-### 2.4 ヒント (手帳 → ヒント)
-順番に並べた条件の表で、最初に満たされていない段階のヒントを出す。1回目は方向だけを示し、同じ段階でもう一度選ぶと、具体的な操作 (どこで、何を、どのコマンドで) を示す。相棒の「相談」も同じ表を使う。
+### 2.4 Hints (notebook → ヒント (hint))
+From a table of conditions in order, the hint for the first unsatisfied stage is shown. The first time only the direction is given; choosing it again at the same stage gives the concrete action (where, what, with which command). The partner's 「相談」 (consult) uses the same table.
 
 ---
 
-## 3. 操作と画面
+## 3. Controls and screen
 
-### 3.1 画面 (256x224)
+### 3.1 Screen (256x224)
 ```
-y   0- 15 見出し (BG2 4bpp): 左に場所名、右に状況 (時刻、または「しらべる ▶ 対象」)
-y  16-143 背景絵 256x128 (BG1 8bpp, 512 タイル)
-y 144-223 下の窓 (BG2 4bpp): 枠つき
-   コマンド時: 左の箱 (x 8-68) に 5 コマンドを縦に (y 149,163,177,191,205)、右の箱 (x 76-244) に対象の一覧 5 行
-   メッセージ時: 窓全体。話者の名前 (黄色) + 本文 3 行、地の文は 4 行。1 行 18 字 (x 12-228)。行の間隔 17px。▼ で送る
+y   0- 15 heading (BG2 4bpp): place name on the left, status on the right (time, or "しらべる ▶ target")
+y  16-143 background picture 256x128 (BG1 8bpp, 512 tiles)
+y 144-223 lower window (BG2 4bpp): framed
+   command mode: 5 commands vertically in the left box (x 8-68) (y 149,163,177,191,205), a 5-line target list in the right box (x 76-244)
+   message mode: the whole window. Speaker name (yellow) + 3 lines of body text; narration has 4 lines. 18 characters per line (x 12-228). Line spacing 17px. Advance with ▼
 ```
-- フォントは東雲 12 ドット (shnmk12, パブリックドメイン) で、ビルド時に必要な字だけを取り出す。カーソル ▶ と送りの ▼ は自作の 12x12 字形 (JIS X 0208 に ▶ がないため)。
-- 色 (CGRAM 0-15、UI 用で固定): 0 黒 (背景色)、1 窓の地 (濃紺)、2 本文 (白)、3 枠 (明)、4 枠の影、5 既読・選べない項目 (灰)、6 話者・カーソル・選んだコマンド (黄)、7 新しい手がかり (水色)。
-- 一覧が 5 行を超えるときは、右端に ▲/▼ と「2/3」のページ表示。上下で 1 行ずつスクロールし、L/R (または左右) で 1 ページずつ移る。
-- 操作: 十字キー上下で選択 (押し続けると 16 フレーム後から 5 フレームおきに繰り返し)、A で決定・送り、B で戻る (メッセージ中は A と同じく送り)。A と B は押した瞬間だけ受け付けるので、押したままにしても会話は飛ばない。メッセージを表示している途中で A を押すと、そのページを一度に出す。
-- 読み終えた話題・調べ終えた対象は灰色。まだ選んでいないものは白。
-- 会話や「みせる」のときは、その場面の人物の肖像 (72x104) を背景絵の決まった位置に重ねる (ビルド時に合成した差し替えタイルを VBlank に DMA で転送。強制ブランクは使わない)。
+- The font is Shinonome 12-dot (shnmk12, public domain); only the needed characters are extracted at build time. The ▶ cursor and the ▼ advance mark are original 12x12 glyphs (JIS X 0208 has no ▶).
+- Colors (CGRAM 0-15, fixed for the UI): 0 black (backdrop), 1 window background (dark navy), 2 body text (white), 3 frame (light), 4 frame shadow, 5 already-read / unselectable items (gray), 6 speaker, cursor, selected command (yellow), 7 new clue (light blue).
+- When a list exceeds 5 lines, ▲/▼ and a page indicator like "2/3" appear at the right edge. Up/Down scroll one line at a time; L/R (or Left/Right) move one page.
+- Controls: D-pad Up/Down to select (held: repeats every 5 frames after 16 frames), A to confirm/advance, B to go back (during a message it advances, like A). A and B are accepted only at the moment of pressing, so holding them does not skip dialogue. Pressing A while a message is being typed shows the whole page at once.
+- Topics already read and targets already examined are gray; those not yet chosen are white.
+- During conversation and みせる (show), the scene person's portrait (72x104) is overlaid at a fixed position on the background picture (replacement tiles composited at build time are DMA-transferred during VBlank; forced blank is not used).
 
-### 3.2 コマンド
-| コマンド | 次に選ぶもの | 動作 |
+### 3.2 Commands
+| Command | What is chosen next | Action |
 |---|---|---|
-| はなす | 話題 (相手はその場面の1人) | 台本を実行 |
-| しらべる | 対象 | 台本を実行 |
-| みせる | 手がかり (物と証言を合わせた一覧) | (相手, 手がかり) の反応。なければ相手ごとの決まった返事 |
-| いどう | 場所 | 絵の切り替え |
-| てちょう | しょうこ / しょうげん / ヒント / すいりする / きろくする / おと | 一覧 → 説明を読む / 推理 / セーブ / 音のオンオフ |
+| はなす (talk) | Topic (the partner is the one person in the scene) | Runs the script |
+| しらべる (examine) | Target | Runs the script |
+| みせる (show) | Clue (one list combining items and testimony) | Reaction for (person, clue); if none, the person's fixed default reply |
+| いどう (move) | Place | Changes the picture |
+| てちょう (notebook) | しょうこ (evidence) / しょうげん (testimony) / ヒント (hint) / すいりする (deduce) / きろくする (save) / おと (sound) | List → read description / deduction / save / sound on/off |
 
-タイトル: 「はじめから / つづきから」。保存データがない、または壊れているとき、「つづきから」は灰色で表示し、選ぶと理由を表示する (ゲームは始まらない)。
+Title: 「はじめから / つづきから」 (new game / continue). When there is no save data or it is corrupted, 「つづきから」 is shown in gray, and choosing it displays the reason (the game does not start).
 
 ---
 
-## 4. ハードウェアの設計
+## 4. Hardware design
 
-### 4.1 ROM と CPU
-- LoROM `$20` (SlowROM)、カートリッジ種別 `$02` (ROM+RAM+バッテリー)、ROM 512 KiB (`$09`)、SRAM 8 KiB (`$03`)、国コード日本。チェックサムは `tools/adv/romfix.py` で書き込む。
-- バンクの割り当て (候補 A の実際): bank0 はコード、表、台本、パレット、ロゴ、SPC700 ドライバ。bank1 はフォント (588 字形 × 24 バイト)。bank2 は本文 (416 テキスト、32018 バイト。足りなくなればビルドツールが次のバンクへ回す。1 つのテキストがバンク境界をまたぐことはない)。bank3-9 は背景 7 枚 (1 枚につき 1 バンク、32768 バイト = 512 タイル。絵の DMA は 1 回 4 KiB 以内の塊で、バンク境界をまたがない)。bank10-11 は肖像の差し替えタイル (6 枚、1 枚 7488 バイト。肖像 1 枚がバンク境界をまたぐことはない)。bank12 は文字層の雛形 (22528 バイト)。bank13-15 は空き ($FF)。全部で 512 KiB。各バンクの容量は ld65 の `MEMORY` で、境界はビルドツールが確かめる。
-- 実行時の規約: ネイティブモード、X/Y は常に 16 ビット、A は普段 16 ビット (ハードウェアのレジスタを書くときだけ 8 ビット)。DB は `$00`、DP は `$0000`。`$7E:2000` 以降の大きいバッファは long アドレッシング (`f:`) で読み書きする。スタックは `$1FFF` から下へ。
+### 4.1 ROM and CPU
+- LoROM `$20` (SlowROM), cartridge type `$02` (ROM+RAM+battery), ROM 512 KiB (`$09`), SRAM 8 KiB (`$03`), country code Japan. The checksum is written by `tools/adv/romfix.py`.
+- Bank allocation (as actually built for candidate A): bank0 holds code, tables, the script, palettes, the logo, and the SPC700 driver. bank1 holds the font (588 glyphs × 24 bytes). bank2 holds the body text (416 texts, 32018 bytes; if it runs out, the build tool moves on to the next bank; no single text straddles a bank boundary). bank3-9 hold the 7 backgrounds (one bank each, 32768 bytes = 512 tiles; picture DMA is in chunks of at most 4 KiB and does not straddle a bank boundary). bank10-11 hold the portrait replacement tiles (6 portraits, 7488 bytes each; no portrait straddles a bank boundary). bank12 holds the text-layer template (22528 bytes). bank13-15 are free ($FF). 512 KiB in total. Each bank's capacity is set in ld65's `MEMORY`, and the build tool checks the boundaries.
+- Run-time conventions: native mode, X/Y always 16-bit, A normally 16-bit (8-bit only when writing hardware registers). DB is `$00`, DP is `$0000`. Large buffers from `$7E:2000` on are accessed with long addressing (`f:`). The stack grows down from `$1FFF`.
 
 ### 4.2 PPU
-- Mode 3 (`BGMODE=$03`)。BG1 は 8bpp で絵、BG2 は 4bpp で文字と窓。OBJ と BG3/4 は使わない (TM=`$03`)。OAM は起動時に 544 バイトをすべて画面外に置き、OBJ は表示しない。
-- VRAM (ワードアドレス):
+- Mode 3 (`BGMODE=$03`). BG1 is the picture at 8bpp, BG2 is text and windows at 4bpp. OBJ and BG3/4 are not used (TM=`$03`). At startup all 544 bytes of OAM are placed off screen, and no OBJ is displayed.
+- VRAM (word addresses):
 
-| 範囲 | 中身 |
+| Range | Contents |
 |---|---|
-| `$0000-$3FFF` | BG1 8bpp タイル 0-511 (絵) |
-| `$4000-$401F` | BG1 タイル 512 = 透明 (起動時にゼロ) |
-| `$4400-$47FF` | BG1 タイルマップ 32x32 (行 2-17 = タイル 0-511、それ以外は 512) |
-| `$4800-$4BFF` | BG2 タイルマップ 32x32 (行 0-1 = タイル 1-64、行 18-27 = タイル 65-384、それ以外は 0) |
-| `$5000-$6FFF` | BG2 4bpp タイル 0-511 (0 は透明、1-384 は WRAM のビットマップと同じ並び) |
+| `$0000-$3FFF` | BG1 8bpp tiles 0-511 (picture) |
+| `$4000-$401F` | BG1 tile 512 = transparent (zeroed at startup) |
+| `$4400-$47FF` | BG1 tilemap 32x32 (rows 2-17 = tiles 0-511, everything else 512) |
+| `$4800-$4BFF` | BG2 tilemap 32x32 (rows 0-1 = tiles 1-64, rows 18-27 = tiles 65-384, everything else 0) |
+| `$5000-$6FFF` | BG2 4bpp tiles 0-511 (0 is transparent, 1-384 in the same order as the WRAM bitmap) |
 
-  BG12NBA=`$50`、BG1SC=`$44`、BG2SC=`$48`、スクロールは H=0、V=-1 (BG の行 0 が最初の表示ラインに来る)。
-- CGRAM: 0-15 は UI (Mode 3 では BG2 のパレット 0 と BG1 の色 0-15 を兼ねる)。16-255 は背景絵。ビルド時に、絵は 240 色へ量子化する (メディアンカット、15 ビット色)。肖像を重ねたタイルも、その場面の 240 色の中で表す (絵と肖像を合わせて量子化する)。
-- 文字: WRAM の `$7E:2000` から 12 タイル行 × 32 タイル × 32 バイト = 12288 バイトのビットマップ (見出し 2 行と下の窓 10 行) に CPU が字形を描く。枠と区切り線は ROM の雛形 (見出し、メッセージ用の窓、コマンド用の窓) に入っていて、消去は雛形から WRAM へ DMA (チャンネル 1、`$2180`) でタイル単位に戻す。書き換えた行は「行ごとの dirty ビット」で覚えておき、NMI で 1 行 1024 バイトずつ DMA する (1 回の VBlank で最大 4 行。下の窓をまるごと書き換えても 3 フレームで反映される)。DrawGlyph は窓の地の色 (1) の上に描く前提なので、色を変えるときは必ず雛形から戻してから描き直す。
-- 絵の切り替え: 背景用パレット (16-255) を 8 段 (2 フレームおき) で暗くし、タイルを最大 4 KiB ずつ 8 回以上の VBlank で転送してから、パレットを明るくする。UI は表示されたまま。強制ブランクは電源投入直後の初期化のときだけ使う。肖像は、その範囲の 9x13 タイル行を ROM の差し替えタイル、または元の絵のタイルから転送して付け外しする。
-- NMI: 用意ができたフレームだけ、ジョブキュー (VRAM / CGRAM の DMA、チャンネル 0) を処理する。メインループ側が 1 回の VBlank あたり 4096 バイトを超えないように積む。数えるもの: `nmi_count`, `lag_count` (メインループが間に合わず NMI が転送しなかったフレーム)、`dma_bytes_max`, `dma_deferred`, `nmi_end_line_max`, `vblank_overrun_count` (NMI の処理の終わりが VBlank を越えて、次の表示期間の V=0..224 に戻っていた回数。コードでは終了時の V カウンタが 225 未満かを見ている)。
-- 1 回の VBlank の計算: NTSC は V=225..261 の 37 ライン × 1364 マスターサイクル = 50468。DMA は 1 バイトあたり 8 サイクル以上なので、4096 バイトは 32768 サイクル以上 (24 ライン強) になる。これにリフレッシュとチャンネルの準備が加わる。最初の予算 4608 バイトでは終了ラインが 260 (余り 1 ライン) と測れたので、4096 バイトに下げた。候補 A の全テストでの `nmi_end_line_max` は 256、`vblank_overrun_count` は 0 (どちらもエミュレータでの測定)。
+  BG12NBA=`$50`, BG1SC=`$44`, BG2SC=`$48`, scroll H=0, V=-1 (BG row 0 lands on the first displayed line).
+- CGRAM: 0-15 are the UI (in Mode 3 these double as BG2 palette 0 and BG1 colors 0-15). 16-255 are the background picture. At build time the picture is quantized to 240 colors (median cut, 15-bit color). Tiles with a portrait overlaid are also expressed within the scene's 240 colors (picture and portrait are quantized together).
+- Text: the CPU draws glyphs into a bitmap in WRAM from `$7E:2000`, 12 tile rows × 32 tiles × 32 bytes = 12288 bytes (2 heading rows and 10 lower-window rows). Frames and divider lines are in ROM templates (heading, message window, command window); erasing is done per tile by DMA from the template into WRAM (channel 1, `$2180`). Rewritten rows are remembered in "per-row dirty bits", and the NMI DMAs them one row (1024 bytes) at a time (up to 4 rows per VBlank; even rewriting the whole lower window shows up within 3 frames). DrawGlyph assumes it draws on the window background color (1), so when changing colors the area is always restored from the template before redrawing.
+- Picture changes: the background palette (16-255) is darkened in 8 steps (every 2 frames), the tiles are transferred in chunks of up to 4 KiB over 8 or more VBlanks, and then the palette is brightened. The UI stays visible. Forced blank is used only for initialization right after power-on. Portraits are put on and taken off by transferring the 9x13 tile rows of that area from the replacement tiles in ROM, or from the original picture tiles.
+- NMI: only in frames where things are ready, it processes the job queue (VRAM / CGRAM DMA, channel 0). The main loop queues no more than 4096 bytes per VBlank. Counted: `nmi_count`, `lag_count` (frames in which the main loop was late and the NMI did not transfer), `dma_bytes_max`, `dma_deferred`, `nmi_end_line_max`, `vblank_overrun_count` (the number of times the end of NMI processing went past VBlank and back into the next display period at V=0..224; the code checks whether the V counter at exit is below 225).
+- Budget for one VBlank: NTSC has V=225..261, 37 lines × 1364 master cycles = 50468. DMA takes at least 8 cycles per byte, so 4096 bytes is at least 32768 cycles (a little over 24 lines). Refresh and channel setup are added to that. With the initial budget of 4608 bytes, the end line measured 260 (1 line to spare), so it was lowered to 4096 bytes. Across all of candidate A's tests, `nmi_end_line_max` is 256 and `vblank_overrun_count` is 0 (both measured on emulators).
 
-### 4.3 SRAM (`$70:0000`, 8 KiB のうち 512 バイトを使う)
-- 2 つのスロット A (`$0000`) と B (`$0100`)、各 256 バイト: `+0` "SHIO"、`+4` 版 (=1)、`+6` 通し番号、`+8` 場面、`+10` 推理の誤答数、`+12` 操作回数、`+14` 音の設定、`+16..+143` フラグ 1024 ビット、`+252` 合計 (0-251 の 16 ビットワードの和)、`+254` 合計の補数。
-- 保存は、古い方 (または壊れている方) のスロットに本体を書き、合計を最後に書く。読み込みは、有効なスロットのうち通し番号が新しい方を使う。検査する項目: 印、版、合計、場面の番号の範囲、行けない場面ではないか、使っていないフラグのビットが 0 か。
-- 両方とも無効なとき: 印もないなら「記録がありません」、印はあるが検査に通らないなら「記録が壊れています」と出してタイトルに戻る。電源投入時の SRAM は不定なので、すべてこの検査で弾く。
+### 4.3 SRAM (`$70:0000`, 512 of the 8 KiB used)
+- Two slots, A (`$0000`) and B (`$0100`), 256 bytes each: `+0` "SHIO", `+4` version (=1), `+6` sequence number, `+8` scene, `+10` wrong answers in the deduction, `+12` action count, `+14` sound setting, `+16..+143` flags (1024 bits), `+252` sum (sum of the 16-bit words over 0-251), `+254` complement of the sum.
+- Saving writes the body to the older (or corrupted) slot and writes the sum last. Loading uses whichever valid slot has the newer sequence number. Checked items: the signature, version, sum, scene number range, that the scene is not an unreachable one, and that unused flag bits are 0.
+- When both are invalid: if there is no signature either, 「記録がありません」 ("No save data"); if there is a signature but the checks fail, 「記録が壊れています」 ("Save data is corrupted"); then it returns to the title. SRAM is undefined at power-on, so all such cases are rejected by these checks.
 
-### 4.4 音
-- 自作の SPC700 ドライバ (`tools/adv/spc.py` が小さなアセンブラで機械語を組む。674 バイト)。BRR 波形 (柔らかい矩形波と正弦波、各 32 サンプル周期) も自作。IPL で `$0200` に転送して起動し、準備ができると port0 に `$5A` を返す。CPU は 1 フレームに 1 つ、port0 にコマンドを書いてから port1 を変える (キューは 8)。効果音 8 種 (カーソル、決定、取消、手がかり、誤答、ページ送り、推理の正解、移動) は voice 0、波の音は voice 2 の DSP ノイズ (ノイズクロック `$11`) の音量を 64 段の表でゆっくり揺らし、左右の位相をずらしている。タイマー 0 は 100 Hz。波の音を出す場面: タイトル、第二桟橋、灯台。「おと：なし」のときは主音量 0 と波の音の停止だけを送り、効果音は送らない。設定は SRAM に入る。
+### 4.4 Sound
+- An original SPC700 driver (`tools/adv/spc.py` assembles the machine code with a small assembler; 674 bytes). The BRR waveforms (a soft square wave and a sine wave, each with a 32-sample period) are also original. It is transferred to `$0200` via the IPL and started; when ready it returns `$5A` on port0. The CPU writes one command per frame to port0 and then changes port1 (queue of 8). The 8 sound effects (cursor, confirm, cancel, clue, wrong answer, page advance, correct deduction, move) use voice 0. The wave sound slowly varies the volume of DSP noise on voice 2 (noise clock `$11`) with a 64-step table, with the left and right channels out of phase. Timer 0 is 100 Hz. Scenes with the wave sound: title, Pier No. 2, lighthouse. With 「おと：なし」 (sound: off), only master volume 0 and a wave-sound stop are sent, and no sound effects are sent. The setting is stored in SRAM.
 
 ---
 
-## 5. データの構造 (`data/adv/story.txt` → `tools/adv/build.py`)
-- 1 つのテキストファイルに、ブロック (`@scene`, `@person`, `@look`, `@topic`, `@show`, `@clue`, `@hint`, `@deduce`, `@script`) を並べる。各ブロックには条件 (`if: FLAG !FLAG`) と動作 (`get: CLUE`, `set: FLAG`, `goto: SCENE`) と本文 (`> 話者| 本文`) を書く。
-- ビルドツールの役目: フラグの番号の割り当て、手がかりのグループ用フラグの自動設定、禁則処理つきの改行と改ページ (1 行 18 字、行頭に `、。」』）ー…` を置かない)、各ラベル (一覧 12 字、見出しの場所名と状況が重ならない) の幅の検査、使われているのに定義されていない手がかり・フラグの検出、すべての手がかりが手に入るか・推理の各問いが始める条件のもとで答えられるかの到達性の検査。
-- 出力: `build/adv/data.inc` (ca65 の表と、各バンクのセグメント指定)、`build/adv/*.bin`、`build/adv/manifest.json` (ソースのハッシュ、字数、各バンクの使用量)、`build/adv/layout.json` (テスト用: 項目ごとのラベルとフラグ)。
-- ROM 上の台本は 16 ビットの命令列: `END, TEXT id, SET f, CLR f, IF f rel, IFN f rel, JMP rel, GET clue, GOTO scene, SFX n, DEDUCE, ENDING, PORTRAIT on/off`。
-- 一覧の項目: ラベルの本文 ID、条件 3 つ (フラグ番号。最上位ビットが立っていれば否定)、台本へのポインタ、既読フラグ。
-- 本文: 16 ビットの字形番号の列。制御コードは `$FFFF` 終わり、`$FFFE` 改行、`$FFFD` 改ページ、`$FFFC c` 色。
+## 5. Data structure (`data/adv/story.txt` → `tools/adv/build.py`)
+- One text file lists blocks (`@scene`, `@person`, `@look`, `@topic`, `@show`, `@clue`, `@hint`, `@deduce`, `@script`). Each block has conditions (`if: FLAG !FLAG`), actions (`get: CLUE`, `set: FLAG`, `goto: SCENE`) and text (`> 話者| 本文`, i.e. `> speaker| text`).
+- The build tool's job: assigning flag numbers, automatically setting the group flags for clues, line and page breaking with kinsoku rules (18 characters per line; `、。」』）ー…` never start a line), checking the width of each label (12 characters for lists; the heading's place name and status must not overlap), detecting clues and flags that are used but not defined, and reachability checks: whether every clue can be obtained and whether each deduction question can be answered under the conditions for starting it.
+- Output: `build/adv/data.inc` (ca65 tables and per-bank segment assignments), `build/adv/*.bin`, `build/adv/manifest.json` (source hashes, character count, usage per bank), `build/adv/layout.json` (for tests: label and flags per item).
+- The script in ROM is a sequence of 16-bit instructions: `END, TEXT id, SET f, CLR f, IF f rel, IFN f rel, JMP rel, GET clue, GOTO scene, SFX n, DEDUCE, ENDING, PORTRAIT on/off`.
+- List items: text ID of the label, 3 conditions (flag numbers; negated if the top bit is set), pointer to the script, read flag.
+- Text: a sequence of 16-bit glyph numbers. Control codes: `$FFFF` end, `$FFFE` newline, `$FFFD` page break, `$FFFC c` color.
 
-## 6. 検証
-- `make adv` はビルド。`make adv-test` は、改造していない Snes9x 1.63 の libretro コアで、パッド入力だけのテストを行う (WRAM はラベルを見て読み取るだけ)。テストの内容: 最初から結末まで (標準の順番)、別の順番での最後まで、推理での誤答と復帰、セーブ → コアを作り直す (バッテリーと同じく SRAM の中身だけを引き継ぐ) → つづきから → 最後まで、SRAM が空・すべて 0xFF・乱数・合計の壊れ・片方のスロットだけ壊れている場合、ボタンの押しっぱなし、文字が枠からはみ出さないかの検査 (ビルド時の幅検査と、実行時の描画位置の監視ラベル `text_clip`)、VBlank 超過 0、ラグ。
-- bsnes 115 (固定の libretro コア) で同じパッド入力を再生し、画面を記録する。
-- 実機では未確認。
+## 6. Verification
+- `make adv` builds. `make adv-test` runs pad-input-only tests on the unmodified Snes9x 1.63 libretro core (WRAM is only read, via the labels). Test contents: start to ending (standard order), to the end in a different order, wrong answers in the deduction and recovery, save → recreate the core (carrying over only the SRAM contents, as with a battery) → つづきから (continue) → to the end, SRAM empty / all 0xFF / random / bad sum / only one slot corrupted, held buttons, checks that text does not spill out of the frame (the build-time width check and the run-time draw-position monitor label `text_clip`), VBlank overruns 0, lag.
+- The same pad input is replayed on bsnes 115 (a fixed libretro core) and the screen is recorded.
+- Not verified on real hardware.
 
-## 7. 実装の段階
-1. 骨格: ヘッダ、リセット、NMI とジョブキュー、Mode 3 の初期化、仮のパレット、パッド。
-2. 文字のビットマップの描画、窓、メッセージ、一覧とスクロール。
-3. 台本の VM、コマンド、場面の切り替え (パレットを暗くする)、手帳。
-4. ビルドツール、`story.txt` の全文、背景の量子化。
-5. 推理、エンディング、セーブとロード、SRAM の検査。
-6. テスト (Snes9x)、bsnes での再生、画面の確認と文字幅の調整。
-7. 肖像の重ね合わせ、効果音と環境音。
-8. `make adv-release` でクリーンビルドの一致を確かめ、`dist/shionari.sfc` を出す。
+## 7. Implementation stages
+1. Skeleton: header, reset, NMI and job queue, Mode 3 initialization, provisional palette, pad.
+2. Text bitmap drawing, windows, messages, lists and scrolling.
+3. Script VM, commands, scene changes (darkening the palette), notebook.
+4. Build tool, the full `story.txt`, background quantization.
+5. Deduction, ending, save and load, SRAM checks.
+6. Tests (Snes9x), replay on bsnes, screen checks and text-width adjustment.
+7. Portrait overlays, sound effects and ambient sound.
+8. Confirm a matching clean build with `make adv-release` and produce `dist/shionari.sfc`.
 
-## 8. root への依頼 (画像)
-1. **warehouse**: 壁に振り子の柱時計 (ガラス戸つき) を描き足し、針を **10時15分** にしてほしい。机の上の赤い本は「出納帳」、鍵束は「事務所の鍵束」として使う (今のままでよい)。右の扉は「表戸」(ガラスが割られている) として扱う。
-2. **signal**: 壁の時計が 5 時ごろを指しているので、**1時10分ごろ** (捜査の時刻) にするか、針がはっきり見えないようにしてほしい。交換盤 (ふたの外れた配電盤のような箱) が壁にあると説明と合う (任意)。
-3. **harbor**: 今の夕焼けの絵は**エンディング (夜明け)** に使う。第二桟橋用に**深夜版** (夕焼けの光なし、小さな詰所に灯り、小型の作業艇が係留されている、人物なし) がほしい。
-4. **cafe**: 壁の時計を 1時半ごろにするか、針がはっきり見えないようにしてほしい (任意)。
-5. **肖像の追加 2 枚** (72x104, alpha): 古賀 (58歳男性、短い白髪の角刈り、日焼け、灰色の作業服) と 辰巳 (38歳男性、痩せ型、七三の黒髪、銀縁眼鏡、紺の防寒ジャンパーの下に白シャツ、疲れた目元)。肖像があるのが犯人だけ、あるいは犯人だけない、ということにならないよう、場面の人物全員に肖像をそろえたい。
-6. 量子化 (UI に 0-15、背景に 16-255) は `tools/adv/build.py` で行う (`*-256.png` を読む。再現できるように `PREPARED.json` の SHA を manifest に記録する)。
+## 8. Requests to the host (images)
+1. **warehouse**: please add a pendulum wall clock (with a glass door) on the wall, with its hands at **10:15**. The red book on the desk will be used as the 「出納帳」 (cash book) and the key ring as the 「事務所の鍵束」 (office key ring) (fine as is). The door on the right is treated as the 「表戸」 (front door) (its glass broken).
+2. **signal**: the wall clock points to about 5 o'clock; please change it to **about 1:10** (the time of the investigation) or make the hands not clearly visible. A switchboard (a box like a distribution board with its cover off) on the wall would match the description (optional).
+3. **harbor**: the current sunset picture will be used for the **ending (dawn)**. For Pier No. 2 a **late-night version** is wanted (no sunset light, a light on in a small watch hut, a small work boat moored, no people).
+4. **cafe**: please change the wall clock to about 1:30 or make the hands not clearly visible (optional).
+5. **Two more portraits** (72x104, alpha): 古賀 (Koga) (58-year-old man, short white crew cut, tanned, gray work clothes) and 辰巳 (Tatsumi) (38-year-old man, thin, black hair parted 7:3, silver-rimmed glasses, white shirt under a navy padded jacket, tired eyes). To avoid only the culprit having a portrait, or only the culprit lacking one, every person in the scenes should have a portrait.
+6. Quantization (0-15 for the UI, 16-255 for the backgrounds) is done in `tools/adv/build.py` (it reads `*-256.png`; for reproducibility the SHA of `PREPARED.json` is recorded in the manifest).

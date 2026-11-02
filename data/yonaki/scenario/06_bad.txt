@@ -1,4 +1,4 @@
-# 夜鳴き鐘 — 本編のバッドエンドと通常エンド
+# 夜鳴き鐘 — the bad endings and the normal endings of the main story
 
 # ---------------------------------------------------------------- E02 迷宮
 *e02_start

@@ -1,5 +1,5 @@
-# 夜鳴き鐘 — 千鶴篇 (解禁: cleared_oyura)。序章のバスで「古い写真のことを聞く」。
-# 昭和四十四年十月二十二日、十七歳の千鶴の最後の一日を、千鶴自身の目で。
+# 夜鳴き鐘 — the 千鶴 arc (千鶴篇; unlocked by cleared_oyura).  Entered with 「古い写真のことを聞く」 on the bus in the prologue.
+# 22 October 1969 (Showa 44): the last day of 千鶴 at seventeen, through her own eyes.
 
 *chizuru_start
 @bgm stop

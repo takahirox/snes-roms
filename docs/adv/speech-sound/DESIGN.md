@@ -1,52 +1,52 @@
-# 会話音 (文字送りの発声風の音) — 設計と検証方法
+# Speech sound (voice-like sound for text display) — design and verification method
 
-候補 E で加えたもの。人物が話すページの本文を打つ間、短く丸い「ポ」に近い音を、話し手ごとに少し違う高さと音色で鳴らす。読み上げの声ではなく、音素にも合わせていない。参考調査は [REFERENCE_NOTES.md](REFERENCE_NOTES.md)。
+Added in candidate E. While the body text of a page spoken by a character is being typed out, a short, round sound close to "po" plays, with a slightly different pitch and timbre per speaker. It is not a reading voice and is not matched to phonemes. Reference research: [REFERENCE_NOTES.md](REFERENCE_NOTES.md).
 
-## 鳴る・鳴らない
-- 鳴る: 台本で `NAME> ` の行 (6 人と「わたし」) のページの本文で、実際に描いた文字のうち「無音文字」以外が描かれたフレーム。肖像の有無には関係しない (肖像のない波多野、わたし、他人の肖像の前で話す人も、その人自身の声)。話者は口パクと同じ本文の話者コード `$FFE0|id` から決まる。
-- 間隔: 同じ話者の音から次の音まで最短 4 フレーム (通常の速さで 2 文字に 1 回、約 15 回/秒)。A/B の早送り (1 フレーム 6 文字) でも同じ最短間隔なので、文字ごとに鳴らず間引かれる。会話音はキューに積まないので、遅れて鳴り続けることはない。
-- 鳴らない: 地の文、黄色の人物名、手帳・ヒント・システムの見出し、一覧とメニュー、ページ待ち・文末待ち、場面の移動、タイトル・エンディング、「おと：なし」の間。句読点・括弧・記号・空白 (`data/adv/voices.txt` の `silent:`) では鳴らさない。句読点の後は口パクと同じフレーム数 (、= 4、。= 8) だけ止め、次の音から新しい句 (音高の抑揚が先頭へ戻る) になる。
-- 終わり: 1 回の音は 20 数 ms で自然に消える (音の中に減衰を持たせた単発の波形)。待ちに入った後に新しい音は出ない。
-- 本文の速さ、口パクの動き、台本、肖像、口の形、保存形式は D と同じ。
+## When it plays and when it does not
+- Plays: in the body text of pages from script lines `NAME> ` (the six people and 「わたし」 ("I", the player)), in frames where a character other than a "silent character" was actually drawn. It does not depend on whether a portrait is shown (波多野 (Hatano) without a portrait, わたし, and someone speaking in front of another person's portrait all use their own voice). The speaker is determined from the same body-text speaker code `$FFE0|id` used by the lip sync.
+- Interval: at least 4 frames from one sound of the same speaker to the next (at normal speed about once every 2 characters, about 15 per second). Fast-forward with A/B (6 characters per frame) uses the same minimum interval, so sounds are thinned out instead of playing per character. Speech sounds are not queued, so they never keep playing late.
+- Does not play: narration, the yellow person names, notebook / hint / system headings, lists and menus, page and end-of-text waits, scene changes, the title and ending, and while 「おと：なし」 (sound: off) is set. Punctuation, brackets, symbols and spaces (`silent:` in `data/adv/voices.txt`) do not sound. After punctuation, sound stops for the same number of frames as the lip sync (、= 4, 。= 8), and the next sound starts a new phrase (the pitch contour returns to its start).
+- End: each sound fades out naturally in twenty-odd ms (a one-shot waveform with the decay built in). No new sound starts after a wait begins.
+- Text speed, lip-sync motion, script, portraits, mouth shapes and save format are the same as in D.
 
-## 音のデータ (`data/adv/voices.txt`)
-処理とデータを分けた。人物ごとに 音色 (倍音の比)・始まりの音高・音高の下がり方・長さ・立ち上がり・音量・最短間隔 を書く。句の中の 8 回分の小さな音高の上下 (`contour`、%) も同じファイル。
+## Sound data (`data/adv/voices.txt`)
+Processing and data are separated. For each person the file gives the timbre (harmonic ratios), starting pitch, pitch fall, length, attack, volume and minimum interval. The small pitch ups and downs over 8 sounds within a phrase (`contour`, %) are in the same file.
 
-| 話し手 | 音色 | 音高 (Hz) | 下がり | 長さ (ms) | 音量 | 間隔 |
+| Speaker | Timbre | Pitch (Hz) | Fall | Length (ms) | Volume | Interval |
 |---|---|---|---|---|---|---|
-| 波多野 | round (1, .32, .10, .04) | 370 | −7% | 24 | 22 | 4 |
-| 古賀 | dark (1, .22, .05) | 300 | −8% | 28 | 24 | 4 |
-| 辰巳 | soft (1, .45, .20, .08, .03) | 345 | −6% | 24 | 20 | 4 |
-| ゆき子 | soft | 540 | −5% | 22 | 18 | 4 |
-| 大河内 | dark | 325 | −6% | 26 | 23 | 4 |
-| 修一 | round | 420 | −6% | 23 | 20 | 4 |
+| 波多野 (Hatano) | round (1, .32, .10, .04) | 370 | −7% | 24 | 22 | 4 |
+| 古賀 (Koga) | dark (1, .22, .05) | 300 | −8% | 28 | 24 | 4 |
+| 辰巳 (Tatsumi) | soft (1, .45, .20, .08, .03) | 345 | −6% | 24 | 20 | 4 |
+| ゆき子 (Yukiko) | soft | 540 | −5% | 22 | 18 | 4 |
+| 大河内 (Ookouchi) | dark | 325 | −6% | 26 | 23 | 4 |
+| 修一 (Shuichi) | round | 420 | −6% | 23 | 20 | 4 |
 | わたし | round | 455 | −5% | 22 | 17 | 4 |
 
-句の抑揚: +2.0, +0.5, +1.0, 0, +0.5, −1.0, 0, −1.5 % (9 回目からは 5〜8 回目をくり返す)。
+Phrase intonation: +2.0, +0.5, +1.0, 0, +0.5, −1.0, 0, −1.5 % (from the 9th sound on, the 5th–8th repeat).
 
-## 波形 (`tools/adv/voice.py`)
-- すべて数式から作る (録音・既存の音・他作品の素材は使っていない)。正弦波の倍音を重ね、音高を長さの間に少し下げ (丸い「ポ」)、二乗余弦の立ち上がりと減衰で 0 から始めて 0 で終える。16 kHz (DSP の音高 $0800) 用に作り、ピーク 12000 に揃える。
-- BRR への変換は、S-DSP の復号と同じ計算 (4 種のフィルタ、範囲、16 ビットでの制限と 2 倍) で、ブロックごとに誤差が最小のフィルタと範囲を探す。最初のブロックはフィルタ 0、最後に無音の 2 ブロックと無音の終端ブロック (ループなし) を置く。一回きりの音は終端ブロックに入った時点で DSP が無音にするため、その前に 0 へ戻しておく。
-- 7 声で 1710 バイト。`python3 -I tools/adv/voice.py --preview OUT.wav` は PC での試聴用の合成で、実機の Gaussian 補間ではない。検証には使っていない。
+## Waveforms (`tools/adv/voice.py`)
+- All made from formulas (no recordings, existing sounds or material from other works). Sine harmonics are stacked, the pitch falls slightly over the length (a round "po"), and a raised-cosine attack and decay make it start at 0 and end at 0. Made for 16 kHz (DSP pitch $0800) and normalized to a peak of 12000.
+- BRR conversion uses the same computation as S-DSP decoding (4 filters, range, 16-bit clamping and doubling) and searches each block for the filter and range with the smallest error. The first block uses filter 0, and at the end come 2 silent blocks and a silent end block (no loop). Since the DSP silences a one-shot sound as soon as it enters the end block, the waveform is brought back to 0 before that.
+- 1710 bytes for 7 voices. `python3 -I tools/adv/voice.py --preview OUT.wav` is a synthesis for listening on a PC, not the hardware's Gaussian interpolation. It is not used for verification.
 
-## SPC700 ドライバ (`tools/adv/spc.py`)
-- 声 1 を会話音専用にした。効果音 (声 0) と波 (声 2) はそのまま。声 1 は GAIN 直接 $7F で、音の形は波形そのものが持つ。キーオフは使わない。
-- CPU からは、効果音のキュー (ポート 0/1、1 フレーム 1 コマンド) とは別の「最新 1 件だけ」の受け口 (ポート 2 に声番号と句の先頭の印、続けてポート 3 の値を変える) で受ける。消音中 (`$30`) は無視する。効果音・消音のキューを会話音で埋めることはない。
-- キーオンの後に 64 サイクルを超える待ちを入れた。DSP は KON を 2 サンプルに 1 回しか読まないので、効果音と会話音のキーオンが続けて書かれると先の方が消えるため。
-- 7 声の表 (波形番号、音量、8 段の音高) はドライバ像の中にあり、`build/adv/layout.json` の `speech.spc` に音量表の位置を出している (テスト用の対照 ROM に使う)。
-- ドライバのコードは 952 バイト、像全体は 2834 バイト (D は 1076)。起動時の転送が増えたが、Snes9x ではフレーム 14 でタイトルの一覧になる (テストは 40 フレーム目に確かめる)。
+## SPC700 driver (`tools/adv/spc.py`)
+- Voice 1 is dedicated to speech sounds. Sound effects (voice 0) and waves (voice 2) are unchanged. Voice 1 uses direct GAIN $7F; the shape of the sound is carried by the waveform itself. Key-off is not used.
+- From the CPU it is received through a "latest one only" inbox separate from the sound-effect queue (ports 0/1, one command per frame): port 2 gets the voice number and a phrase-start mark, then the value of port 3 is changed. It is ignored while muted (`$30`). Speech sounds never fill the sound-effect / mute queue.
+- A wait of more than 64 cycles was added after key-on. The DSP reads KON only once every 2 samples, so if key-ons for a sound effect and a speech sound are written back to back, the earlier one is lost.
+- The table for the 7 voices (waveform number, volume, 8-step pitch) lives in the driver image, and the position of the volume table is emitted as `speech.spc` in `build/adv/layout.json` (used for the control ROM in the tests).
+- The driver code is 952 bytes and the whole image 2834 bytes (1076 in D). The transfer at startup grew, but on Snes9x the title list appears at frame 14 (the test checks at frame 40).
 
-## 65816 (`src/adv/voice.inc`、`ui.inc`・`text.inc` の数行)
-- `DrawGlyph` が字を描くところまで進んだら `g_drawn` を立てる。`UpdateMsg` は字を描いた後に `VoiceGlyph` を呼び、句読点の止める長さを口パクと同じ表 (`GlyphPause`) で取り、描けた文字・本文の話者あり・`GlyphVoice` が 1 のときだけ数える。画面に出ていない文字では数えない。字の描画と DMA の作業変数 (t5 の DMA 予算、t7 の文字数) には触れない。
-- `VoiceUpdate` (毎フレーム、口パクの後): 文字を打っている・本文の話者あり・句読点の止めなし・最短間隔が過ぎた・音あり・APU 応答あり のとき、話者の声番号 (`SpeakerVoice`) と句の先頭の印をポート 2/3 へ書く。APU が応答しなかった場合は従来どおり無音で続く。
-- 表 `GlyphVoice` / `SpeakerVoice` / `SpeakerGap` は `build.py` が `voices.txt` から作る。台本の話し手に声がない、声のある名前が台本にない、などはビルドで止める。
+## 65816 (`src/adv/voice.inc`, a few lines in `ui.inc` and `text.inc`)
+- When `DrawGlyph` gets as far as drawing a character, it sets `g_drawn`. After drawing a character, `UpdateMsg` calls `VoiceGlyph`, which takes the punctuation stop length from the same table as the lip sync (`GlyphPause`) and counts only when the character was drawn, the body text has a speaker, and `GlyphVoice` is 1. Characters not shown on screen are not counted. The working variables for character drawing and DMA (DMA budget in t5, character count in t7) are not touched.
+- `VoiceUpdate` (every frame, after the lip sync): when text is being typed, the body text has a speaker, there is no punctuation stop, the minimum interval has passed, sound is on, and the APU responds, it writes the speaker's voice number (`SpeakerVoice`) and the phrase-start mark to ports 2/3. If the APU did not respond, the game continues silently as before.
+- The tables `GlyphVoice` / `SpeakerVoice` / `SpeakerGap` are generated by `build.py` from `voices.txt`. The build stops if a speaker in the script has no voice, if a name with a voice is not in the script, and so on.
 
-## 検証の方法 (`tests/adv/speech.py`、`make adv-test` に追加)
-エミュレータの音声出力 (ネイティブ PCM) で確かめ、内部の数だけでは合格にしない。
-- 規則のモデル: 各フレームの処理 1 回ごとに、ROM の本文の符号 (`msg_ptr` の前後) を読み、話者コード・無音文字・句読点の止め・最短間隔・待ち・音の有無から「鳴るはずの音」を計算し、WRAM の送信数と声番号に一致させる。
-- PCM: 鳴るはずの音ごとに、その声の波形 (BRR を復号し期待の音高で再標本化したもの) との相関で音を見つける。他の音がないところでは長さ・ピーク・RMS・直流・最大の段差・飽和・前の本当の無音 (0 が 160 サンプル)・最初と最後のサンプル・音高・第 2 倍音比を測る。何も鳴ってはいけないフレーム (屋内で、どの命令からも 50 フレーム以上たったところ: 名前、地の文、メニュー、待ち、句読点の止め、音なし) は PCM が厳密に 0。
-- 対照 ROM (null-volume twin): 同じソースで、ドライバ像の会話音の音量表 7 バイトだけを 0 にした ROM (違いはその 7 バイトとチェックサムだけ、と確認)。同じパッド入力で再生し、CPU の進み (モード・本文の位置・送信数・効果音の命令…) がフレームごとに一致することを確かめてから、PCM の差を取る。差は声 1 だけの音になる: 鳴るはずの音すべてが波形と音量どおりに入っていること、それ以外のサンプルがすべて 0 であることを確かめる。波の中・効果音と重なる音もこれで確かめ、効果音と波が会話音で変わらないことも同時に示す。
-- fixture ROM (本番とは別の ROM): 台本のコピーに、チャイムの直後に早送りで 波多野 (修一の肖像の前) が話す行と、わたしの行を足したもの (`build/adv-speechfixture/`、物語の差分・ROM・ラベル・レイアウト・操作記録を別に保存)。同じ fixture の対照 ROM との差で、チャイムに重なった会話音とチャイム以外が 0 であることを確かめ、補助としてチャイムの 4 音の高さ・順・長さ・強さをチャイム単独と比べる。他人の肖像の前でも話し手自身の音高であることも確かめる。
-- D との保存の互換: D の記録から D と E で同じ状態に続き、続けた後に会話音が鳴り、E で書いた記録を D が同じに読む。
-- 2 つのコア: 同じ操作記録を新しい Snes9x で再生すると PCM がバイト単位で一致する。bsnes 115 (48 kHz) でも本番と対照 ROM を再生し、差が鳴るはずの音すべてを含み、それ以外が 0。Snes9x との違い (音高・ピーク・フレーム内の開始時刻) を測って許容を決めた。画面は従来の `tests/adv/bsnes.py` が会話音のテストの操作記録も再生して比べる (RGB 差 2 以内、battery 一致)。
-- 試聴用の短い録画 (`review`): 7 人・早送り・音なし を WAV と音付き MP4 にし、波形の図も作る。判定は上のテストで行う。
+## Verification method (`tests/adv/speech.py`, added to `make adv-test`)
+Checked with the emulator's audio output (native PCM); internal counts alone are not enough to pass.
+- Rule model: for every frame's processing, read the encoded body text in the ROM (around `msg_ptr`), compute "the sounds that should play" from the speaker code, silent characters, punctuation stops, minimum interval, waits and the sound setting, and match them against the send count and voice number in WRAM.
+- PCM: for each sound that should play, find it by correlation with that voice's waveform (BRR decoded and resampled to the expected pitch). Where no other sound is present, measure length, peak, RMS, DC, largest step, clipping, true silence before it (160 samples of 0), first and last samples, pitch, and the 2nd-harmonic ratio. In frames where nothing may sound (indoors, 50 or more frames after any command: names, narration, menus, waits, punctuation stops, sound off), the PCM is exactly 0.
+- Control ROM (null-volume twin): a ROM from the same source in which only the 7 bytes of the speech-sound volume table in the driver image are 0 (confirmed that only those 7 bytes and the checksum differ). Both are replayed with the same pad input; after confirming that the CPU's progress (mode, body-text position, send count, sound-effect commands…) agrees frame by frame, the PCM difference is taken. The difference is the sound of voice 1 alone: check that every sound that should play is in it with the expected waveform and volume, and that all other samples are 0. This also checks sounds inside the waves and overlapping sound effects, and at the same time shows that sound effects and waves are not changed by speech sounds.
+- Fixture ROM (a ROM separate from the real one): a copy of the script with a line spoken by Hatano (in front of 修一 (Shuichi)'s portrait) on fast-forward right after the chime, plus a line by わたし (`build/adv-speechfixture/`, with the story diff, ROM, labels, layout and input recordings stored separately). The difference from the same fixture's control ROM confirms the speech sounds overlapping the chime and that everything other than the chime is 0; as a supplement, the pitch, order, length and strength of the chime's 4 notes are compared with the chime alone. It also confirms that the speaker's own pitch is used even in front of another person's portrait.
+- Save compatibility with D: from a D save, D and E continue into the same state, speech sounds play after continuing, and D reads a save written by E identically.
+- Two cores: replaying the same input recording on a fresh Snes9x gives byte-identical PCM. bsnes 115 (48 kHz) also replays the real and control ROMs; the difference contains every sound that should play, and everything else is 0. Differences from Snes9x (pitch, peak, start time within the frame) were measured to set tolerances. For the screen, the existing `tests/adv/bsnes.py` also replays and compares the speech-sound test's input recordings (RGB difference within 2, battery match).
+- Short recordings for listening (`review`): 7 people, fast-forward and sound off rendered as WAV and MP4 with sound, plus waveform sheets. Pass/fail is decided by the tests above.

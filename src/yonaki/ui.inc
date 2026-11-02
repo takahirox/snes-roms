@@ -197,9 +197,9 @@ TitleScreen:
     jmp @menu
 
 ; ---------------------------------------------------------------- name entry (はじめから)
-; 主人公の名字 and ヒロインの名前 (names: 1..NAME_MAX glyphs each) typed from pages of characters (かな, カナ,
-; the heroine's family name 早瀬 is fixed and shown grey before her name; notes say which name each one is)
-; 漢字 1-3, NameGrid) over the dimmed title picture.  Arrows move the cursor (the command row under the grid:
+; The hero's family name (主人公) and the heroine's given name (ヒロイン) (1..NAME_MAX glyphs each) typed from
+; pages of characters (かな, カナ, 漢字 1-3, NameGrid) over the dimmed title picture (the heroine's family name
+; 早瀬 is fixed and shown grey before her name; notes say which name each one is).  Arrows move the cursor (the command row under the grid:
 ; かな カナ 漢字 けす 決定), A types or runs a command, B deletes (on an empty name: back to the first name, or
 ; to the title), L / R change the page, START decides.  Carry set: back to the title.
 NE_FAMILY_X = TX0 + 74                  ; ヒロイン: 早瀬

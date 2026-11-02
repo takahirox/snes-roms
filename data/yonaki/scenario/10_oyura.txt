@@ -1,4 +1,4 @@
-# 夜鳴き鐘 — おゆら篇 (解禁: cleared_main)。第四章の二度目の鐘で「鐘の音を、数える」。
+# 夜鳴き鐘 — the おゆら arc (おゆら篇; unlocked by cleared_main).  Entered with 「鐘の音を、数える」 at the second bell of chapter 4.
 
 *oyura_start
 @bgm stop
