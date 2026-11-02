@@ -123,7 +123,7 @@ TY0       = 2                   ; line n at TY0 + 16 n (screen 18 + 16 n)
 PAGE_LINES = 12
 CHOICE_X  = 26                  ; option letter (cursor at TX0)
 OPT_TEXT_X = CHOICE_X + 16      ; option text (tools/yonaki/script.py CHOICE_PX)
-DIM_TEXT  = 6                   ; BG1 minus this much under text (of 31; tools/yonaki/build.py reads it)
+DIM_TEXT  = 0                   ; BG1 minus this much under text (of 31; tools/yonaki/build.py reads it)
 DIM_MENU  = 15
 
 ; ui_state (for the tests)
@@ -175,6 +175,7 @@ g_pad:    .res 2
 g_space:  .res 2               ; extra pixels after each glyph (letter spacing)
 s_m0:     .res 2               ; silhouette colour masks
 s_m1:     .res 2
+s_tr:     .res 2               ; 1: the silhouette is translucent
 
 .segment "BSS"
 ; statistics for the tests
@@ -221,6 +222,8 @@ photo_c0:  .res 2              ; tile columns [photo_c0, photo_c1) of the dirty 
 photo_c1:  .res 2
 pal_dirty: .res 2
 pal_src:   .res 4              ; long address of the 240 photo colours
+tint_dirty: .res 2
+tint_up:   .res 4              ; long address of the 112 translucent-figure colours to upload (CGRAM 144)
 ui_dirty:  .res 2
 map_dirty: .res 2
 ui_pal:    .res 32
@@ -288,6 +291,8 @@ sil_id:    .res 8
 sil_x:     .res 8
 sil_col:   .res 8
 sil_dirty: .res 2
+tint_ok:   .res 2              ; 1: the picture has translucent-figure colours
+tint_col:  .res 2              ; the colour drawn translucent (0 blue, 1 white, 2 red)
 reg_c0:    .res 2              ; columns / top row composited last time
 reg_c1:    .res 2
 reg_top:   .res 2
@@ -990,6 +995,7 @@ WaitUploads:
     ora photo_dirty
     ora photo_dirty+2
     ora pal_dirty
+    ora tint_dirty
     ora map_dirty
     ora ui_dirty
     bne :+
@@ -1123,7 +1129,7 @@ PumpUploads:
     sta t3
     jsr Enqueue
 :   lda pal_dirty
-    beq @map
+    beq :+
     stz pal_dirty
     lda #16
     sta t0
@@ -1135,6 +1141,21 @@ PumpUploads:
     lda pal_src
     sta t2
     lda #480
+    sta t3
+    jsr Enqueue
+:   lda tint_dirty                  ; after the photo colours, which it overwrites in part
+    beq @map
+    stz tint_dirty
+    lda #144
+    sta t0
+    lda tint_up+2
+    xba
+    and #$FF00
+    ora #$0001
+    sta t1
+    lda tint_up
+    sta t2
+    lda #224
     sta t3
     jsr Enqueue
 @map:
@@ -1302,12 +1323,13 @@ ZeroWord: .word 0
 FFWord: .word $FFFF
 
 ; colours 0-15: BG2 palette 0 (0 backdrop black, 1 text, 2 shadow, 3 grey), palette 1 (5 highlighted
-; text, 6 shadow, 7 grey as in palette 0), 8/9 white silhouette body/rim, 10/11 red, 12/13 blue
+; text, 6 shadow, 7 grey as in palette 0), 8/9 white silhouette body/rim, 10/11 red, 12/13 blue (the bodies
+; are drawn with these only where the photo has no translucent-figure colours)
 SysPalette:
     .word $0000, $7BDE, $0C42, $4A52
     .word $0000, $3F7F, $0842, $4A52
-    .word $6B18, $7FFF, $0C54, $211F
-    .word $5505, $7E2C, $0000, $0000
+    .word $6B18, $6F7B, $0C54, $211F
+    .word $5505, $558B, $0000, $0000
 
 .include "src/yonaki/text.inc"
 .include "src/yonaki/pic.inc"

@@ -34,7 +34,7 @@ Review tools:
 |---|---|
 | `tools/yonaki/script.py` | parser, text normalization, wrapping (kinsoku), checks, VM simulation / routes |
 | `tools/yonaki/build.py` | encoding, bank layout, `const.inc`, `data.inc`, `yonaki.cfg`, `layout.json` |
-| `tools/yonaki/pictures.py` | photos → 240 colours + 8bpp tiles; silhouettes → masks (cached in `build/yonaki/cache`) |
+| `tools/yonaki/pictures.py` | photos → 240 colours (112 + their translucent-figure versions where silhouettes appear) + 8bpp tiles; silhouettes → masks (cached in `build/yonaki/cache`) |
 | `tools/yonaki/font.py`, `logo.py` | Shinonome 12-dot glyphs; the title logo |
 | `tools/yonaki/romfix.py` | header checks and checksum |
 | `tools/yonaki/audio.py` (+ music, songs, sfx, spc) | the sound driver and music (music agent) |
@@ -54,15 +54,20 @@ bit (above BG1).  The BG3 map pointer (offset-per-tile in mode 4) points at zero
 
 CGRAM 0–15: 0 black (backdrop), BG2 palette 0 = 1 text white, 2 shadow, 3 grey; palette 1 (highlighted line) =
 5 yellow-white, 6 shadow, 7; silhouettes 8/9 white (ghost) body/rim, 10/11 red, 12/13 blue.  CGRAM 16–255: the
-photo's 240 colours.
+photo's 240 colours.  A photo that silhouettes appear on has 112 colours (CGRAM 16–127) and, at CGRAM 144–255, the
+same colours seen through a translucent blue figure (`pictures.TINTS`: 60% of (36, 52, 176)); the white (45% of
+(232, 236, 255)) and red versions are in a second block (PicTable+75) and replace them while such a figure is on
+screen.
 
 Text: 18 full-width characters (216 px) per line from screen x 20, 12 lines, line n at screen y 18 + 16n
 (each line is exactly two tile rows, so a choice is highlighted by switching those map rows to palette 1).
 Glyphs are white with a 1-pixel dark shadow right, down and diagonal.
 
-Colour math: under text the photo is dimmed by subtracting a fixed colour from BG1 (`DIM_TEXT` = 6/31, ramped 1 a frame);
+Colour math: the photo can be dimmed under text by subtracting a fixed colour from BG1 (`DIM_TEXT`, ramped 1 a frame;
+0 now, so text sits on the full-brightness photo and relies on the glyph shadow);
 `@fx dark` and silhouette updates take it to 31 (black).  The silhouette colours 8–13 are raised by about half
-the dim (table `SilComp`) so the figures keep their brightness under text and still go black in the dark.
+the dim (table `SilComp`) so solid figures keep their brightness under text and still go black in
+the dark; a translucent figure is part of the photo and dims with it.
 Flashes and the white transition add a fixed colour to every layer.  Shake moves BG1; the ripple is HDMA
 channel 7 on BG1HOFS (a 2-px sine, table in bank 0); mosaic uses MOSAIC on BG1; fades use master brightness.
 
@@ -121,6 +126,11 @@ backs, kneeling at a tray, waist-deep in the tub), painted flat magenta (`assets
 following the script's flow (`script.bg_flow`), cuts the magenta out as the mask and keeps its place: SilTable
 holds the top row and the op the column.  Without a staged picture a `@sil` falls back to the standing figure
 (`assets/yonaki/src/sil/`) on the bottom edge at its l / c / r column.
+
+Figures are translucent: compositing keeps the photo's pixel under the figure and sets its bit 7 (colour + 128,
+the tinted version), rim included, so it has no outline.  Only one tint is in CGRAM at a time: white
+before red before blue among the slots (`PickTint`); a figure of another colour, or any figure on a picture without
+tinted colours (black, white, the title), is drawn solid in colours 8–13 as before.
 
 ## Script VM
 

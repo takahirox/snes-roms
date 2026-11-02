@@ -5,6 +5,10 @@ palette by median cut refined with weighted k-means on the 15-bit colours, snapp
 dithered (default: serpentine Floyd-Steinberg with damped error, see DITHER) and cut into 768 8bpp tiles (32 per
 row, row-major), pixel value = palette index + 16.
 
+Photos that silhouettes appear on (tint=True) get 112 colours (CGRAM 16-127) and, at CGRAM 144-255, the same
+colours seen through a translucent blue figure: the engine sets bit 7 of the pixels under a figure.  The white
+and red versions follow in a separate block (TINTS).
+
 Silhouettes (assets/yonaki/src/sil/<id>.png, solid black figure on white): threshold, crop to the figure,
 area-resample so the figure is SIL_HEIGHT pixels tall, re-threshold, pad to a whole number of tiles (figure
 centred, feet on the last row) and mark a 1-pixel rim on the outer edge of the figure.  Mask format: per tile
@@ -26,12 +30,15 @@ from PIL import Image, ImageFilter                   # noqa: E402
 
 W, H = 256, 192
 COLORS = 240
+TINT_COLORS = 112                                   # photos under translucent silhouettes
+# figure colour, opacity: the colours under a blue / white (ghost) / red figure
+TINTS = dict(blue=((36, 52, 176), 0.6), white=((232, 236, 255), 0.45), red=((190, 24, 24), 0.6))
 SIL_HEIGHT = 160
 CACHE = ROOT / 'build/yonaki/cache'
 WEIGHT = np.array([0.299, 0.587, 0.114]) * 3        # distance weights (gamma-encoded RGB)
 DITHER = 'fs'                                       # 'fs' (damped error diffusion), 'bayer', 'none'
 FS_DAMP = 0.75
-VERSION = b'pictures-v3'
+VERSION = b'pictures-v4'
 
 
 def _key(*parts):
@@ -195,13 +202,27 @@ def palette_words(pal):
     return words + [0] * (COLORS - len(words))
 
 
-def convert_photo(arr, method=DITHER):
-    pal = make_palette(arr)
+def tint_words(words, kind):
+    """The 15-bit colours words as seen through a translucent figure of TINTS[kind]."""
+    t, a = TINTS[kind]
+    c5 = np.array([[w & 31, w >> 5 & 31, w >> 10 & 31] for w in words])
+    rgb = (c5 << 3) | (c5 >> 2)
+    return palette_words(rgb * (1 - a) + np.array(t, float) * a)[:len(words)]
+
+
+def convert_photo(arr, method=DITHER, tint=False):
+    pal = make_palette(arr, TINT_COLORS if tint else COLORS)
     idx = dither(arr, pal, method)
     rgb = pal[idx]
     err = float((((rgb - arr) ** 2) * WEIGHT).sum(2).mean())
-    return dict(tiles=tiles8(idx), palette=palette_words(pal), preview=rgb.astype(np.uint8),
-                stats=dict(palette_used=len(pal), mean_weighted_error=round(err, 2), dither=method))
+    words = palette_words(pal)
+    r = dict(tiles=tiles8(idx), palette=words, preview=rgb.astype(np.uint8),
+             stats=dict(palette_used=len(pal), mean_weighted_error=round(err, 2), dither=method))
+    if tint:
+        base = words[:TINT_COLORS]
+        r['palette'] = base + [0] * 16 + tint_words(base, 'blue')    # CGRAM 16-127, 128-143, 144-255
+        r['tints'] = tint_words(base, 'white') + tint_words(base, 'red')
+    return r
 
 
 def _cached(key, make):
@@ -223,14 +244,15 @@ def _cached(key, make):
     return r
 
 
-def background(path, method=DITHER):
-    """Photo file -> dict(tiles 49152 bytes, palette 240 words, preview (192,256,3), stats)."""
+def background(path, method=DITHER, tint=False):
+    """Photo file -> dict(tiles 49152 bytes, palette 240 words, preview (192,256,3), stats; tint: tints 224
+    words, the white and red versions of the 112 colours)."""
     data = pathlib.Path(path).read_bytes()
 
     def make():
         arr = np.asarray(resize_photo(Image.open(path)), float)
-        return convert_photo(arr, method)
-    return _cached(_key(data, method), make)
+        return convert_photo(arr, method, tint)
+    return _cached(_key(data, method, tint, TINTS), make)
 
 
 def solid(rgb):

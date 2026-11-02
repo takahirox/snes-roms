@@ -426,6 +426,7 @@ LoadPic:
     jsr TakeRegion
     lda #1
     sta pal_dirty
+    jsr QueueTint
     lda blanked
     beq @stream
     jsr UploadPhotoNow
@@ -557,6 +558,7 @@ ApplySils:
     bne :-
     jsr RestoreRows
     jsr CompositeAll
+    jsr QueueTint
     jsr TakeRegion
     lda rs_c0
     sta photo_c0
@@ -602,6 +604,7 @@ MarkPhotoRows:
     rts
 
 CompositeAll:
+    jsr PickTint
     ldx #0
 @l:
     lda sil_key,x
@@ -616,14 +619,89 @@ CompositeAll:
     bne @l
     rts
 
+; tint_ok: the picture has translucent-figure colours (PicTable+75, the white / red block; the blue ones are
+; colours 128-239 of its palette).  tint_col: the colour drawn translucent, white before red before blue (one
+; scene shows a blue figure with a white one: the blue one is then drawn solid).
+PickTint:
+    stz tint_ok
+    stz tint_col
+    ldx pic_entry
+    lda PicTable+77,x
+    and #$00FF
+    beq @d
+    inc tint_ok
+    ldx #0
+@l:
+    lda sil_key,x
+    cmp #$FFFF
+    beq @n
+    lda sil_col,x
+    cmp #1
+    beq @white
+    cmp #2
+    bne @n
+    lda tint_col
+    bne @n                      ; white stays
+    lda #2
+    sta tint_col
+    bra @n
+@white:
+    sta tint_col
+@n:
+    inx
+    inx
+    cpx #8
+    bne @l
+@d:
+    rts
+
+; the translucent-figure colours of tint_col to CGRAM 144-255 (after the photo colours)
+QueueTint:
+    lda tint_ok
+    beq @d
+    lda tint_col
+    bne @alt
+    lda pal_src
+    clc
+    adc #256                    ; colour 128 of the photo palette
+    sta tint_up
+    lda pal_src+2
+    sta tint_up+2
+    bra @q
+@alt:
+    ldx pic_entry
+    cmp #2
+    lda PicTable+75,x
+    bcc :+
+    adc #224-1                  ; red follows white (carry set)
+:   sta tint_up
+    lda PicTable+77,x
+    and #$00FF
+    sta tint_up+2
+@q:
+    lda #1
+    sta tint_dirty
+@d:
+    rts
+
 ; X = slot * 2: composite that silhouette into the WRAM photo.
-; Per pixel row of a tile, with cover c and rim r (mask bytes) and old plane words:
+; Solid (no translucent-figure colours, or not tint_col), per pixel row of a tile, with cover c and rim r (mask
+; bytes) and old plane words:
 ;   planes 0/1 = (old & ~c) | r | (red: c in plane 1)
 ;   planes 2/3 = (old & ~c) | c in plane 3 | (blue: c in plane 2)
 ;   planes 4-7 = old & ~c
 ; which gives colour 12/13 (blue body/rim), 10/11 (red), 8/9 (white).
+; Translucent: no rim; the whole figure keeps the photo's colour with bit 7 set, the same colour seen through
+; the figure (colours 144-255):  plane 7 = old | c
 Composite:
+    stz s_tr
+    lda tint_ok
+    beq :+
     lda sil_col,x
+    cmp tint_col
+    bne :+
+    inc s_tr
+:   lda sil_col,x
     ldy #0
     cmp #2
     bne :+
@@ -695,6 +773,9 @@ Composite:
     tax
     lda #8
     sta c_n
+    lda s_tr
+    beq @px
+    jmp @pxt
 @px:
     lda [p0],y
     sta t1                      ; rim << 8 | cover
@@ -738,6 +819,21 @@ Composite:
     iny
     dec c_n
     bne @px
+    bra @tnext
+@pxt:
+    lda [p0],y
+    and #$00FF                  ; cover (the rim is part of it)
+    beq @skipt
+    xba
+    ora f:PHOTO+48,x
+    sta f:PHOTO+48,x
+@skipt:
+    inx
+    inx
+    iny
+    iny
+    dec c_n
+    bne @pxt
 @tnext:
     inc c_tx
     lda c_tx

@@ -1,6 +1,6 @@
 # 夜鳴き鐘 (Yonaki Kane) — design
 
-An original sound novel for the Super Famicom: photographic backgrounds with characters shown as blue silhouettes.
+An original sound novel for the Super Famicom: photographic backgrounds with characters shown as translucent blue silhouettes.
 The story branches on the player's choices; guide it badly and you reach a bad ending without getting to the truth.
 Clearing the main story unlocks other stories (scenarios) set on the same night, reached through new choices.
 
@@ -211,10 +211,10 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 ## 6. Screen and controls
 
 - Background: a 256×192 photo (16-dot black bands above and below). Fades on every scene change.
-- Characters: blue silhouettes (composited onto the background by the CPU). Ghosts are white; horror scenes can also
+- Characters: translucent blue silhouettes without an outline (composited onto the background by the CPU). Ghosts are white; horror scenes can also
   use red.
-- Text: 12-dot characters across the whole screen, 18 characters a line, at most 12 lines. The background is dimmed
-  while text is shown. Waits for A after each paragraph. When the page is full, goes to the next page.
+- Text: 12-dot characters across the whole screen, 18 characters a line, at most 12 lines. The background stays at
+  full brightness under text; the glyphs' dark shadow keeps them readable. Waits for A after each paragraph. When the page is full, goes to the next page.
 - Choices: listed under the text. Select with up/down, confirm with A.
 - A: advance / confirm. B (held): fast-forward through text already read (stops at unread text). START: menu
   (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
@@ -253,8 +253,9 @@ body text              one line is one paragraph; wrapped automatically, waits f
 
 - LoROM, up to 4 MiB, 8 KiB battery-backed SRAM.
 - Screen: Mode 4. BG1 8bpp photo (768 tiles at VRAM $0000–$BFFF), BG2 2bpp text (a 28×24-tile bitmap).
-  CGRAM 0–15 for text and silhouettes, 16–255 for the photo (each photo quantized to 240 colours).
-- Fade to black and dimming under text: colour math subtracting a fixed colour from BG1.
+  CGRAM 0–15 for text and silhouettes, 16–255 for the photo (each photo quantized to 240 colours, or to 112 plus
+  their translucent-figure versions when silhouettes appear on it).
+- Fade to black and the menu dim: colour math subtracting a fixed colour from BG1.
 - Effects: screen shake (BG1 scroll), flash, mosaic, an HDMA water-surface ripple.
 - Sound: takes over the SPC700 driver of 潮鳴りの密室 (Shionari no Misshitsu) (6-voice music + sound effects) and
   remakes the songs and sound effects.

@@ -18,7 +18,7 @@ An original sound novel for the Super Famicom. On the last night of 水明館 (S
 | Scenario | Main story (prologue to chapter 5), おゆら篇 (the Oyura chapter; supernatural), 千鶴篇 (the Chizuru chapter; Shōwa 44 = 1969), bonus 編集部篇 (the editorial-office chapter). About 65,000 characters, about 2,400 paragraphs, 49 choice points |
 | Endings | 20 (main story 14, おゆら篇 3, 千鶴篇 2, bonus 1) |
 | Backgrounds | 43 photo-like backgrounds (made with Codex CLI image generation; sources and prompts in [ART.json](../../assets/yonaki/ART.json)) |
-| Characters | 100-odd per-scene silhouettes (generated to match each background photo, in poses such as sitting in a seat, kneeling formally before a meal tray, or standing in the bath. [stage.json](../../assets/yonaki/stage.json). Shown in blue, white or red) |
+| Characters | 100-odd per-scene silhouettes (generated to match each background photo, in poses such as sitting in a seat, kneeling formally before a meal tray, or standing in the bath. [stage.json](../../assets/yonaki/stage.json). Shown as translucent blue, white or red figures) |
 | Sound | 18 original songs, 32 sound effects, rain and storm ambience (synthesized from formulas for the SPC700) |
 
 ## Build and test
