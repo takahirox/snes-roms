@@ -1,0 +1,70 @@
+{
+ "rom_sha256": "1132c59cfba4cc7b0c1a7d7957b4b5de84c6038e0e061ca2e6372f8b8b4a01ca",
+ "core": "Snes9x 1.63 libretro (unmodified)",
+ "note": "recordings for listening and viewing; the checks are tests/adv/run.py (opening, audio) and tests/adv/speech.py",
+ "opening": {
+  "mp4": "docs/adv/music/review/opening.mp4",
+  "frames": 3175,
+  "title_frame": 2274,
+  "title_s": 37.84,
+  "seconds": 52.8,
+  "peak": 14489,
+  "clipped": 0
+ },
+ "songs": {
+  "1_title": {
+   "file": "docs/adv/music/review/songs/1_title.m4a",
+   "music_cur": [
+    1
+   ],
+   "seconds": 46.0,
+   "peak": 15012,
+   "clipped": 0
+  },
+  "2_investigate": {
+   "file": "docs/adv/music/review/songs/2_investigate.m4a",
+   "music_cur": [
+    2
+   ],
+   "seconds": 42.0,
+   "peak": 14567,
+   "clipped": 0
+  },
+  "3_sea": {
+   "file": "docs/adv/music/review/songs/3_sea.m4a",
+   "music_cur": [
+    3
+   ],
+   "seconds": 48.0,
+   "peak": 9084,
+   "clipped": 0
+  },
+  "4_cafe": {
+   "file": "docs/adv/music/review/songs/4_cafe.m4a",
+   "music_cur": [
+    4
+   ],
+   "seconds": 40.0,
+   "peak": 11986,
+   "clipped": 0
+  },
+  "5_deduce": {
+   "file": "docs/adv/music/review/songs/5_deduce.m4a",
+   "music_cur": [
+    5
+   ],
+   "seconds": 55.0,
+   "peak": 10924,
+   "clipped": 0
+  },
+  "6_dawn": {
+   "file": "docs/adv/music/review/songs/6_dawn.m4a",
+   "music_cur": [
+    6
+   ],
+   "seconds": 52.0,
+   "peak": 13322,
+   "clipped": 0
+  }
+ }
+}

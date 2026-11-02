@@ -1,0 +1,5740 @@
+{
+ "image_sha256": "5bf1087a86d35c2a24f9034b2d4a326c2429c4d21e80e922b64b2c1edbbaaee9",
+ "core": "Snes9x 1.63 libretro (unmodified)",
+ "rom": "build/yonaki-audio/review.sfc",
+ "info": {
+  "load": 512,
+  "entry": 512,
+  "image_bytes": 48523,
+  "image_end": "$BF8B",
+  "free_bytes": 8309,
+  "code_bytes": 3657,
+  "dir": "$1100",
+  "sample_bytes": 32229,
+  "effect_bytes": 1284,
+  "sequence_bytes": 10608,
+  "echo": {
+   "start": "$E000",
+   "edl": 4,
+   "bytes": 8192
+  },
+  "songs": {
+   "title": {
+    "bpm": 65.79,
+    "beats": 4,
+    "bars": 18.0,
+    "seconds": 65.66,
+    "loop_bar": 3.0,
+    "loop_seconds": 58.37,
+    "intro_seconds": 7.3,
+    "ticks_per_second": 52.63157894736842,
+    "total_ticks": 3456,
+    "loop_tick": 384
+   },
+   "journey": {
+    "bpm": 91.74,
+    "beats": 4,
+    "bars": 16.0,
+    "seconds": 41.86,
+    "loop_bar": 1.0,
+    "loop_seconds": 41.86,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 73.39449541284404,
+    "total_ticks": 3072,
+    "loop_tick": 0
+   },
+   "inn": {
+    "bpm": 80.0,
+    "beats": 3,
+    "bars": 24.0,
+    "seconds": 54.0,
+    "loop_bar": 1.0,
+    "loop_seconds": 54.0,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 64.0,
+    "total_ticks": 3456,
+    "loop_tick": 0
+   },
+   "dinner": {
+    "bpm": 104.17,
+    "beats": 4,
+    "bars": 24.0,
+    "seconds": 55.3,
+    "loop_bar": 1.0,
+    "loop_seconds": 55.3,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 83.33333333333333,
+    "total_ticks": 4608,
+    "loop_tick": 0
+   },
+   "night": {
+    "bpm": 59.88,
+    "beats": 3,
+    "bars": 24.0,
+    "seconds": 72.14,
+    "loop_bar": 1.0,
+    "loop_seconds": 72.14,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 47.90419161676647,
+    "total_ticks": 3456,
+    "loop_tick": 0
+   },
+   "legend": {
+    "bpm": 54.05,
+    "beats": 4,
+    "bars": 16.0,
+    "seconds": 71.04,
+    "loop_bar": 1.0,
+    "loop_seconds": 71.04,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 43.24324324324324,
+    "total_ticks": 3072,
+    "loop_tick": 0
+   },
+   "unease": {
+    "bpm": 96.15,
+    "beats": 4,
+    "bars": 24.0,
+    "seconds": 59.9,
+    "loop_bar": 1.0,
+    "loop_seconds": 59.9,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 76.92307692307692,
+    "total_ticks": 4608,
+    "loop_tick": 0
+   },
+   "horror": {
+    "bpm": 71.94,
+    "beats": 4,
+    "bars": 8.0,
+    "seconds": 26.69,
+    "loop_bar": 1.0,
+    "loop_seconds": 26.69,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 57.55395683453237,
+    "total_ticks": 1536,
+    "loop_tick": 0
+   },
+   "chase": {
+    "bpm": 161.29,
+    "beats": 4,
+    "bars": 16.0,
+    "seconds": 23.81,
+    "loop_bar": 1.0,
+    "loop_seconds": 23.81,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 129.03225806451613,
+    "total_ticks": 3072,
+    "loop_tick": 0
+   },
+   "investigate": {
+    "bpm": 100.0,
+    "beats": 4,
+    "bars": 24.0,
+    "seconds": 57.6,
+    "loop_bar": 1.0,
+    "loop_seconds": 57.6,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 80.0,
+    "total_ticks": 4608,
+    "loop_tick": 0
+   },
+   "deduce": {
+    "bpm": 116.28,
+    "beats": 4,
+    "bars": 16.0,
+    "seconds": 33.02,
+    "loop_bar": 1.0,
+    "loop_seconds": 33.02,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 93.02325581395348,
+    "total_ticks": 3072,
+    "loop_tick": 0
+   },
+   "sorrow": {
+    "bpm": 54.05,
+    "beats": 4,
+    "bars": 16.0,
+    "seconds": 71.04,
+    "loop_bar": 1.0,
+    "loop_seconds": 71.04,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 43.24324324324324,
+    "total_ticks": 3072,
+    "loop_tick": 0
+   },
+   "dawn": {
+    "bpm": 71.94,
+    "beats": 4,
+    "bars": 16.0,
+    "seconds": 53.38,
+    "loop_bar": 1.0,
+    "loop_seconds": 53.38,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 57.55395683453237,
+    "total_ticks": 3072,
+    "loop_tick": 0
+   },
+   "badend": {
+    "bpm": 50.0,
+    "beats": 4,
+    "bars": 8.5,
+    "seconds": 40.8,
+    "loop_bar": null,
+    "loop_seconds": null,
+    "intro_seconds": null,
+    "ticks_per_second": 40.0,
+    "total_ticks": 1632,
+    "loop_tick": null
+   },
+   "staff": {
+    "bpm": 69.93,
+    "beats": 4,
+    "bars": 40.0,
+    "seconds": 137.28,
+    "loop_bar": 25.0,
+    "loop_seconds": 54.91,
+    "intro_seconds": 82.37,
+    "ticks_per_second": 55.94405594405595,
+    "total_ticks": 7680,
+    "loop_tick": 4608
+   },
+   "oyura": {
+    "bpm": 62.89,
+    "beats": 4,
+    "bars": 16.0,
+    "seconds": 61.06,
+    "loop_bar": 1.0,
+    "loop_seconds": 61.06,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 50.314465408805034,
+    "total_ticks": 3072,
+    "loop_tick": 0
+   },
+   "chizuru": {
+    "bpm": 91.74,
+    "beats": 4,
+    "bars": 24.0,
+    "seconds": 62.78,
+    "loop_bar": 1.0,
+    "loop_seconds": 62.78,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 73.39449541284404,
+    "total_ticks": 4608,
+    "loop_tick": 0
+   },
+   "omake": {
+    "bpm": 131.58,
+    "beats": 4,
+    "bars": 16.0,
+    "seconds": 29.18,
+    "loop_bar": 1.0,
+    "loop_seconds": 29.18,
+    "intro_seconds": 0.0,
+    "ticks_per_second": 105.26315789473684,
+    "total_ticks": 3072,
+    "loop_tick": 0
+   }
+  }
+ },
+ "note": "recordings of a test ROM that uploads the image through the IPL and sends the commands through the APU ports; analysis in tests/yonaki/music_review.py",
+ "songs": {
+  "title": {
+   "seconds": 74.68,
+   "peak": 14917,
+   "clipped": 0,
+   "rms": 2469.2,
+   "rms_dbfs": -22.5,
+   "port2_values": [
+    0,
+    1
+   ],
+   "port3_last_beat": 81,
+   "port3_expected_about": 81,
+   "tuned_share": 0.994,
+   "score_share_mean": 0.979,
+   "chord_share_mean": 0.891,
+   "score_share_min_bar": {
+    "bar": 8,
+    "score_share": 0.919,
+    "chord_share": 0.839,
+    "top": [
+     "E",
+     "C",
+     "A",
+     "A#"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.97,
+     "chord_share": 0.895,
+     "top": [
+      "D",
+      "F",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.965,
+     "chord_share": 0.913,
+     "top": [
+      "D",
+      "F",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.974,
+     "chord_share": 0.936,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.983,
+     "chord_share": 0.927,
+     "top": [
+      "A#",
+      "D",
+      "A",
+      "F"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.98,
+     "chord_share": 0.902,
+     "top": [
+      "G",
+      "E",
+      "D",
+      "C#"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.962,
+     "chord_share": 0.906,
+     "top": [
+      "D",
+      "F",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.981,
+     "chord_share": 0.694,
+     "top": [
+      "F",
+      "C",
+      "E",
+      "G"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.919,
+     "chord_share": 0.839,
+     "top": [
+      "E",
+      "C",
+      "A",
+      "A#"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.989,
+     "chord_share": 0.908,
+     "top": [
+      "D#",
+      "A#",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.976,
+     "chord_share": 0.92,
+     "top": [
+      "A",
+      "D",
+      "E",
+      "F"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.994,
+     "chord_share": 0.757,
+     "top": [
+      "A",
+      "G",
+      "D",
+      "A#"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.991,
+     "chord_share": 0.781,
+     "top": [
+      "D",
+      "F",
+      "E",
+      "A#"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.991,
+     "chord_share": 0.981,
+     "top": [
+      "D#",
+      "A#",
+      "D",
+      "F"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.985,
+     "chord_share": 0.944,
+     "top": [
+      "A",
+      "E",
+      "C#",
+      "B"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.99,
+     "chord_share": 0.976,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.991,
+     "chord_share": 0.978,
+     "top": [
+      "A#",
+      "A",
+      "D",
+      "F"
+     ]
+    },
+    {
+     "bar": 17,
+     "score_share": 0.995,
+     "chord_share": 0.809,
+     "top": [
+      "D#",
+      "G",
+      "D",
+      "C#"
+     ]
+    },
+    {
+     "bar": 18,
+     "score_share": 0.989,
+     "chord_share": 0.974,
+     "top": [
+      "D",
+      "F",
+      "A",
+      "E"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 65.66,
+    "max_step_at_seam": 3710,
+    "p999_step_elsewhere": 1162,
+    "rms_before_seam": 2461,
+    "rms_at_loop_start": 2076,
+    "repeat_correlation": 0.9939,
+    "repeat_envelope_correlation": 0.9959,
+    "repeat_rms_ratio": 1.005,
+    "repeat_checked_at_s": 12.3,
+    "max_step_at_first_loop_start": 3626,
+    "rms_100ms_after_seam": 3484
+   },
+   "seconds_score": 65.66,
+   "loop_seconds": 58.37,
+   "file": "songs/00_title.m4a"
+  },
+  "journey": {
+   "seconds": 50.87,
+   "peak": 12266,
+   "clipped": 0,
+   "rms": 2133.3,
+   "rms_dbfs": -23.7,
+   "port2_values": [
+    0,
+    2
+   ],
+   "port3_last_beat": 77,
+   "port3_expected_about": 77,
+   "tuned_share": 0.993,
+   "score_share_mean": 0.85,
+   "chord_share_mean": 0.758,
+   "score_share_min_bar": {
+    "bar": 8,
+    "score_share": 0.714,
+    "chord_share": 0.714,
+    "top": [
+     "B",
+     "G#",
+     "F#",
+     "E"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.838,
+     "chord_share": 0.735,
+     "top": [
+      "E",
+      "C",
+      "B",
+      "D"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.79,
+     "chord_share": 0.444,
+     "top": [
+      "B",
+      "A",
+      "E",
+      "F#"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.921,
+     "chord_share": 0.626,
+     "top": [
+      "C",
+      "G",
+      "B",
+      "F"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.891,
+     "chord_share": 0.891,
+     "top": [
+      "G",
+      "D",
+      "B",
+      "F#"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.922,
+     "chord_share": 0.718,
+     "top": [
+      "A",
+      "E",
+      "D",
+      "C"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.797,
+     "chord_share": 0.795,
+     "top": [
+      "E",
+      "C",
+      "A",
+      "G"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.91,
+     "chord_share": 0.684,
+     "top": [
+      "F",
+      "A",
+      "C",
+      "D"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.714,
+     "chord_share": 0.714,
+     "top": [
+      "B",
+      "G#",
+      "F#",
+      "E"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.801,
+     "chord_share": 0.732,
+     "top": [
+      "A",
+      "C",
+      "E",
+      "B"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.802,
+     "chord_share": 0.748,
+     "top": [
+      "D",
+      "B",
+      "G",
+      "F#"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.925,
+     "chord_share": 0.925,
+     "top": [
+      "G",
+      "E",
+      "B",
+      "D"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.957,
+     "chord_share": 0.957,
+     "top": [
+      "A",
+      "E",
+      "C#",
+      "B"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.811,
+     "chord_share": 0.734,
+     "top": [
+      "C",
+      "A",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.831,
+     "chord_share": 0.831,
+     "top": [
+      "A",
+      "F",
+      "E",
+      "C"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.916,
+     "chord_share": 0.818,
+     "top": [
+      "A#",
+      "D",
+      "F",
+      "C"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.77,
+     "chord_share": 0.77,
+     "top": [
+      "B",
+      "F#",
+      "E",
+      "D#"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 41.86,
+    "max_step_at_seam": 1178,
+    "p999_step_elsewhere": 1062,
+    "repeat_correlation": 0.9977,
+    "repeat_envelope_correlation": 0.9988,
+    "repeat_rms_ratio": 0.999,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 1178,
+    "rms_100ms_after_seam": 2537
+   },
+   "seconds_score": 41.86,
+   "loop_seconds": 41.86,
+   "file": "songs/01_journey.m4a"
+  },
+  "inn": {
+   "seconds": 63.0,
+   "peak": 13312,
+   "clipped": 0,
+   "rms": 2748.7,
+   "rms_dbfs": -21.5,
+   "port2_values": [
+    0,
+    3
+   ],
+   "port3_last_beat": 84,
+   "port3_expected_about": 83,
+   "tuned_share": 0.99,
+   "score_share_mean": 0.978,
+   "chord_share_mean": 0.892,
+   "score_share_min_bar": {
+    "bar": 15,
+    "score_share": 0.964,
+    "chord_share": 0.964,
+    "top": [
+     "F",
+     "C",
+     "A",
+     "G"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.973,
+     "chord_share": 0.973,
+     "top": [
+      "C",
+      "F",
+      "A",
+      "G"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.98,
+     "chord_share": 0.98,
+     "top": [
+      "G",
+      "E",
+      "C",
+      "A"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.977,
+     "chord_share": 0.623,
+     "top": [
+      "A#",
+      "G",
+      "F",
+      "D"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.97,
+     "chord_share": 0.972,
+     "top": [
+      "C",
+      "E",
+      "G",
+      "B"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.977,
+     "chord_share": 0.56,
+     "top": [
+      "D",
+      "A",
+      "C",
+      "F"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.982,
+     "chord_share": 0.982,
+     "top": [
+      "C",
+      "A",
+      "D",
+      "F"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.992,
+     "chord_share": 0.903,
+     "top": [
+      "A#",
+      "G",
+      "A",
+      "D"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.975,
+     "chord_share": 0.975,
+     "top": [
+      "G",
+      "E",
+      "C",
+      "D"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.976,
+     "chord_share": 0.484,
+     "top": [
+      "F",
+      "A",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.977,
+     "chord_share": 0.78,
+     "top": [
+      "C#",
+      "C",
+      "F",
+      "A#"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.976,
+     "chord_share": 0.976,
+     "top": [
+      "A",
+      "C",
+      "G",
+      "E"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.981,
+     "chord_share": 0.981,
+     "top": [
+      "A",
+      "F",
+      "D",
+      "E"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.992,
+     "chord_share": 0.904,
+     "top": [
+      "A#",
+      "G",
+      "A",
+      "D"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.98,
+     "chord_share": 0.964,
+     "top": [
+      "G",
+      "F",
+      "C",
+      "E"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.964,
+     "chord_share": 0.964,
+     "top": [
+      "F",
+      "C",
+      "A",
+      "G"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.972,
+     "chord_share": 0.973,
+     "top": [
+      "E",
+      "C",
+      "G",
+      "B"
+     ]
+    },
+    {
+     "bar": 17,
+     "score_share": 0.985,
+     "chord_share": 0.887,
+     "top": [
+      "F",
+      "D",
+      "E",
+      "A"
+     ]
+    },
+    {
+     "bar": 18,
+     "score_share": 0.964,
+     "chord_share": 0.964,
+     "top": [
+      "E",
+      "C",
+      "A",
+      "B"
+     ]
+    },
+    {
+     "bar": 19,
+     "score_share": 0.981,
+     "chord_share": 0.759,
+     "top": [
+      "A#",
+      "D",
+      "C",
+      "F"
+     ]
+    },
+    {
+     "bar": 20,
+     "score_share": 0.977,
+     "chord_share": 0.977,
+     "top": [
+      "A",
+      "C",
+      "F",
+      "G"
+     ]
+    },
+    {
+     "bar": 21,
+     "score_share": 0.991,
+     "chord_share": 0.905,
+     "top": [
+      "A#",
+      "G",
+      "A",
+      "D"
+     ]
+    },
+    {
+     "bar": 22,
+     "score_share": 0.978,
+     "chord_share": 0.978,
+     "top": [
+      "A#",
+      "G",
+      "C",
+      "E"
+     ]
+    },
+    {
+     "bar": 23,
+     "score_share": 0.974,
+     "chord_share": 0.974,
+     "top": [
+      "A",
+      "F",
+      "C",
+      "G"
+     ]
+    },
+    {
+     "bar": 24,
+     "score_share": 0.977,
+     "chord_share": 0.978,
+     "top": [
+      "G",
+      "E",
+      "C",
+      "B"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 54.0,
+    "max_step_at_seam": 2398,
+    "p999_step_elsewhere": 781,
+    "repeat_correlation": 0.9965,
+    "repeat_envelope_correlation": 0.9998,
+    "repeat_rms_ratio": 0.999,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 2532,
+    "rms_100ms_after_seam": 3165
+   },
+   "seconds_score": 54.0,
+   "loop_seconds": 54.0,
+   "file": "songs/02_inn.m4a"
+  },
+  "dinner": {
+   "seconds": 64.29,
+   "peak": 12495,
+   "clipped": 0,
+   "rms": 2175.0,
+   "rms_dbfs": -23.6,
+   "port2_values": [
+    0,
+    4
+   ],
+   "port3_last_beat": 111,
+   "port3_expected_about": 111,
+   "tuned_share": 0.989,
+   "score_share_mean": 0.9,
+   "chord_share_mean": 0.71,
+   "score_share_min_bar": {
+    "bar": 2,
+    "score_share": 0.82,
+    "chord_share": 0.727,
+    "top": [
+     "G",
+     "B",
+     "E",
+     "F#"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.925,
+     "chord_share": 0.482,
+     "top": [
+      "A",
+      "G",
+      "D",
+      "B"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.82,
+     "chord_share": 0.727,
+     "top": [
+      "G",
+      "B",
+      "E",
+      "F#"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.941,
+     "chord_share": 0.51,
+     "top": [
+      "D",
+      "G",
+      "E",
+      "C"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.924,
+     "chord_share": 0.968,
+     "top": [
+      "D",
+      "A",
+      "F#",
+      "E"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.923,
+     "chord_share": 0.561,
+     "top": [
+      "A",
+      "B",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.836,
+     "chord_share": 0.436,
+     "top": [
+      "F#",
+      "A",
+      "B",
+      "G"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.904,
+     "chord_share": 0.601,
+     "top": [
+      "G",
+      "A",
+      "E",
+      "C"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.829,
+     "chord_share": 0.769,
+     "top": [
+      "D#",
+      "A#",
+      "G",
+      "G#"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.903,
+     "chord_share": 0.662,
+     "top": [
+      "G",
+      "B",
+      "D",
+      "A"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.846,
+     "chord_share": 0.66,
+     "top": [
+      "E",
+      "B",
+      "C",
+      "G#"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.905,
+     "chord_share": 0.676,
+     "top": [
+      "A",
+      "E",
+      "B",
+      "C"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.904,
+     "chord_share": 0.659,
+     "top": [
+      "D#",
+      "A#",
+      "C",
+      "G#"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.875,
+     "chord_share": 0.501,
+     "top": [
+      "A",
+      "G",
+      "B",
+      "F#"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.9,
+     "chord_share": 0.827,
+     "top": [
+      "G",
+      "E",
+      "B",
+      "F#"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.888,
+     "chord_share": 0.889,
+     "top": [
+      "F#",
+      "A",
+      "G",
+      "C#"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.959,
+     "chord_share": 0.98,
+     "top": [
+      "G",
+      "D",
+      "B",
+      "A"
+     ]
+    },
+    {
+     "bar": 17,
+     "score_share": 0.886,
+     "chord_share": 0.589,
+     "top": [
+      "G",
+      "D",
+      "E",
+      "B"
+     ]
+    },
+    {
+     "bar": 18,
+     "score_share": 0.932,
+     "chord_share": 0.789,
+     "top": [
+      "A",
+      "F#",
+      "D",
+      "E"
+     ]
+    },
+    {
+     "bar": 19,
+     "score_share": 0.933,
+     "chord_share": 0.694,
+     "top": [
+      "B",
+      "F#",
+      "D",
+      "A"
+     ]
+    },
+    {
+     "bar": 20,
+     "score_share": 0.962,
+     "chord_share": 0.963,
+     "top": [
+      "E",
+      "B",
+      "F#",
+      "F"
+     ]
+    },
+    {
+     "bar": 21,
+     "score_share": 0.928,
+     "chord_share": 0.694,
+     "top": [
+      "A",
+      "G",
+      "D#",
+      "E"
+     ]
+    },
+    {
+     "bar": 22,
+     "score_share": 0.836,
+     "chord_share": 0.705,
+     "top": [
+      "A",
+      "F#",
+      "D",
+      "G"
+     ]
+    },
+    {
+     "bar": 23,
+     "score_share": 0.887,
+     "chord_share": 0.748,
+     "top": [
+      "D",
+      "G",
+      "B",
+      "A"
+     ]
+    },
+    {
+     "bar": 24,
+     "score_share": 0.96,
+     "chord_share": 0.96,
+     "top": [
+      "G",
+      "D",
+      "B",
+      "A"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 55.3,
+    "max_step_at_seam": 2546,
+    "p999_step_elsewhere": 1143,
+    "repeat_correlation": 0.9916,
+    "repeat_envelope_correlation": 0.9996,
+    "repeat_rms_ratio": 1.0,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 2536,
+    "rms_100ms_after_seam": 2758
+   },
+   "seconds_score": 55.3,
+   "loop_seconds": 55.3,
+   "file": "songs/03_dinner.m4a"
+  },
+  "night": {
+   "seconds": 81.13,
+   "peak": 10935,
+   "clipped": 0,
+   "rms": 1201.9,
+   "rms_dbfs": -28.7,
+   "port2_values": [
+    0,
+    5
+   ],
+   "port3_last_beat": 81,
+   "port3_expected_about": 80,
+   "tuned_share": 0.976,
+   "score_share_mean": 0.965,
+   "chord_share_mean": 0.884,
+   "score_share_min_bar": {
+    "bar": 6,
+    "score_share": 0.935,
+    "chord_share": 0.935,
+    "top": [
+     "E",
+     "F",
+     "C",
+     "B"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.959,
+     "chord_share": 0.988,
+     "top": [
+      "E",
+      "C",
+      "B",
+      "G"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.976,
+     "chord_share": 0.606,
+     "top": [
+      "B",
+      "C",
+      "E",
+      "G"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.962,
+     "chord_share": 0.99,
+     "top": [
+      "E",
+      "A",
+      "C",
+      "B"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.974,
+     "chord_share": 0.946,
+     "top": [
+      "B",
+      "G",
+      "E",
+      "F#"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.94,
+     "chord_share": 0.911,
+     "top": [
+      "E",
+      "C",
+      "A",
+      "B"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.935,
+     "chord_share": 0.935,
+     "top": [
+      "E",
+      "F",
+      "C",
+      "B"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.988,
+     "chord_share": 0.961,
+     "top": [
+      "E",
+      "B",
+      "D",
+      "F#"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.984,
+     "chord_share": 0.949,
+     "top": [
+      "E",
+      "B",
+      "F#",
+      "G#"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.959,
+     "chord_share": 0.748,
+     "top": [
+      "C",
+      "E",
+      "D",
+      "B"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.978,
+     "chord_share": 0.615,
+     "top": [
+      "B",
+      "C",
+      "E",
+      "G"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.962,
+     "chord_share": 0.989,
+     "top": [
+      "E",
+      "A",
+      "C",
+      "B"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.985,
+     "chord_share": 0.947,
+     "top": [
+      "B",
+      "E",
+      "G",
+      "F#"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.976,
+     "chord_share": 0.702,
+     "top": [
+      "G",
+      "F",
+      "E",
+      "C"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.937,
+     "chord_share": 0.937,
+     "top": [
+      "E",
+      "F",
+      "C",
+      "B"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.983,
+     "chord_share": 0.951,
+     "top": [
+      "E",
+      "B",
+      "F#",
+      "F"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.953,
+     "chord_share": 0.989,
+     "top": [
+      "E",
+      "C",
+      "B",
+      "G"
+     ]
+    },
+    {
+     "bar": 17,
+     "score_share": 0.974,
+     "chord_share": 0.715,
+     "top": [
+      "A",
+      "B",
+      "C",
+      "E"
+     ]
+    },
+    {
+     "bar": 18,
+     "score_share": 0.964,
+     "chord_share": 0.945,
+     "top": [
+      "E",
+      "B",
+      "G",
+      "F#"
+     ]
+    },
+    {
+     "bar": 19,
+     "score_share": 0.947,
+     "chord_share": 0.947,
+     "top": [
+      "E",
+      "D",
+      "C",
+      "F"
+     ]
+    },
+    {
+     "bar": 20,
+     "score_share": 0.948,
+     "chord_share": 0.948,
+     "top": [
+      "E",
+      "C",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 21,
+     "score_share": 0.953,
+     "chord_share": 0.666,
+     "top": [
+      "G",
+      "F",
+      "E",
+      "A"
+     ]
+    },
+    {
+     "bar": 22,
+     "score_share": 0.967,
+     "chord_share": 0.947,
+     "top": [
+      "D",
+      "E",
+      "B",
+      "F#"
+     ]
+    },
+    {
+     "bar": 23,
+     "score_share": 0.971,
+     "chord_share": 0.954,
+     "top": [
+      "D",
+      "F",
+      "C",
+      "A"
+     ]
+    },
+    {
+     "bar": 24,
+     "score_share": 0.978,
+     "chord_share": 0.924,
+     "top": [
+      "E",
+      "B",
+      "F#",
+      "F"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 72.14,
+    "max_step_at_seam": 3264,
+    "p999_step_elsewhere": 910,
+    "repeat_correlation": 0.9951,
+    "repeat_envelope_correlation": 0.9999,
+    "repeat_rms_ratio": 0.999,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 3275,
+    "rms_100ms_after_seam": 2823
+   },
+   "seconds_score": 72.14,
+   "loop_seconds": 72.14,
+   "file": "songs/04_night.m4a"
+  },
+  "legend": {
+   "seconds": 80.03,
+   "peak": 14019,
+   "clipped": 0,
+   "rms": 2588.9,
+   "rms_dbfs": -22.0,
+   "port2_values": [
+    0,
+    6
+   ],
+   "port3_last_beat": 72,
+   "port3_expected_about": 72,
+   "tuned_share": 0.975,
+   "score_share_mean": 0.926,
+   "chord_share_mean": 0.782,
+   "score_share_min_bar": {
+    "bar": 8,
+    "score_share": 0.771,
+    "chord_share": 0.771,
+    "top": [
+     "A",
+     "D",
+     "E",
+     "C#"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.947,
+     "chord_share": 0.881,
+     "top": [
+      "D",
+      "A",
+      "D#",
+      "E"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.951,
+     "chord_share": 0.951,
+     "top": [
+      "D",
+      "A",
+      "E",
+      "D#"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.958,
+     "chord_share": 0.463,
+     "top": [
+      "A#",
+      "A",
+      "E",
+      "D"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.943,
+     "chord_share": 0.943,
+     "top": [
+      "A",
+      "E",
+      "D",
+      "C#"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.933,
+     "chord_share": 0.933,
+     "top": [
+      "A#",
+      "D",
+      "A",
+      "F"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.978,
+     "chord_share": 0.43,
+     "top": [
+      "D#",
+      "A#",
+      "D",
+      "A"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.912,
+     "chord_share": 0.912,
+     "top": [
+      "A",
+      "D",
+      "E",
+      "C#"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.771,
+     "chord_share": 0.771,
+     "top": [
+      "A",
+      "D",
+      "E",
+      "C#"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.967,
+     "chord_share": 0.907,
+     "top": [
+      "G",
+      "D#",
+      "A#",
+      "A"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.984,
+     "chord_share": 0.795,
+     "top": [
+      "D#",
+      "G",
+      "A",
+      "A#"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.941,
+     "chord_share": 0.941,
+     "top": [
+      "D",
+      "A",
+      "E",
+      "C#"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.952,
+     "chord_share": 0.483,
+     "top": [
+      "A#",
+      "A",
+      "D",
+      "E"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.931,
+     "chord_share": 0.586,
+     "top": [
+      "D",
+      "D#",
+      "A#",
+      "A"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.973,
+     "chord_share": 0.834,
+     "top": [
+      "A#",
+      "D#",
+      "A",
+      "G"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.906,
+     "chord_share": 0.906,
+     "top": [
+      "A",
+      "D",
+      "E",
+      "C#"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.771,
+     "chord_share": 0.771,
+     "top": [
+      "A",
+      "D",
+      "E",
+      "C#"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 71.04,
+    "max_step_at_seam": 840,
+    "p999_step_elsewhere": 1415,
+    "repeat_correlation": 0.8759,
+    "repeat_envelope_correlation": 0.9422,
+    "repeat_rms_ratio": 1.003,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 841,
+    "rms_100ms_after_seam": 2163
+   },
+   "seconds_score": 71.04,
+   "loop_seconds": 71.04,
+   "file": "songs/05_legend.m4a"
+  },
+  "unease": {
+   "seconds": 68.9,
+   "peak": 17991,
+   "clipped": 0,
+   "rms": 1652.0,
+   "rms_dbfs": -25.9,
+   "port2_values": [
+    0,
+    7
+   ],
+   "port3_last_beat": 110,
+   "port3_expected_about": 110,
+   "tuned_share": 0.955,
+   "score_share_mean": 0.86,
+   "chord_share_mean": 0.684,
+   "score_share_min_bar": {
+    "bar": 2,
+    "score_share": 0.482,
+    "chord_share": 0.277,
+    "top": [
+     "G",
+     "A",
+     "F#",
+     "G#"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.508,
+     "chord_share": 0.3,
+     "top": [
+      "G",
+      "A",
+      "F#",
+      "A#"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.482,
+     "chord_share": 0.277,
+     "top": [
+      "G",
+      "A",
+      "F#",
+      "G#"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.792,
+     "chord_share": 0.788,
+     "top": [
+      "C",
+      "G",
+      "F#",
+      "A#"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.775,
+     "chord_share": 0.684,
+     "top": [
+      "C",
+      "G",
+      "A",
+      "F#"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.838,
+     "chord_share": 0.455,
+     "top": [
+      "F#",
+      "C",
+      "G",
+      "A"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.806,
+     "chord_share": 0.752,
+     "top": [
+      "C#",
+      "F",
+      "G#",
+      "A"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.868,
+     "chord_share": 0.441,
+     "top": [
+      "F#",
+      "C",
+      "G",
+      "A"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.889,
+     "chord_share": 0.846,
+     "top": [
+      "B",
+      "F",
+      "F#",
+      "A"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.886,
+     "chord_share": 0.821,
+     "top": [
+      "D#",
+      "G",
+      "D",
+      "A#"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.91,
+     "chord_share": 0.81,
+     "top": [
+      "D#",
+      "G",
+      "G#",
+      "D"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.95,
+     "chord_share": 0.875,
+     "top": [
+      "D#",
+      "G",
+      "A#",
+      "D"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.89,
+     "chord_share": 0.829,
+     "top": [
+      "D#",
+      "G",
+      "D",
+      "A#"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.917,
+     "chord_share": 0.188,
+     "top": [
+      "F",
+      "G#",
+      "G",
+      "C"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.877,
+     "chord_share": 0.717,
+     "top": [
+      "F",
+      "G#",
+      "G",
+      "D#"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.903,
+     "chord_share": 0.378,
+     "top": [
+      "F#",
+      "G",
+      "D",
+      "A"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.957,
+     "chord_share": 0.896,
+     "top": [
+      "F",
+      "G",
+      "F#",
+      "D"
+     ]
+    },
+    {
+     "bar": 17,
+     "score_share": 0.899,
+     "chord_share": 0.833,
+     "top": [
+      "G#",
+      "C",
+      "G",
+      "F"
+     ]
+    },
+    {
+     "bar": 18,
+     "score_share": 0.908,
+     "chord_share": 0.435,
+     "top": [
+      "G",
+      "C",
+      "D",
+      "C#"
+     ]
+    },
+    {
+     "bar": 19,
+     "score_share": 0.928,
+     "chord_share": 0.859,
+     "top": [
+      "G",
+      "C",
+      "D",
+      "A"
+     ]
+    },
+    {
+     "bar": 20,
+     "score_share": 0.906,
+     "chord_share": 0.877,
+     "top": [
+      "D#",
+      "C",
+      "G",
+      "A#"
+     ]
+    },
+    {
+     "bar": 21,
+     "score_share": 0.939,
+     "chord_share": 0.843,
+     "top": [
+      "D#",
+      "C",
+      "A#",
+      "G"
+     ]
+    },
+    {
+     "bar": 22,
+     "score_share": 0.954,
+     "chord_share": 0.757,
+     "top": [
+      "F",
+      "C#",
+      "A#",
+      "G#"
+     ]
+    },
+    {
+     "bar": 23,
+     "score_share": 0.958,
+     "chord_share": 0.906,
+     "top": [
+      "D",
+      "F",
+      "A",
+      "B"
+     ]
+    },
+    {
+     "bar": 24,
+     "score_share": 0.893,
+     "chord_share": 0.861,
+     "top": [
+      "F",
+      "B",
+      "F#",
+      "A"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 59.9,
+    "max_step_at_seam": 3176,
+    "p999_step_elsewhere": 733,
+    "repeat_correlation": 1.0,
+    "repeat_envelope_correlation": 1.0,
+    "repeat_rms_ratio": 1.0,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 3040,
+    "rms_100ms_after_seam": 2696
+   },
+   "seconds_score": 59.9,
+   "loop_seconds": 59.9,
+   "file": "songs/06_unease.m4a"
+  },
+  "horror": {
+   "seconds": 35.69,
+   "peak": 13405,
+   "clipped": 0,
+   "rms": 2178.3,
+   "rms_dbfs": -23.5,
+   "port2_values": [
+    0,
+    8
+   ],
+   "port3_last_beat": 42,
+   "port3_expected_about": 42,
+   "tuned_share": 0.91,
+   "score_share_mean": 0.81,
+   "chord_share_mean": 0.384,
+   "score_share_min_bar": {
+    "bar": 8,
+    "score_share": 0.717,
+    "chord_share": 0.275,
+    "top": [
+     "F#",
+     "F",
+     "E",
+     "D#"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.735,
+     "chord_share": 0.565,
+     "top": [
+      "E",
+      "F",
+      "B",
+      "C"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.799,
+     "chord_share": 0.246,
+     "top": [
+      "D#",
+      "F",
+      "E",
+      "A#"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.908,
+     "chord_share": 0.527,
+     "top": [
+      "B",
+      "F#",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.845,
+     "chord_share": 0.448,
+     "top": [
+      "B",
+      "F#",
+      "F",
+      "C"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.733,
+     "chord_share": 0.571,
+     "top": [
+      "E",
+      "F",
+      "B",
+      "C"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.882,
+     "chord_share": 0.33,
+     "top": [
+      "D#",
+      "B",
+      "C",
+      "E"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.863,
+     "chord_share": 0.106,
+     "top": [
+      "A#",
+      "F#",
+      "G",
+      "F"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.717,
+     "chord_share": 0.275,
+     "top": [
+      "F#",
+      "F",
+      "E",
+      "D#"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 26.69,
+    "max_step_at_seam": 1086,
+    "p999_step_elsewhere": 955,
+    "repeat_correlation": 0.992,
+    "repeat_envelope_correlation": 0.9993,
+    "repeat_rms_ratio": 0.999,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 920,
+    "rms_100ms_after_seam": 4126
+   },
+   "seconds_score": 26.69,
+   "loop_seconds": 26.69,
+   "file": "songs/07_horror.m4a"
+  },
+  "chase": {
+   "seconds": 32.81,
+   "peak": 20245,
+   "clipped": 0,
+   "rms": 2917.4,
+   "rms_dbfs": -21.0,
+   "port2_values": [
+    0,
+    9
+   ],
+   "port3_last_beat": 88,
+   "port3_expected_about": 88,
+   "tuned_share": 0.886,
+   "score_share_mean": 0.701,
+   "chord_share_mean": 0.657,
+   "score_share_min_bar": {
+    "bar": 12,
+    "score_share": 0.555,
+    "chord_share": 0.555,
+    "top": [
+     "G",
+     "C",
+     "D",
+     "B"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.778,
+     "chord_share": 0.741,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "C"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.771,
+     "chord_share": 0.684,
+     "top": [
+      "D",
+      "A",
+      "C",
+      "D#"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.577,
+     "chord_share": 0.563,
+     "top": [
+      "A#",
+      "A",
+      "F",
+      "D"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.671,
+     "chord_share": 0.671,
+     "top": [
+      "C",
+      "G",
+      "B",
+      "E"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.763,
+     "chord_share": 0.709,
+     "top": [
+      "D",
+      "A",
+      "C",
+      "G"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.685,
+     "chord_share": 0.598,
+     "top": [
+      "D",
+      "A",
+      "B",
+      "E"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.63,
+     "chord_share": 0.527,
+     "top": [
+      "D",
+      "G",
+      "A",
+      "B"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.651,
+     "chord_share": 0.651,
+     "top": [
+      "C#",
+      "A",
+      "G#",
+      "E"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.78,
+     "chord_share": 0.745,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "C"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.774,
+     "chord_share": 0.689,
+     "top": [
+      "D",
+      "A",
+      "C",
+      "D#"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.687,
+     "chord_share": 0.574,
+     "top": [
+      "A#",
+      "F",
+      "C",
+      "A"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.555,
+     "chord_share": 0.555,
+     "top": [
+      "G",
+      "C",
+      "D",
+      "B"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.772,
+     "chord_share": 0.715,
+     "top": [
+      "D",
+      "G",
+      "A#",
+      "A"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.721,
+     "chord_share": 0.67,
+     "top": [
+      "D#",
+      "A#",
+      "D",
+      "G"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.655,
+     "chord_share": 0.655,
+     "top": [
+      "A",
+      "E",
+      "B",
+      "C"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.744,
+     "chord_share": 0.758,
+     "top": [
+      "A",
+      "E",
+      "C",
+      "C#"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 23.81,
+    "max_step_at_seam": 3068,
+    "p999_step_elsewhere": 1862,
+    "repeat_correlation": 0.996,
+    "repeat_envelope_correlation": 0.9999,
+    "repeat_rms_ratio": 1.0,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 3089,
+    "rms_100ms_after_seam": 4620
+   },
+   "seconds_score": 23.81,
+   "loop_seconds": 23.81,
+   "file": "songs/08_chase.m4a"
+  },
+  "investigate": {
+   "seconds": 66.61,
+   "peak": 12748,
+   "clipped": 0,
+   "rms": 1965.8,
+   "rms_dbfs": -24.4,
+   "port2_values": [
+    0,
+    10
+   ],
+   "port3_last_beat": 111,
+   "port3_expected_about": 111,
+   "tuned_share": 0.973,
+   "score_share_mean": 0.822,
+   "chord_share_mean": 0.727,
+   "score_share_min_bar": {
+    "bar": 4,
+    "score_share": 0.648,
+    "chord_share": 0.64,
+    "top": [
+     "G#",
+     "D#",
+     "E",
+     "B"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.832,
+     "chord_share": 0.832,
+     "top": [
+      "A",
+      "C",
+      "E",
+      "B"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.822,
+     "chord_share": 0.822,
+     "top": [
+      "G",
+      "B",
+      "D",
+      "F#"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.79,
+     "chord_share": 0.691,
+     "top": [
+      "C",
+      "A",
+      "F",
+      "B"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.648,
+     "chord_share": 0.64,
+     "top": [
+      "G#",
+      "D#",
+      "E",
+      "B"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.9,
+     "chord_share": 0.439,
+     "top": [
+      "D",
+      "E",
+      "B",
+      "A"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.809,
+     "chord_share": 0.559,
+     "top": [
+      "A",
+      "E",
+      "G#",
+      "B"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.955,
+     "chord_share": 0.852,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "C"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.758,
+     "chord_share": 0.758,
+     "top": [
+      "E",
+      "B",
+      "G#",
+      "F#"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.875,
+     "chord_share": 0.728,
+     "top": [
+      "E",
+      "A",
+      "C",
+      "B"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.85,
+     "chord_share": 0.688,
+     "top": [
+      "E",
+      "G",
+      "C",
+      "D"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.93,
+     "chord_share": 0.812,
+     "top": [
+      "F",
+      "A",
+      "C",
+      "G"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.948,
+     "chord_share": 0.948,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.75,
+     "chord_share": 0.683,
+     "top": [
+      "F",
+      "D",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.85,
+     "chord_share": 0.641,
+     "top": [
+      "C",
+      "A",
+      "A#",
+      "F"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.679,
+     "chord_share": 0.563,
+     "top": [
+      "G#",
+      "B",
+      "D#",
+      "D"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.951,
+     "chord_share": 0.954,
+     "top": [
+      "E",
+      "B",
+      "G#",
+      "F#"
+     ]
+    },
+    {
+     "bar": 17,
+     "score_share": 0.899,
+     "chord_share": 0.823,
+     "top": [
+      "F",
+      "D",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 18,
+     "score_share": 0.731,
+     "chord_share": 0.658,
+     "top": [
+      "B",
+      "D",
+      "F#",
+      "G"
+     ]
+    },
+    {
+     "bar": 19,
+     "score_share": 0.936,
+     "chord_share": 0.748,
+     "top": [
+      "C",
+      "G",
+      "E",
+      "D"
+     ]
+    },
+    {
+     "bar": 20,
+     "score_share": 0.777,
+     "chord_share": 0.69,
+     "top": [
+      "A",
+      "C",
+      "E",
+      "B"
+     ]
+    },
+    {
+     "bar": 21,
+     "score_share": 0.769,
+     "chord_share": 0.769,
+     "top": [
+      "F",
+      "D",
+      "B",
+      "A"
+     ]
+    },
+    {
+     "bar": 22,
+     "score_share": 0.749,
+     "chord_share": 0.635,
+     "top": [
+      "B",
+      "E",
+      "G#",
+      "D"
+     ]
+    },
+    {
+     "bar": 23,
+     "score_share": 0.852,
+     "chord_share": 0.852,
+     "top": [
+      "A",
+      "C",
+      "E",
+      "G"
+     ]
+    },
+    {
+     "bar": 24,
+     "score_share": 0.677,
+     "chord_share": 0.659,
+     "top": [
+      "B",
+      "G#",
+      "D#",
+      "F#"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 57.6,
+    "max_step_at_seam": 1780,
+    "p999_step_elsewhere": 1257,
+    "repeat_correlation": 1.0,
+    "repeat_envelope_correlation": 0.9995,
+    "repeat_rms_ratio": 0.999,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 1756,
+    "rms_100ms_after_seam": 2253
+   },
+   "seconds_score": 57.6,
+   "loop_seconds": 57.6,
+   "file": "songs/09_investigate.m4a"
+  },
+  "deduce": {
+   "seconds": 42.01,
+   "peak": 15216,
+   "clipped": 0,
+   "rms": 2831.4,
+   "rms_dbfs": -21.3,
+   "port2_values": [
+    0,
+    11
+   ],
+   "port3_last_beat": 81,
+   "port3_expected_about": 81,
+   "tuned_share": 0.992,
+   "score_share_mean": 0.866,
+   "chord_share_mean": 0.8,
+   "score_share_min_bar": {
+    "bar": 4,
+    "score_share": 0.637,
+    "chord_share": 0.637,
+    "top": [
+     "B",
+     "F#",
+     "G",
+     "D"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.951,
+     "chord_share": 0.897,
+     "top": [
+      "C",
+      "G",
+      "D#",
+      "D"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.871,
+     "chord_share": 0.871,
+     "top": [
+      "C",
+      "G#",
+      "D#",
+      "G"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.79,
+     "chord_share": 0.694,
+     "top": [
+      "F",
+      "G#",
+      "C",
+      "D#"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.637,
+     "chord_share": 0.637,
+     "top": [
+      "B",
+      "F#",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.825,
+     "chord_share": 0.782,
+     "top": [
+      "D#",
+      "A#",
+      "G",
+      "F"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.787,
+     "chord_share": 0.787,
+     "top": [
+      "D#",
+      "C",
+      "A#",
+      "G"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.89,
+     "chord_share": 0.719,
+     "top": [
+      "C#",
+      "G#",
+      "F",
+      "D#"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.968,
+     "chord_share": 0.968,
+     "top": [
+      "G",
+      "B",
+      "D",
+      "F#"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.96,
+     "chord_share": 0.899,
+     "top": [
+      "G#",
+      "C",
+      "D#",
+      "G"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.917,
+     "chord_share": 0.917,
+     "top": [
+      "A#",
+      "F",
+      "C",
+      "D"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.956,
+     "chord_share": 0.643,
+     "top": [
+      "A#",
+      "D#",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.891,
+     "chord_share": 0.891,
+     "top": [
+      "C",
+      "D#",
+      "G",
+      "A#"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.855,
+     "chord_share": 0.769,
+     "top": [
+      "F",
+      "C",
+      "G#",
+      "G"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.829,
+     "chord_share": 0.772,
+     "top": [
+      "C#",
+      "G#",
+      "F",
+      "D#"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.757,
+     "chord_share": 0.583,
+     "top": [
+      "B",
+      "D",
+      "A",
+      "F"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.965,
+     "chord_share": 0.965,
+     "top": [
+      "G",
+      "B",
+      "D",
+      "F#"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 33.02,
+    "max_step_at_seam": 2378,
+    "p999_step_elsewhere": 1666,
+    "repeat_correlation": 1.0,
+    "repeat_envelope_correlation": 1.0,
+    "repeat_rms_ratio": 1.0,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 2179,
+    "rms_100ms_after_seam": 3851
+   },
+   "seconds_score": 33.02,
+   "loop_seconds": 33.02,
+   "file": "songs/10_deduce.m4a"
+  },
+  "sorrow": {
+   "seconds": 80.03,
+   "peak": 14159,
+   "clipped": 0,
+   "rms": 2403.4,
+   "rms_dbfs": -22.7,
+   "port2_values": [
+    0,
+    12
+   ],
+   "port3_last_beat": 72,
+   "port3_expected_about": 72,
+   "tuned_share": 0.996,
+   "score_share_mean": 0.979,
+   "chord_share_mean": 0.911,
+   "score_share_min_bar": {
+    "bar": 3,
+    "score_share": 0.962,
+    "chord_share": 0.919,
+    "top": [
+     "G",
+     "E",
+     "C#",
+     "A"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.976,
+     "chord_share": 0.976,
+     "top": [
+      "D",
+      "A",
+      "E",
+      "C#"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.974,
+     "chord_share": 0.974,
+     "top": [
+      "A#",
+      "A",
+      "D",
+      "F"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.962,
+     "chord_share": 0.919,
+     "top": [
+      "G",
+      "E",
+      "C#",
+      "A"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.983,
+     "chord_share": 0.983,
+     "top": [
+      "D",
+      "A",
+      "E",
+      "F#"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.968,
+     "chord_share": 0.76,
+     "top": [
+      "F",
+      "A",
+      "C",
+      "E"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.962,
+     "chord_share": 0.962,
+     "top": [
+      "A",
+      "C",
+      "E",
+      "G"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.971,
+     "chord_share": 0.869,
+     "top": [
+      "A#",
+      "D#",
+      "G",
+      "A"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.966,
+     "chord_share": 0.966,
+     "top": [
+      "D",
+      "A",
+      "E",
+      "F"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.987,
+     "chord_share": 0.671,
+     "top": [
+      "A",
+      "G",
+      "A#",
+      "D"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.99,
+     "chord_share": 0.768,
+     "top": [
+      "D",
+      "F",
+      "E",
+      "A#"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.994,
+     "chord_share": 0.994,
+     "top": [
+      "D#",
+      "A#",
+      "D",
+      "G"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.987,
+     "chord_share": 0.987,
+     "top": [
+      "A",
+      "E",
+      "C#",
+      "B"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.985,
+     "chord_share": 0.985,
+     "top": [
+      "D",
+      "A",
+      "E",
+      "F"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.986,
+     "chord_share": 0.986,
+     "top": [
+      "A#",
+      "A",
+      "E",
+      "F"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.994,
+     "chord_share": 0.799,
+     "top": [
+      "G",
+      "D#",
+      "D",
+      "C#"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.985,
+     "chord_share": 0.985,
+     "top": [
+      "D",
+      "A",
+      "E",
+      "F"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 71.04,
+    "max_step_at_seam": 1160,
+    "p999_step_elsewhere": 1154,
+    "repeat_correlation": 0.9999,
+    "repeat_envelope_correlation": 1.0,
+    "repeat_rms_ratio": 1.0,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 1196,
+    "rms_100ms_after_seam": 1724
+   },
+   "seconds_score": 71.04,
+   "loop_seconds": 71.04,
+   "file": "songs/11_sorrow.m4a"
+  },
+  "dawn": {
+   "seconds": 62.38,
+   "peak": 14412,
+   "clipped": 0,
+   "rms": 2777.8,
+   "rms_dbfs": -21.4,
+   "port2_values": [
+    0,
+    13
+   ],
+   "port3_last_beat": 74,
+   "port3_expected_about": 74,
+   "tuned_share": 0.992,
+   "score_share_mean": 0.99,
+   "chord_share_mean": 0.859,
+   "score_share_min_bar": {
+    "bar": 5,
+    "score_share": 0.982,
+    "chord_share": 0.857,
+    "top": [
+     "F#",
+     "D",
+     "E",
+     "C#"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.99,
+     "chord_share": 0.973,
+     "top": [
+      "D",
+      "A",
+      "F#",
+      "E"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.983,
+     "chord_share": 0.983,
+     "top": [
+      "A",
+      "B",
+      "D",
+      "E"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.983,
+     "chord_share": 0.872,
+     "top": [
+      "G",
+      "E",
+      "C#",
+      "F#"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.99,
+     "chord_share": 0.979,
+     "top": [
+      "D",
+      "F#",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.982,
+     "chord_share": 0.857,
+     "top": [
+      "F#",
+      "D",
+      "E",
+      "C#"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.992,
+     "chord_share": 0.975,
+     "top": [
+      "C#",
+      "A",
+      "F#",
+      "G#"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.993,
+     "chord_share": 0.876,
+     "top": [
+      "E",
+      "G",
+      "B",
+      "A"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.99,
+     "chord_share": 0.979,
+     "top": [
+      "D",
+      "F#",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.989,
+     "chord_share": 0.426,
+     "top": [
+      "A",
+      "G",
+      "D",
+      "F#"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.991,
+     "chord_share": 0.822,
+     "top": [
+      "D",
+      "E",
+      "F#",
+      "G"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.992,
+     "chord_share": 0.743,
+     "top": [
+      "E",
+      "D",
+      "B",
+      "G"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.996,
+     "chord_share": 0.977,
+     "top": [
+      "A",
+      "E",
+      "B",
+      "C#"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.989,
+     "chord_share": 0.97,
+     "top": [
+      "D",
+      "A",
+      "F#",
+      "E"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.993,
+     "chord_share": 0.61,
+     "top": [
+      "A",
+      "B",
+      "D",
+      "G"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.996,
+     "chord_share": 0.731,
+     "top": [
+      "G",
+      "D",
+      "E",
+      "C#"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.99,
+     "chord_share": 0.979,
+     "top": [
+      "D",
+      "F#",
+      "A",
+      "E"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 53.38,
+    "max_step_at_seam": 920,
+    "p999_step_elsewhere": 968,
+    "repeat_correlation": 1.0,
+    "repeat_envelope_correlation": 1.0,
+    "repeat_rms_ratio": 1.0,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 901,
+    "rms_100ms_after_seam": 3432
+   },
+   "seconds_score": 53.38,
+   "loop_seconds": 53.38,
+   "file": "songs/12_dawn.m4a"
+  },
+  "badend": {
+   "seconds": 44.79,
+   "peak": 11838,
+   "clipped": 0,
+   "rms": 2162.3,
+   "rms_dbfs": -23.6,
+   "port2_values": [
+    0,
+    14
+   ],
+   "port3_last_beat": 34,
+   "port3_expected_about": 37,
+   "tuned_share": 0.996,
+   "score_share_mean": 0.969,
+   "chord_share_mean": 0.88,
+   "score_share_min_bar": {
+    "bar": 5,
+    "score_share": 0.935,
+    "chord_share": 0.935,
+    "top": [
+     "A",
+     "F",
+     "D",
+     "C"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.98,
+     "chord_share": 0.98,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.986,
+     "chord_share": 0.703,
+     "top": [
+      "A#",
+      "A",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.978,
+     "chord_share": 0.553,
+     "top": [
+      "A",
+      "G",
+      "D",
+      "A#"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.984,
+     "chord_share": 0.983,
+     "top": [
+      "A",
+      "C#",
+      "E",
+      "G#"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.935,
+     "chord_share": 0.935,
+     "top": [
+      "A",
+      "F",
+      "D",
+      "C"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.98,
+     "chord_share": 0.98,
+     "top": [
+      "D#",
+      "A#",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.955,
+     "chord_share": 0.953,
+     "top": [
+      "A",
+      "D",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.95,
+     "chord_share": 0.95,
+     "top": [
+      "A",
+      "D",
+      "F",
+      "E"
+     ]
+    }
+   ],
+   "seconds_score": 40.8,
+   "loop_seconds": null,
+   "file": "songs/13_badend.m4a"
+  },
+  "staff": {
+   "seconds": 146.28,
+   "peak": 14027,
+   "clipped": 0,
+   "rms": 2573.8,
+   "rms_dbfs": -22.1,
+   "port2_values": [
+    0,
+    15
+   ],
+   "port3_last_beat": 170,
+   "port3_expected_about": 170,
+   "tuned_share": 0.99,
+   "score_share_mean": 0.985,
+   "chord_share_mean": 0.885,
+   "score_share_min_bar": {
+    "bar": 6,
+    "score_share": 0.967,
+    "chord_share": 0.914,
+    "top": [
+     "C",
+     "E",
+     "A",
+     "B"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.972,
+     "chord_share": 0.94,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.98,
+     "chord_share": 0.957,
+     "top": [
+      "A#",
+      "D",
+      "A",
+      "F"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.975,
+     "chord_share": 0.841,
+     "top": [
+      "G",
+      "E",
+      "C#",
+      "D"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.971,
+     "chord_share": 0.944,
+     "top": [
+      "D",
+      "F",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.983,
+     "chord_share": 0.738,
+     "top": [
+      "F",
+      "C",
+      "E",
+      "D"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.967,
+     "chord_share": 0.914,
+     "top": [
+      "C",
+      "E",
+      "A",
+      "B"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.984,
+     "chord_share": 0.902,
+     "top": [
+      "A#",
+      "D#",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.98,
+     "chord_share": 0.945,
+     "top": [
+      "D",
+      "A",
+      "E",
+      "F"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.988,
+     "chord_share": 0.833,
+     "top": [
+      "A#",
+      "D",
+      "A",
+      "G"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.982,
+     "chord_share": 0.833,
+     "top": [
+      "D",
+      "A#",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.994,
+     "chord_share": 0.954,
+     "top": [
+      "A#",
+      "D#",
+      "D",
+      "F"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.969,
+     "chord_share": 0.897,
+     "top": [
+      "E",
+      "A",
+      "C#",
+      "B"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.974,
+     "chord_share": 0.942,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.982,
+     "chord_share": 0.956,
+     "top": [
+      "A#",
+      "D",
+      "A",
+      "F"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.986,
+     "chord_share": 0.803,
+     "top": [
+      "D#",
+      "C#",
+      "D",
+      "G"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.971,
+     "chord_share": 0.944,
+     "top": [
+      "D",
+      "F",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 17,
+     "score_share": 0.996,
+     "chord_share": 0.977,
+     "top": [
+      "C",
+      "A",
+      "F",
+      "G"
+     ]
+    },
+    {
+     "bar": 18,
+     "score_share": 0.984,
+     "chord_share": 0.984,
+     "top": [
+      "E",
+      "G",
+      "C",
+      "B"
+     ]
+    },
+    {
+     "bar": 19,
+     "score_share": 0.981,
+     "chord_share": 0.742,
+     "top": [
+      "A#",
+      "G",
+      "D",
+      "F"
+     ]
+    },
+    {
+     "bar": 20,
+     "score_share": 0.978,
+     "chord_share": 0.978,
+     "top": [
+      "C",
+      "E",
+      "G",
+      "B"
+     ]
+    },
+    {
+     "bar": 21,
+     "score_share": 0.979,
+     "chord_share": 0.674,
+     "top": [
+      "C",
+      "D",
+      "A",
+      "F"
+     ]
+    },
+    {
+     "bar": 22,
+     "score_share": 0.991,
+     "chord_share": 0.987,
+     "top": [
+      "A",
+      "C",
+      "D",
+      "F"
+     ]
+    },
+    {
+     "bar": 23,
+     "score_share": 0.993,
+     "chord_share": 0.924,
+     "top": [
+      "A#",
+      "G",
+      "A",
+      "D"
+     ]
+    },
+    {
+     "bar": 24,
+     "score_share": 0.981,
+     "chord_share": 0.983,
+     "top": [
+      "G",
+      "E",
+      "C",
+      "B"
+     ]
+    },
+    {
+     "bar": 25,
+     "score_share": 0.991,
+     "chord_share": 0.977,
+     "top": [
+      "D",
+      "A",
+      "F#",
+      "E"
+     ]
+    },
+    {
+     "bar": 26,
+     "score_share": 0.984,
+     "chord_share": 0.984,
+     "top": [
+      "A",
+      "B",
+      "D",
+      "E"
+     ]
+    },
+    {
+     "bar": 27,
+     "score_share": 0.984,
+     "chord_share": 0.885,
+     "top": [
+      "G",
+      "E",
+      "C#",
+      "F#"
+     ]
+    },
+    {
+     "bar": 28,
+     "score_share": 0.991,
+     "chord_share": 0.983,
+     "top": [
+      "D",
+      "F#",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 29,
+     "score_share": 0.984,
+     "chord_share": 0.851,
+     "top": [
+      "F#",
+      "D",
+      "E",
+      "C#"
+     ]
+    },
+    {
+     "bar": 30,
+     "score_share": 0.992,
+     "chord_share": 0.975,
+     "top": [
+      "A",
+      "C#",
+      "F#",
+      "G#"
+     ]
+    },
+    {
+     "bar": 31,
+     "score_share": 0.996,
+     "chord_share": 0.885,
+     "top": [
+      "E",
+      "G",
+      "B",
+      "A"
+     ]
+    },
+    {
+     "bar": 32,
+     "score_share": 0.992,
+     "chord_share": 0.983,
+     "top": [
+      "D",
+      "F#",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 33,
+     "score_share": 0.991,
+     "chord_share": 0.468,
+     "top": [
+      "A",
+      "G",
+      "D",
+      "F#"
+     ]
+    },
+    {
+     "bar": 34,
+     "score_share": 0.99,
+     "chord_share": 0.821,
+     "top": [
+      "D",
+      "E",
+      "F#",
+      "G"
+     ]
+    },
+    {
+     "bar": 35,
+     "score_share": 0.993,
+     "chord_share": 0.77,
+     "top": [
+      "E",
+      "D",
+      "B",
+      "G"
+     ]
+    },
+    {
+     "bar": 36,
+     "score_share": 0.996,
+     "chord_share": 0.974,
+     "top": [
+      "A",
+      "E",
+      "B",
+      "C#"
+     ]
+    },
+    {
+     "bar": 37,
+     "score_share": 0.991,
+     "chord_share": 0.977,
+     "top": [
+      "D",
+      "A",
+      "F#",
+      "E"
+     ]
+    },
+    {
+     "bar": 38,
+     "score_share": 0.989,
+     "chord_share": 0.57,
+     "top": [
+      "A",
+      "B",
+      "D",
+      "G"
+     ]
+    },
+    {
+     "bar": 39,
+     "score_share": 0.995,
+     "chord_share": 0.727,
+     "top": [
+      "G",
+      "D",
+      "E",
+      "C#"
+     ]
+    },
+    {
+     "bar": 40,
+     "score_share": 0.991,
+     "chord_share": 0.983,
+     "top": [
+      "D",
+      "F#",
+      "A",
+      "E"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 137.28,
+    "max_step_at_seam": 906,
+    "p999_step_elsewhere": 1105,
+    "rms_before_seam": 2548,
+    "rms_at_loop_start": 2537,
+    "repeat_correlation": 0.9946,
+    "repeat_envelope_correlation": 0.999,
+    "repeat_rms_ratio": 0.998,
+    "repeat_checked_at_s": 87.37,
+    "max_step_at_first_loop_start": 940,
+    "rms_100ms_after_seam": 3215
+   },
+   "seconds_score": 137.28,
+   "loop_seconds": 54.91,
+   "file": "songs/14_staff.m4a"
+  },
+  "oyura": {
+   "seconds": 70.07,
+   "peak": 14239,
+   "clipped": 0,
+   "rms": 2447.7,
+   "rms_dbfs": -22.5,
+   "port2_values": [
+    0,
+    16
+   ],
+   "port3_last_beat": 73,
+   "port3_expected_about": 73,
+   "tuned_share": 0.962,
+   "score_share_mean": 0.72,
+   "chord_share_mean": 0.37,
+   "score_share_min_bar": {
+    "bar": 4,
+    "score_share": 0.275,
+    "chord_share": 0.216,
+    "top": [
+     "C",
+     "E",
+     "A",
+     "C#"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.524,
+     "chord_share": 0.381,
+     "top": [
+      "A",
+      "B",
+      "E",
+      "D"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.511,
+     "chord_share": 0.327,
+     "top": [
+      "A",
+      "B",
+      "E",
+      "C"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.456,
+     "chord_share": 0.297,
+     "top": [
+      "A",
+      "E",
+      "B",
+      "C"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.275,
+     "chord_share": 0.216,
+     "top": [
+      "C",
+      "E",
+      "A",
+      "C#"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.818,
+     "chord_share": 0.65,
+     "top": [
+      "D",
+      "D#",
+      "F#",
+      "B"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.926,
+     "chord_share": 0.267,
+     "top": [
+      "D#",
+      "D",
+      "F#",
+      "A#"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.859,
+     "chord_share": 0.776,
+     "top": [
+      "A",
+      "D#",
+      "F#",
+      "B"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.29,
+     "chord_share": 0.082,
+     "top": [
+      "D#",
+      "C",
+      "F#",
+      "C#"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.923,
+     "chord_share": 0.244,
+     "top": [
+      "A#",
+      "A",
+      "D",
+      "B"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.97,
+     "chord_share": 0.02,
+     "top": [
+      "D#",
+      "G",
+      "A",
+      "B"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.917,
+     "chord_share": 0.888,
+     "top": [
+      "D",
+      "A",
+      "E",
+      "B"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.341,
+     "chord_share": 0.266,
+     "top": [
+      "C",
+      "D",
+      "E",
+      "A"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.926,
+     "chord_share": 0.412,
+     "top": [
+      "A",
+      "G",
+      "A#",
+      "D#"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.95,
+     "chord_share": 0.174,
+     "top": [
+      "A#",
+      "A",
+      "G",
+      "D#"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.962,
+     "chord_share": 0.133,
+     "top": [
+      "D#",
+      "A",
+      "A#",
+      "F"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.871,
+     "chord_share": 0.79,
+     "top": [
+      "D",
+      "D#",
+      "C",
+      "A#"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 61.06,
+    "max_step_at_seam": 974,
+    "p999_step_elsewhere": 1538,
+    "repeat_correlation": 0.5004,
+    "repeat_envelope_correlation": 0.9987,
+    "repeat_rms_ratio": 1.001,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 804,
+    "rms_100ms_after_seam": 4003
+   },
+   "seconds_score": 61.06,
+   "loop_seconds": 61.06,
+   "file": "songs/15_oyura.m4a"
+  },
+  "chizuru": {
+   "seconds": 71.78,
+   "peak": 11752,
+   "clipped": 0,
+   "rms": 1982.3,
+   "rms_dbfs": -24.4,
+   "port2_values": [
+    0,
+    17
+   ],
+   "port3_last_beat": 109,
+   "port3_expected_about": 109,
+   "tuned_share": 0.978,
+   "score_share_mean": 0.948,
+   "chord_share_mean": 0.855,
+   "score_share_min_bar": {
+    "bar": 24,
+    "score_share": 0.894,
+    "chord_share": 0.894,
+    "top": [
+     "B",
+     "E",
+     "G#",
+     "D"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.962,
+     "chord_share": 0.732,
+     "top": [
+      "E",
+      "A",
+      "B",
+      "C"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.935,
+     "chord_share": 0.757,
+     "top": [
+      "A",
+      "F",
+      "C",
+      "D"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.928,
+     "chord_share": 0.812,
+     "top": [
+      "B",
+      "G#",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.953,
+     "chord_share": 0.953,
+     "top": [
+      "A",
+      "E",
+      "C",
+      "B"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.929,
+     "chord_share": 0.929,
+     "top": [
+      "A",
+      "C",
+      "F",
+      "G"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.949,
+     "chord_share": 0.823,
+     "top": [
+      "B",
+      "G",
+      "A",
+      "D"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.951,
+     "chord_share": 0.843,
+     "top": [
+      "C",
+      "E",
+      "G",
+      "D"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.962,
+     "chord_share": 0.964,
+     "top": [
+      "E",
+      "B",
+      "G#",
+      "F#"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.934,
+     "chord_share": 0.875,
+     "top": [
+      "E",
+      "C",
+      "F",
+      "A"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.948,
+     "chord_share": 0.858,
+     "top": [
+      "D",
+      "A",
+      "F",
+      "E"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.96,
+     "chord_share": 0.673,
+     "top": [
+      "G",
+      "D",
+      "E",
+      "F"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.934,
+     "chord_share": 0.933,
+     "top": [
+      "C",
+      "G",
+      "E",
+      "D"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.956,
+     "chord_share": 0.861,
+     "top": [
+      "F",
+      "A",
+      "C",
+      "E"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.949,
+     "chord_share": 0.682,
+     "top": [
+      "D",
+      "A",
+      "B",
+      "F"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.951,
+     "chord_share": 0.951,
+     "top": [
+      "E",
+      "B",
+      "D",
+      "G#"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.936,
+     "chord_share": 0.936,
+     "top": [
+      "A",
+      "C",
+      "E",
+      "B"
+     ]
+    },
+    {
+     "bar": 17,
+     "score_share": 0.975,
+     "chord_share": 0.882,
+     "top": [
+      "A",
+      "F",
+      "G",
+      "C"
+     ]
+    },
+    {
+     "bar": 18,
+     "score_share": 0.978,
+     "chord_share": 0.887,
+     "top": [
+      "B",
+      "G",
+      "D",
+      "A"
+     ]
+    },
+    {
+     "bar": 19,
+     "score_share": 0.953,
+     "chord_share": 0.744,
+     "top": [
+      "G",
+      "C",
+      "E",
+      "B"
+     ]
+    },
+    {
+     "bar": 20,
+     "score_share": 0.968,
+     "chord_share": 0.968,
+     "top": [
+      "A",
+      "C",
+      "E",
+      "B"
+     ]
+    },
+    {
+     "bar": 21,
+     "score_share": 0.948,
+     "chord_share": 0.836,
+     "top": [
+      "F",
+      "D",
+      "A",
+      "E"
+     ]
+    },
+    {
+     "bar": 22,
+     "score_share": 0.946,
+     "chord_share": 0.881,
+     "top": [
+      "G",
+      "D",
+      "B",
+      "F"
+     ]
+    },
+    {
+     "bar": 23,
+     "score_share": 0.959,
+     "chord_share": 0.857,
+     "top": [
+      "G",
+      "C",
+      "E",
+      "D"
+     ]
+    },
+    {
+     "bar": 24,
+     "score_share": 0.894,
+     "chord_share": 0.894,
+     "top": [
+      "B",
+      "E",
+      "G#",
+      "D"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 62.78,
+    "max_step_at_seam": 2046,
+    "p999_step_elsewhere": 1183,
+    "repeat_correlation": 0.9986,
+    "repeat_envelope_correlation": 1.0,
+    "repeat_rms_ratio": 1.001,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 2063,
+    "rms_100ms_after_seam": 2421
+   },
+   "seconds_score": 62.78,
+   "loop_seconds": 62.78,
+   "file": "songs/16_chizuru.m4a"
+  },
+  "omake": {
+   "seconds": 38.19,
+   "peak": 12895,
+   "clipped": 0,
+   "rms": 1646.6,
+   "rms_dbfs": -26.0,
+   "port2_values": [
+    0,
+    18
+   ],
+   "port3_last_beat": 83,
+   "port3_expected_about": 83,
+   "tuned_share": 0.971,
+   "score_share_mean": 0.842,
+   "chord_share_mean": 0.807,
+   "score_share_min_bar": {
+    "bar": 12,
+    "score_share": 0.728,
+    "chord_share": 0.728,
+    "top": [
+     "G",
+     "E",
+     "C",
+     "D"
+    ]
+   },
+   "bars": [
+    {
+     "bar": 1,
+     "score_share": 0.79,
+     "chord_share": 0.79,
+     "top": [
+      "C",
+      "E",
+      "B",
+      "G"
+     ]
+    },
+    {
+     "bar": 2,
+     "score_share": 0.812,
+     "chord_share": 0.721,
+     "top": [
+      "A",
+      "E",
+      "B",
+      "G"
+     ]
+    },
+    {
+     "bar": 3,
+     "score_share": 0.898,
+     "chord_share": 0.931,
+     "top": [
+      "A",
+      "G",
+      "F",
+      "D"
+     ]
+    },
+    {
+     "bar": 4,
+     "score_share": 0.857,
+     "chord_share": 0.857,
+     "top": [
+      "C",
+      "E",
+      "G",
+      "B"
+     ]
+    },
+    {
+     "bar": 5,
+     "score_share": 0.918,
+     "chord_share": 0.918,
+     "top": [
+      "A",
+      "C",
+      "F",
+      "G"
+     ]
+    },
+    {
+     "bar": 6,
+     "score_share": 0.743,
+     "chord_share": 0.635,
+     "top": [
+      "G#",
+      "F",
+      "D#",
+      "G"
+     ]
+    },
+    {
+     "bar": 7,
+     "score_share": 0.84,
+     "chord_share": 0.741,
+     "top": [
+      "C",
+      "G",
+      "E",
+      "F"
+     ]
+    },
+    {
+     "bar": 8,
+     "score_share": 0.91,
+     "chord_share": 0.923,
+     "top": [
+      "F#",
+      "G",
+      "D",
+      "C#"
+     ]
+    },
+    {
+     "bar": 9,
+     "score_share": 0.785,
+     "chord_share": 0.785,
+     "top": [
+      "C",
+      "E",
+      "B",
+      "G"
+     ]
+    },
+    {
+     "bar": 10,
+     "score_share": 0.812,
+     "chord_share": 0.721,
+     "top": [
+      "A",
+      "E",
+      "B",
+      "G"
+     ]
+    },
+    {
+     "bar": 11,
+     "score_share": 0.91,
+     "chord_share": 0.86,
+     "top": [
+      "G",
+      "A",
+      "F",
+      "D"
+     ]
+    },
+    {
+     "bar": 12,
+     "score_share": 0.728,
+     "chord_share": 0.728,
+     "top": [
+      "G",
+      "E",
+      "C",
+      "D"
+     ]
+    },
+    {
+     "bar": 13,
+     "score_share": 0.906,
+     "chord_share": 0.799,
+     "top": [
+      "A",
+      "F",
+      "G",
+      "C"
+     ]
+    },
+    {
+     "bar": 14,
+     "score_share": 0.737,
+     "chord_share": 0.628,
+     "top": [
+      "G#",
+      "F",
+      "D#",
+      "G"
+     ]
+    },
+    {
+     "bar": 15,
+     "score_share": 0.852,
+     "chord_share": 0.918,
+     "top": [
+      "D",
+      "F",
+      "A",
+      "G"
+     ]
+    },
+    {
+     "bar": 16,
+     "score_share": 0.966,
+     "chord_share": 0.952,
+     "top": [
+      "C",
+      "G",
+      "E",
+      "B"
+     ]
+    }
+   ],
+   "loop": {
+    "seam_s": 29.18,
+    "max_step_at_seam": 2256,
+    "p999_step_elsewhere": 1377,
+    "repeat_correlation": 1.0,
+    "repeat_envelope_correlation": 0.9997,
+    "repeat_rms_ratio": 0.998,
+    "repeat_checked_at_s": 5.0,
+    "max_step_at_first_loop_start": 2255,
+    "rms_100ms_after_seam": 2307
+   },
+   "seconds_score": 29.18,
+   "loop_seconds": 29.18,
+   "file": "songs/17_omake.m4a"
+  }
+ },
+ "sfx": {
+  "bell": {
+   "seconds": 10.3,
+   "peak": 13661,
+   "clipped": 0,
+   "rms": 1096.4,
+   "rms_dbfs": -29.5,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 5.3,
+   "partials_hz": [
+    440.0,
+    880.0,
+    885.9,
+    1050.1,
+    1325.9,
+    1762.0,
+    2237.2,
+    2354.5
+   ],
+   "partials_ratio_to_strongest": [
+    0.5,
+    1.0,
+    1.007,
+    1.193,
+    1.507,
+    2.002,
+    2.542,
+    2.676
+   ],
+   "partials_db": [
+    -0.6,
+    0.0,
+    -5.8,
+    -6.8,
+    -13.4,
+    -5.7,
+    -34.8,
+    -26.4
+   ],
+   "number": 1,
+   "file": "sfx/01_bell.m4a"
+  },
+  "bell_far": {
+   "seconds": 8.6,
+   "peak": 4367,
+   "clipped": 0,
+   "rms": 348.7,
+   "rms_dbfs": -39.5,
+   "onset_s": 0.002,
+   "decay_to_-40dB_s": 5.22,
+   "partials_hz": [
+    416.5,
+    831.1,
+    837.0,
+    991.5,
+    1253.5,
+    1666.1,
+    1670.1,
+    2225.4
+   ],
+   "partials_ratio_to_strongest": [
+    0.501,
+    1.0,
+    1.007,
+    1.193,
+    1.508,
+    2.005,
+    2.009,
+    2.678
+   ],
+   "partials_db": [
+    -3.3,
+    0.0,
+    -7.8,
+    -7.7,
+    -18.7,
+    -8.2,
+    -14.7,
+    -29.5
+   ],
+   "number": 2,
+   "file": "sfx/02_bell_far.m4a"
+  },
+  "thunder": {
+   "seconds": 4.89,
+   "peak": 23554,
+   "clipped": 0,
+   "rms": 3133.2,
+   "rms_dbfs": -20.4,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 3.4,
+   "number": 3,
+   "file": "sfx/03_thunder.m4a"
+  },
+  "rumble": {
+   "seconds": 5.41,
+   "peak": 6246,
+   "clipped": 0,
+   "rms": 976.1,
+   "rms_dbfs": -30.5,
+   "onset_s": 0.019,
+   "decay_to_-40dB_s": 2.84,
+   "number": 4,
+   "file": "sfx/04_rumble.m4a"
+  },
+  "door": {
+   "seconds": 2.35,
+   "peak": 8289,
+   "clipped": 0,
+   "rms": 568.2,
+   "rms_dbfs": -35.2,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 0.2,
+   "hits_s": [
+    0.0,
+    0.42,
+    0.52
+   ],
+   "number": 5,
+   "file": "sfx/05_door.m4a"
+  },
+  "door_bang": {
+   "seconds": 1.9,
+   "peak": 20510,
+   "clipped": 0,
+   "rms": 1295.2,
+   "rms_dbfs": -28.1,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 0.26,
+   "number": 6,
+   "file": "sfx/06_door_bang.m4a"
+  },
+  "steps": {
+   "seconds": 4.11,
+   "peak": 6908,
+   "clipped": 0,
+   "rms": 402.2,
+   "rms_dbfs": -38.2,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 2.24,
+   "hits_s": [
+    0.0,
+    0.48,
+    0.6,
+    1.05,
+    1.54,
+    1.66,
+    2.11
+   ],
+   "number": 7,
+   "file": "sfx/07_steps.m4a"
+  },
+  "knock": {
+   "seconds": 2.21,
+   "peak": 11268,
+   "clipped": 0,
+   "rms": 651.7,
+   "rms_dbfs": -34.0,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 0.38,
+   "hits_s": [
+    0.0,
+    0.15,
+    0.31
+   ],
+   "number": 8,
+   "file": "sfx/08_knock.m4a"
+  },
+  "water": {
+   "seconds": 2.15,
+   "peak": 16296,
+   "clipped": 0,
+   "rms": 1912.0,
+   "rms_dbfs": -24.7,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 0.7,
+   "number": 9,
+   "file": "sfx/09_water.m4a"
+  },
+  "drip": {
+   "seconds": 3.0,
+   "peak": 11770,
+   "clipped": 0,
+   "rms": 362.1,
+   "rms_dbfs": -39.1,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 0.98,
+   "number": 10,
+   "file": "sfx/10_drip.m4a"
+  },
+  "heart": {
+   "seconds": 4.49,
+   "peak": 16432,
+   "clipped": 0,
+   "rms": 3186.5,
+   "rms_dbfs": -20.2,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 1.42,
+   "hits_s": [
+    0.0,
+    0.74,
+    1.49,
+    2.24
+   ],
+   "number": 11,
+   "file": "sfx/11_heart.m4a"
+  },
+  "shock": {
+   "seconds": 3.09,
+   "peak": 19882,
+   "clipped": 0,
+   "rms": 1837.5,
+   "rms_dbfs": -25.0,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 1.58,
+   "number": 12,
+   "file": "sfx/12_shock.m4a"
+  },
+  "glass": {
+   "seconds": 2.16,
+   "peak": 15650,
+   "clipped": 0,
+   "rms": 878.3,
+   "rms_dbfs": -31.4,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 0.48,
+   "number": 13,
+   "file": "sfx/13_glass.m4a"
+  },
+  "clock": {
+   "seconds": 7.5,
+   "peak": 6209,
+   "clipped": 0,
+   "rms": 850.0,
+   "rms_dbfs": -31.7,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 5.4,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 14,
+   "file": "sfx/14_clock.m4a"
+  },
+  "tick": {
+   "seconds": 4.49,
+   "peak": 8888,
+   "clipped": 0,
+   "rms": 263.2,
+   "rms_dbfs": -41.9,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 2.5,
+   "hits_s": [
+    0.0,
+    0.49,
+    0.99,
+    1.49,
+    1.99,
+    2.49
+   ],
+   "number": 15,
+   "file": "sfx/15_tick.m4a"
+  },
+  "match": {
+   "seconds": 2.31,
+   "peak": 11413,
+   "clipped": 0,
+   "rms": 1432.3,
+   "rms_dbfs": -27.2,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 0.68,
+   "number": 16,
+   "file": "sfx/16_match.m4a"
+  },
+  "camera": {
+   "seconds": 2.45,
+   "peak": 7875,
+   "clipped": 0,
+   "rms": 526.7,
+   "rms_dbfs": -35.9,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 1.06,
+   "number": 17,
+   "file": "sfx/17_camera.m4a"
+  },
+  "radio": {
+   "seconds": 2.13,
+   "peak": 10639,
+   "clipped": 0,
+   "rms": 2168.9,
+   "rms_dbfs": -23.6,
+   "onset_s": 0.002,
+   "decay_to_-40dB_s": 0.42,
+   "number": 18,
+   "file": "sfx/18_radio.m4a"
+  },
+  "thud": {
+   "seconds": 2.05,
+   "peak": 23258,
+   "clipped": 0,
+   "rms": 2242.5,
+   "rms_dbfs": -23.3,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 0.58,
+   "number": 19,
+   "file": "sfx/19_thud.m4a"
+  },
+  "wind": {
+   "seconds": 3.49,
+   "peak": 3911,
+   "clipped": 0,
+   "rms": 449.0,
+   "rms_dbfs": -37.3,
+   "onset_s": 0.096,
+   "decay_to_-40dB_s": 1.56,
+   "number": 20,
+   "file": "sfx/20_wind.m4a"
+  },
+  "clock1": {
+   "seconds": 4.49,
+   "peak": 6209,
+   "clipped": 0,
+   "rms": 638.5,
+   "rms_dbfs": -34.2,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 2.4,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 21,
+   "file": "sfx/21_clock1.m4a"
+  },
+  "clock2": {
+   "seconds": 6.01,
+   "peak": 6212,
+   "clipped": 0,
+   "rms": 776.9,
+   "rms_dbfs": -32.5,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 3.9,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 22,
+   "file": "sfx/22_clock2.m4a"
+  },
+  "clock3": {
+   "seconds": 7.5,
+   "peak": 6261,
+   "clipped": 0,
+   "rms": 849.9,
+   "rms_dbfs": -31.7,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 5.4,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 23,
+   "file": "sfx/23_clock3.m4a"
+  },
+  "clock4": {
+   "seconds": 9.0,
+   "peak": 6271,
+   "clipped": 0,
+   "rms": 895.8,
+   "rms_dbfs": -31.3,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 6.9,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 24,
+   "file": "sfx/24_clock4.m4a"
+  },
+  "clock5": {
+   "seconds": 10.5,
+   "peak": 6216,
+   "clipped": 0,
+   "rms": 925.8,
+   "rms_dbfs": -31.0,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 8.4,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 25,
+   "file": "sfx/25_clock5.m4a"
+  },
+  "clock6": {
+   "seconds": 12.0,
+   "peak": 6282,
+   "clipped": 0,
+   "rms": 949.2,
+   "rms_dbfs": -30.8,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 9.9,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 26,
+   "file": "sfx/26_clock6.m4a"
+  },
+  "clock7": {
+   "seconds": 13.49,
+   "peak": 6209,
+   "clipped": 0,
+   "rms": 964.6,
+   "rms_dbfs": -30.6,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 11.4,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 27,
+   "file": "sfx/27_clock7.m4a"
+  },
+  "clock8": {
+   "seconds": 14.99,
+   "peak": 6209,
+   "clipped": 0,
+   "rms": 980.4,
+   "rms_dbfs": -30.5,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 12.9,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 28,
+   "file": "sfx/28_clock8.m4a"
+  },
+  "clock9": {
+   "seconds": 16.51,
+   "peak": 6209,
+   "clipped": 0,
+   "rms": 990.8,
+   "rms_dbfs": -30.4,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 14.4,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 29,
+   "file": "sfx/29_clock9.m4a"
+  },
+  "clock10": {
+   "seconds": 18.0,
+   "peak": 6270,
+   "clipped": 0,
+   "rms": 998.6,
+   "rms_dbfs": -30.3,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 15.9,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 30,
+   "file": "sfx/30_clock10.m4a"
+  },
+  "clock11": {
+   "seconds": 19.5,
+   "peak": 6209,
+   "clipped": 0,
+   "rms": 1005.7,
+   "rms_dbfs": -30.3,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 17.4,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 31,
+   "file": "sfx/31_clock11.m4a"
+  },
+  "clock12": {
+   "seconds": 21.0,
+   "peak": 6245,
+   "clipped": 0,
+   "rms": 1012.5,
+   "rms_dbfs": -30.2,
+   "onset_s": 0.001,
+   "decay_to_-40dB_s": 18.9,
+   "partials_hz": [
+    219.0,
+    440.0,
+    526.0,
+    662.9,
+    882.0,
+    1118.6,
+    1177.3,
+    1441.3
+   ],
+   "partials_ratio_to_strongest": [
+    0.498,
+    1.0,
+    1.196,
+    1.507,
+    2.004,
+    2.542,
+    2.676,
+    3.276
+   ],
+   "partials_db": [
+    -2.6,
+    0.0,
+    -9.1,
+    -16.3,
+    -11.2,
+    -18.9,
+    -19.9,
+    -27.0
+   ],
+   "number": 32,
+   "file": "sfx/32_clock12.m4a"
+  }
+ },
+ "amb": {
+  "rain": {
+   "seconds": 20.0,
+   "peak": 3269,
+   "clipped": 0,
+   "rms": 217.4,
+   "rms_dbfs": -43.6,
+   "transients_per_s": 36.4,
+   "spectral_flatness": 0.078,
+   "envelope_variation": 1.113,
+   "file": "amb/rain.m4a"
+  },
+  "storm": {
+   "seconds": 30.0,
+   "peak": 8510,
+   "clipped": 0,
+   "rms": 771.7,
+   "rms_dbfs": -32.6,
+   "transients_per_s": 35.5,
+   "spectral_flatness": 0.049,
+   "envelope_variation": 1.069,
+   "file": "amb/storm.m4a"
+  },
+  "rain_under_night": {
+   "music_rms": 1211.7,
+   "rain_rms": 219.4,
+   "mixed_rms": 1230.6,
+   "rain_below_music_db": -14.8,
+   "mixed_peak": 11128,
+   "mixed_clipped": 0,
+   "file": "amb/rain_under_night.m4a"
+  },
+  "_white_noise_reference": {
+   "transients_per_s": 0.0,
+   "spectral_flatness": 0.565,
+   "envelope_variation": 0.026
+  }
+ },
+ "driver_ready_frame": 79,
+ "protocol": {
+  "fade": {
+   "port2_zero_after_s": 0.85,
+   "tail_rms": 6.4,
+   "ok": true
+  },
+  "stop": {
+   "port2": 0,
+   "rms_after_0_5s": 7.0,
+   "ok": true
+  },
+  "mute": {
+   "peak_while_muted": 0,
+   "rms_after_unmute": 949.3,
+   "ok": true
+  },
+  "duck": {
+   "level_change_db": -8.1,
+   "ok": true
+  },
+  "rapid_switch": {
+   "port2": 18,
+   "expected": 18,
+   "rms": 1678.3,
+   "ok": true
+  },
+  "layered": {
+   "peak": 18730,
+   "clipped": 0,
+   "port2": 8,
+   "ok": true
+  },
+  "sfx_stop": {
+   "rms_after_0_8s": 18.6,
+   "ok": true
+  },
+  "amb_off": {
+   "rms_first_0_3s": 109.2,
+   "rms_after_1_5s": 6.0,
+   "ok": true
+  },
+  "badend_end": {
+   "port2_end": 0,
+   "ok": true
+  },
+  "all_ok": true
+ },
+ "seconds_to_run": 78.4
+}

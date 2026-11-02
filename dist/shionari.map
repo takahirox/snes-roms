@@ -1,0 +1,62 @@
+Modules list:
+-------------
+shionari.o:
+    CODE              Offs=000000  Size=002818  Align=00001  Fill=0000
+    RODATA            Offs=000000  Size=003A56  Align=00001  Fill=0000
+    BSS               Offs=000000  Size=000394  Align=00001  Fill=0000
+    ZEROPAGE          Offs=000000  Size=00004A  Align=00001  Fill=0000
+    HIBSS             Offs=000000  Size=003580  Align=00001  Fill=0000
+    HEADER            Offs=000000  Size=000040  Align=00001  Fill=0000
+    BANK1             Offs=000000  Size=0038E8  Align=00001  Fill=0000
+    BANK2             Offs=000000  Size=007F98  Align=00001  Fill=0000
+    BANK3             Offs=000000  Size=008000  Align=00001  Fill=0000
+    BANK4             Offs=000000  Size=008000  Align=00001  Fill=0000
+    BANK5             Offs=000000  Size=008000  Align=00001  Fill=0000
+    BANK6             Offs=000000  Size=008000  Align=00001  Fill=0000
+    BANK7             Offs=000000  Size=008000  Align=00001  Fill=0000
+    BANK8             Offs=000000  Size=008000  Align=00001  Fill=0000
+    BANK9             Offs=000000  Size=008000  Align=00001  Fill=0000
+    BANK10            Offs=000000  Size=007500  Align=00001  Fill=0000
+    BANK11            Offs=000000  Size=003A80  Align=00001  Fill=0000
+    BANK12            Offs=000000  Size=005800  Align=00001  Fill=0000
+    BANK13            Offs=000000  Size=007B59  Align=00001  Fill=0000
+
+
+Segment list:
+-------------
+Name                   Start     End    Size  Align
+----------------------------------------------------
+ZEROPAGE              000000  000049  00004A  00001
+BSS                   000200  000593  000394  00001
+CODE                  008000  00A817  002818  00001
+RODATA                00A818  00E26D  003A56  00001
+HEADER                00FFC0  00FFFF  000040  00001
+BANK1                 018000  01B8E7  0038E8  00001
+BANK2                 028000  02FF97  007F98  00001
+BANK3                 038000  03FFFF  008000  00001
+BANK4                 048000  04FFFF  008000  00001
+BANK5                 058000  05FFFF  008000  00001
+BANK6                 068000  06FFFF  008000  00001
+BANK7                 078000  07FFFF  008000  00001
+BANK8                 088000  08FFFF  008000  00001
+BANK9                 098000  09FFFF  008000  00001
+BANK10                0A8000  0AF4FF  007500  00001
+BANK11                0B8000  0BBA7F  003A80  00001
+BANK12                0C8000  0CD7FF  005800  00001
+BANK13                0D8000  0DFB58  007B59  00001
+HIBSS                 7E2000  7E557F  003580  00001
+
+
+Exports list by name:
+---------------------
+
+
+
+Exports list by value:
+----------------------
+
+
+
+Imports list:
+-------------
+

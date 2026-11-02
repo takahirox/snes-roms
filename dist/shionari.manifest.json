@@ -1,0 +1,803 @@
+{
+ "target": "潮鳴りの密室 (dist/shionari.sfc)",
+ "sources": {
+  "data/adv/story.txt": "356d68c586eeca95daa6731efcb6c3dadae3b9f1ae5fcc3e907bc01bc8634f32",
+  "data/adv/mouths.txt": "e2e5b1efcbc40e956a703dccda833a625c5e9fcfc26d794d0f4e5542b200aa7c",
+  "data/adv/voices.txt": "681b5924ff615906cb9dd14c624190b4c4ce5a2f50dd0d90e27d7df9cae8b246",
+  "assets/shinonome/shnmk12.bdf": "17b0fa218105027f1d6615af3e5e46c2d0fbb2a6ac2fa2f7e5d39dff92d2116f",
+  "assets/shinonome/shnm6x12r.bdf": "bd54dc33f9caa588183c161a23f374def17be24d28417040cd277c264e4a07e4",
+  "tools/adv/build.py": "8bdd3dd2ae2e785d2f3ab55618428da7d00472338a0ec156ff0aa09ed24c0543",
+  "tools/adv/story.py": "4183a85b21aa1ed19924087045cf7c9249b3808e0114612f616c9daeacbfb846",
+  "tools/adv/quantize.py": "a5331fdc65c3917f76f98ab3a797ee76bf9f8417f9947a17d5a18fe2ae4f1957",
+  "tools/adv/mouth.py": "91cb389781e2755791702ea9546fce6694c6d26f142996e22e93fc14b842ebd3",
+  "tools/adv/spc.py": "64294e538ae722db2a6261b819549a2ed02e19c897a0d3cf3305764c834758d7",
+  "tools/adv/voice.py": "0edd5f86c79fd2dd01b06599cb8db29682477ab18a315992f6995919c95204b3",
+  "tools/png_codec.py": "243df57acec47486cef6d4dcca37d939d59b01bb3962b498a50ab06820a70eae",
+  "assets/adv/harbor-night-256.png": "29dcd22e5352651816d91c18c1fef45a29d6053d6185f1f2b88fa8903a11713d",
+  "assets/adv/warehouse-256.png": "65dcb15abcaa901160856b35f4732f11138a6209eec67ae41f883b7a482194d5",
+  "assets/adv/signal-256.png": "d2c6cae75b86218aa820632a77f2fce2422aff3dc42b806fed5436ddde2143c8",
+  "assets/adv/cafe-256.png": "6cdbc015c62f93b3132aa4b662a539648600e2f0497049418d9f48af6e929ea6",
+  "assets/adv/lighthouse-256.png": "f22ead7eda7bd76356edc5e71c3aa130dfc6e92a5f8f5cb445296360dfa4b149",
+  "assets/adv/station-256.png": "6e631176acbdb448d7da818a4aaf72ecd32070ee68afeaa7a3fdd65203ec6a8c",
+  "assets/adv/harbor-256.png": "cd9d58692822028961df7b3ff0c8c54218ef47fb370700d7a11af8a5da0da9a2",
+  "assets/adv/portrait-tatsumi-72.png": "15b52c1e8b3282c922bf55576ceb1f3d65ebe74ad0ddc019f21334ef1c2f7b4c",
+  "assets/adv/portrait-detective-72.png": "59543e43e9f8000074c48a8ea157f0e653da5bbcbca8a11a07986f20b630dbbf",
+  "assets/adv/portrait-koga-72.png": "8e10561b9dc178b0354e5f55eb2ad6b79d4d62c0e6fc53133644c9d51d907f4f",
+  "assets/adv/portrait-owner-72.png": "180a58fbf91918aa236ab06f73eeb58fd1a77d32358b82e64cc3cc5b22e7e9c9",
+  "assets/adv/portrait-keeper-72.png": "055a644c66ca4cb333bc0abe8453f87a0285cc05daf17b16ce68130cea2e15d3",
+  "assets/adv/portrait-director-72.png": "7f9839009a11b969d5444e9530c507f3a49e6ef5007c3b90886f535e83134d88"
+ },
+ "outputs": {
+  "font.bin": "6b2bcf04c8dcc223781f8156f1a25f81a3082e7974e2e7b16986796985aada0b",
+  "text0.bin": "55838b1f8db23a1051eba574e277d589d24a176c77241fa1b6b96d0529f2cc97",
+  "pic0.bin": "adcb3daec8b5535b480108b89c79992a3a8852f8336b860988fb4bceb5e2110d",
+  "pic1.bin": "859e5bdae4959c066ba755a8f8c46a09ac58d2caa6e76dff552aebbe5648a9c7",
+  "pic2.bin": "8efc96ffdeee286b690654c5b565b1a004ae66fc2ac7abe64fba8e78a20814a5",
+  "pic3.bin": "0b584bc1229330c7324e4dc20931839de244bec00c2101642c314a6351460427",
+  "pic4.bin": "9965328381d2aba22842a6fbd1d622552335b9dc61c146d0ce0347a39c79aab4",
+  "pic5.bin": "d53128c4ee5b39211177601f3247188d9e95886ddc3d0c1607e1f62021421a14",
+  "pic6.bin": "0510f2f577a268a34fd16a8fafd16d78132a0b7c3039c09ff9c9c6e8b80e4042",
+  "portrait0.bin": "91bc8f5b71f658906b2df565652397992ec5f82bd4c1023573cf957802852604",
+  "portrait1.bin": "83fd6e55c417115a404569c92bd2414c3d1cf99088bab2873ed5548cd55d8216",
+  "templates.bin": "c47f355f239817a15061d9ac15adab51541aafde4626f0a59bf29bc746c0aad3",
+  "logo.bin": "5587bf34b78ba4cadd80ad1c0ab4e9493026ee466648b1a00e726b89b8ed0106",
+  "mouth.bin": "c0cad2cdb931a07d404244f79143709486d63f4809aa2c44b2336b2d5aeac3d7",
+  "spc.bin": "5bba151fd09871529cd983ac5f5d15d259d912fde4124a0d2b0a2b4411727623"
+ },
+ "glyphs": 607,
+ "texts": 427,
+ "text_bytes": 32664,
+ "text_banks": 1,
+ "picture_banks": [
+  3,
+  4,
+  5,
+  6,
+  7,
+  8,
+  9
+ ],
+ "portrait_banks": [
+  10,
+  11
+ ],
+ "last_bank": 13,
+ "flags": 126,
+ "clues": 33,
+ "pictures": [
+  {
+   "path": "assets/adv/harbor-night-256.png",
+   "unique_15bit": 1018,
+   "palette_used": 239,
+   "mean_weighted_error": 0.434
+  },
+  {
+   "path": "assets/adv/warehouse-256.png",
+   "unique_15bit": 2104,
+   "palette_used": 238,
+   "mean_weighted_error": 1.603
+  },
+  {
+   "path": "assets/adv/signal-256.png",
+   "unique_15bit": 1096,
+   "palette_used": 235,
+   "mean_weighted_error": 0.667
+  },
+  {
+   "path": "assets/adv/cafe-256.png",
+   "unique_15bit": 1614,
+   "palette_used": 233,
+   "mean_weighted_error": 1.11
+  },
+  {
+   "path": "assets/adv/lighthouse-256.png",
+   "unique_15bit": 1579,
+   "palette_used": 236,
+   "mean_weighted_error": 1.108
+  },
+  {
+   "path": "assets/adv/station-256.png",
+   "unique_15bit": 1345,
+   "palette_used": 238,
+   "mean_weighted_error": 0.762
+  },
+  {
+   "path": "assets/adv/harbor-256.png",
+   "unique_15bit": 1070,
+   "palette_used": 236,
+   "mean_weighted_error": 0.726
+  }
+ ],
+ "portraits": [
+  {
+   "scene": "pier",
+   "path": "assets/adv/portrait-tatsumi-72.png",
+   "x": 8,
+   "y": 24,
+   "w": 72,
+   "h": 104
+  },
+  {
+   "scene": "warehouse",
+   "path": "assets/adv/portrait-detective-72.png",
+   "x": 176,
+   "y": 24,
+   "w": 72,
+   "h": 104
+  },
+  {
+   "scene": "signal",
+   "path": "assets/adv/portrait-koga-72.png",
+   "x": 176,
+   "y": 24,
+   "w": 72,
+   "h": 104
+  },
+  {
+   "scene": "cafe",
+   "path": "assets/adv/portrait-owner-72.png",
+   "x": 176,
+   "y": 24,
+   "w": 72,
+   "h": 104
+  },
+  {
+   "scene": "lighthouse",
+   "path": "assets/adv/portrait-keeper-72.png",
+   "x": 176,
+   "y": 24,
+   "w": 72,
+   "h": 104
+  },
+  {
+   "scene": "station",
+   "path": "assets/adv/portrait-director-72.png",
+   "x": 176,
+   "y": 24,
+   "w": 72,
+   "h": 104
+  }
+ ],
+ "mouths": [
+  {
+   "portrait_index": 0,
+   "scene": "pier",
+   "person": "tatsumi",
+   "speaker_id": 3,
+   "path": "assets/adv/portrait-tatsumi-72.png",
+   "patch": [
+    22,
+    48,
+    12,
+    6
+   ],
+   "tile_rect": [
+    4,
+    9,
+    2,
+    1
+   ],
+   "vram_word": 9344,
+   "bytes_per_row": 128,
+   "rows": 1,
+   "frame_sha256": [
+    "53de0942b82f8b96e382966dd741ed28fcabe1e0a342d3a06bfab28a35d14705",
+    "1da28aa42fa6a07ede0c01fc393afdb3534a41b5110f1fd1a19a7ffbe5b46bc1",
+    "cc434f8f672b1ced4a272c5289bb6e112e13e8196d87b041f71ab80843dfeb69"
+   ],
+   "frame_offset": [
+    0,
+    128,
+    256
+   ],
+   "patch_error": [
+    {
+     "mean": 0.917,
+     "max": 6
+    },
+    {
+     "mean": 1.056,
+     "max": 6
+    },
+    {
+     "mean": 1.111,
+     "max": 5
+    }
+   ]
+  },
+  {
+   "portrait_index": 1,
+   "scene": "warehouse",
+   "person": "hatano",
+   "speaker_id": 1,
+   "path": "assets/adv/portrait-detective-72.png",
+   "patch": [
+    24,
+    50,
+    8,
+    6
+   ],
+   "tile_rect": [
+    25,
+    9,
+    1,
+    1
+   ],
+   "vram_word": 10016,
+   "bytes_per_row": 64,
+   "rows": 1,
+   "frame_sha256": [
+    "50c249319b2c2d08acdf17478199b07cd20b09a91e1045872ee46c307ff16dd2",
+    "e8c15c417405956bd8dbe30ef7f3da6fc217e3f9725b4734ef15b917d5dc21ae",
+    "e8a24298a221952254e99f94b2b4e846a9b323e179c1d1921b0eadd7df7844e0"
+   ],
+   "frame_offset": [
+    384,
+    448,
+    512
+   ],
+   "patch_error": [
+    {
+     "mean": 4.625,
+     "max": 33
+    },
+    {
+     "mean": 4.979,
+     "max": 33
+    },
+    {
+     "mean": 5.667,
+     "max": 33
+    }
+   ]
+  },
+  {
+   "portrait_index": 2,
+   "scene": "signal",
+   "person": "koga",
+   "speaker_id": 2,
+   "path": "assets/adv/portrait-koga-72.png",
+   "patch": [
+    20,
+    40,
+    13,
+    7
+   ],
+   "tile_rect": [
+    24,
+    8,
+    2,
+    1
+   ],
+   "vram_word": 8960,
+   "bytes_per_row": 128,
+   "rows": 1,
+   "frame_sha256": [
+    "fb68c812f1e21a26692fe948c568af0369da50940c9224799cff8561b9b47ac6",
+    "045ab2096b03cec396afe9d6897861a9cecb63c46852aaba67d988e0333a3fdd",
+    "f85a46e67969e076ef65f748af52787b19c10c7a76012f94b5c709992ba273eb"
+   ],
+   "frame_offset": [
+    576,
+    704,
+    832
+   ],
+   "patch_error": [
+    {
+     "mean": 0.659,
+     "max": 4
+    },
+    {
+     "mean": 0.978,
+     "max": 5
+    },
+    {
+     "mean": 0.967,
+     "max": 5
+    }
+   ]
+  },
+  {
+   "portrait_index": 3,
+   "scene": "cafe",
+   "person": "yukiko",
+   "speaker_id": 4,
+   "path": "assets/adv/portrait-owner-72.png",
+   "patch": [
+    24,
+    46,
+    8,
+    6
+   ],
+   "tile_rect": [
+    25,
+    8,
+    1,
+    2
+   ],
+   "vram_word": 8992,
+   "bytes_per_row": 64,
+   "rows": 2,
+   "frame_sha256": [
+    "7b3de6a7817bdb51272eae849667f206b3682926dcdc3c73be31bbceaacabd41",
+    "3f019a5e8f103c1dd4c739468fbe3e9e3cbf407415a3f08561b74912e06481e8",
+    "e597877f21fbdbe7690704eeeef649e9916d27dd0d83807dd2103a6fc5aea35b"
+   ],
+   "frame_offset": [
+    960,
+    1088,
+    1216
+   ],
+   "patch_error": [
+    {
+     "mean": 4.667,
+     "max": 30
+    },
+    {
+     "mean": 4.792,
+     "max": 30
+    },
+    {
+     "mean": 5.438,
+     "max": 30
+    }
+   ]
+  },
+  {
+   "portrait_index": 4,
+   "scene": "lighthouse",
+   "person": "ookouchi",
+   "speaker_id": 5,
+   "path": "assets/adv/portrait-keeper-72.png",
+   "patch": [
+    21,
+    52,
+    13,
+    7
+   ],
+   "tile_rect": [
+    24,
+    9,
+    2,
+    2
+   ],
+   "vram_word": 9984,
+   "bytes_per_row": 128,
+   "rows": 2,
+   "frame_sha256": [
+    "d908d842c1870749df480ac8282597db2a0ffb646dd280e566241b773cca2f93",
+    "867f3ee7d1b6fc5f48d4029d81e44ecbb19c4c6d7c45a77ea7b2ddb540d8128e",
+    "f9894675932431f8fc6b701958f69aea4b82df47d822c3c469e0ef2fbb5f0106"
+   ],
+   "frame_offset": [
+    1344,
+    1600,
+    1856
+   ],
+   "patch_error": [
+    {
+     "mean": 1.615,
+     "max": 11
+    },
+    {
+     "mean": 1.648,
+     "max": 7
+    },
+    {
+     "mean": 1.868,
+     "max": 7
+    }
+   ]
+  },
+  {
+   "portrait_index": 5,
+   "scene": "station",
+   "person": "shuichi",
+   "speaker_id": 6,
+   "path": "assets/adv/portrait-director-72.png",
+   "patch": [
+    22,
+    53,
+    13,
+    7
+   ],
+   "tile_rect": [
+    25,
+    9,
+    1,
+    2
+   ],
+   "vram_word": 10016,
+   "bytes_per_row": 64,
+   "rows": 2,
+   "frame_sha256": [
+    "96803284698c8167ccee170416434b93b35f78ab1d1ee37002c035f71d7a8332",
+    "b4c86d3d0a4eb65c3b241a4773ea3dfd356985c4b71b640e8a19f8fc77c4b19d",
+    "03bc9c1f2a045cbb3128eb4db63e601562aba2592fd8004f1b95a4b155076802"
+   ],
+   "frame_offset": [
+    2112,
+    2240,
+    2368
+   ],
+   "patch_error": [
+    {
+     "mean": 1.242,
+     "max": 7
+    },
+    {
+     "mean": 1.275,
+     "max": 7
+    },
+    {
+     "mean": 1.308,
+     "max": 7
+    }
+   ]
+  }
+ ],
+ "speech": {
+  "voices": [
+   {
+    "name": "波多野",
+    "speaker_id": 1,
+    "voice": 0,
+    "timbre": "round",
+    "pitch_hz": 370.0,
+    "glide_pct": -7.0,
+    "length_ms": 24.0,
+    "samples": 384,
+    "brr_bytes": 243,
+    "brr_max_error": 128,
+    "volume": 55,
+    "gap": 4,
+    "contour_pitch": [
+     "$0829",
+     "$080A",
+     "$0814",
+     "$0800",
+     "$080A",
+     "$07EC",
+     "$0800",
+     "$07E1"
+    ]
+   },
+   {
+    "name": "古賀",
+    "speaker_id": 2,
+    "voice": 1,
+    "timbre": "dark",
+    "pitch_hz": 300.0,
+    "glide_pct": -8.0,
+    "length_ms": 28.0,
+    "samples": 448,
+    "brr_bytes": 279,
+    "brr_max_error": 112,
+    "volume": 60,
+    "gap": 4,
+    "contour_pitch": [
+     "$0829",
+     "$080A",
+     "$0814",
+     "$0800",
+     "$080A",
+     "$07EC",
+     "$0800",
+     "$07E1"
+    ]
+   },
+   {
+    "name": "辰巳",
+    "speaker_id": 3,
+    "voice": 2,
+    "timbre": "soft",
+    "pitch_hz": 345.0,
+    "glide_pct": -6.0,
+    "length_ms": 24.0,
+    "samples": 384,
+    "brr_bytes": 243,
+    "brr_max_error": 115,
+    "volume": 50,
+    "gap": 4,
+    "contour_pitch": [
+     "$0829",
+     "$080A",
+     "$0814",
+     "$0800",
+     "$080A",
+     "$07EC",
+     "$0800",
+     "$07E1"
+    ]
+   },
+   {
+    "name": "ゆき子",
+    "speaker_id": 4,
+    "voice": 3,
+    "timbre": "soft",
+    "pitch_hz": 540.0,
+    "glide_pct": -5.0,
+    "length_ms": 22.0,
+    "samples": 352,
+    "brr_bytes": 225,
+    "brr_max_error": 349,
+    "volume": 56,
+    "gap": 4,
+    "contour_pitch": [
+     "$0829",
+     "$080A",
+     "$0814",
+     "$0800",
+     "$080A",
+     "$07EC",
+     "$0800",
+     "$07E1"
+    ]
+   },
+   {
+    "name": "大河内",
+    "speaker_id": 5,
+    "voice": 4,
+    "timbre": "dark",
+    "pitch_hz": 325.0,
+    "glide_pct": -6.0,
+    "length_ms": 26.0,
+    "samples": 416,
+    "brr_bytes": 261,
+    "brr_max_error": 240,
+    "volume": 58,
+    "gap": 4,
+    "contour_pitch": [
+     "$0829",
+     "$080A",
+     "$0814",
+     "$0800",
+     "$080A",
+     "$07EC",
+     "$0800",
+     "$07E1"
+    ]
+   },
+   {
+    "name": "修一",
+    "speaker_id": 6,
+    "voice": 5,
+    "timbre": "round",
+    "pitch_hz": 420.0,
+    "glide_pct": -6.0,
+    "length_ms": 23.0,
+    "samples": 368,
+    "brr_bytes": 234,
+    "brr_max_error": 126,
+    "volume": 62,
+    "gap": 4,
+    "contour_pitch": [
+     "$0829",
+     "$080A",
+     "$0814",
+     "$0800",
+     "$080A",
+     "$07EC",
+     "$0800",
+     "$07E1"
+    ]
+   },
+   {
+    "name": "わたし",
+    "speaker_id": 14,
+    "voice": 6,
+    "timbre": "round",
+    "pitch_hz": 455.0,
+    "glide_pct": -5.0,
+    "length_ms": 22.0,
+    "samples": 352,
+    "brr_bytes": 225,
+    "brr_max_error": 101,
+    "volume": 52,
+    "gap": 4,
+    "contour_pitch": [
+     "$0829",
+     "$080A",
+     "$0814",
+     "$0800",
+     "$080A",
+     "$07EC",
+     "$0800",
+     "$07E1"
+    ]
+   }
+  ],
+  "silent": "―‥…　、。「」『』〔〕〜・ー！（），－．：；？［］",
+  "contour": [
+   2.0,
+   0.5,
+   1.0,
+   0.0,
+   0.5,
+   -1.0,
+   0.0,
+   -1.5
+  ],
+  "voiced_glyphs": 589,
+  "glyphs": 607,
+  "spc": {
+   "code_bytes": 1881,
+   "image_bytes": 31577,
+   "image_end": "$7D59",
+   "entry": 512,
+   "dir": 2560,
+   "speech_samples": 7,
+   "speech_bytes": 1710,
+   "speech_volume_offset": 1690,
+   "speech_voices": 7,
+   "music_samples": {
+    "ep": {
+     "samples": 1792,
+     "brr_bytes": 1008,
+     "looped": true,
+     "natural_hz": 1000.0,
+     "rate": 32000,
+     "peak": 20000
+    },
+    "strings": {
+     "samples": 4096,
+     "brr_bytes": 2304,
+     "looped": true,
+     "natural_hz": 1000.0,
+     "rate": 32000,
+     "peak": 20000
+    },
+    "pad": {
+     "samples": 4096,
+     "brr_bytes": 2304,
+     "looped": true,
+     "natural_hz": 1000.0,
+     "rate": 32000,
+     "peak": 20000
+    },
+    "flute": {
+     "samples": 1280,
+     "brr_bytes": 720,
+     "looped": true,
+     "natural_hz": 1000.0,
+     "rate": 32000,
+     "peak": 20000
+    },
+    "clarinet": {
+     "samples": 256,
+     "brr_bytes": 144,
+     "looped": true,
+     "natural_hz": 1000.0,
+     "rate": 32000,
+     "peak": 20000
+    },
+    "oboe": {
+     "samples": 256,
+     "brr_bytes": 144,
+     "looped": true,
+     "natural_hz": 1000.0,
+     "rate": 32000,
+     "peak": 20000
+    },
+    "bass": {
+     "samples": 3072,
+     "brr_bytes": 1728,
+     "looped": true,
+     "natural_hz": 250.0,
+     "rate": 32000,
+     "peak": 22000
+    },
+    "harp": {
+     "samples": 3072,
+     "brr_bytes": 1728,
+     "looped": true,
+     "natural_hz": 500.0,
+     "rate": 32000,
+     "peak": 20000
+    },
+    "bell": {
+     "samples": 2304,
+     "brr_bytes": 1296,
+     "looped": true,
+     "natural_hz": 1000.0,
+     "rate": 32000,
+     "peak": 20000
+    },
+    "timp": {
+     "samples": 7200,
+     "brr_bytes": 4077,
+     "looped": false,
+     "natural_hz": 87.307,
+     "rate": 8000,
+     "peak": 22000
+    },
+    "shaker": {
+     "samples": 800,
+     "brr_bytes": 477,
+     "looped": false,
+     "natural_hz": 261.6256,
+     "rate": 16000,
+     "peak": 12000
+    },
+    "wood": {
+     "samples": 720,
+     "brr_bytes": 432,
+     "looped": false,
+     "natural_hz": 261.6256,
+     "rate": 16000,
+     "peak": 20000
+    }
+   },
+   "music_sample_bytes": 16362,
+   "sequence_bytes": 11202,
+   "songs": {
+    "opening": {
+     "bpm": 80.0,
+     "bars": 28.0,
+     "seconds": 84.0,
+     "loop_bar": 13.0
+    },
+    "investigate": {
+     "bpm": 96.15,
+     "bars": 16.0,
+     "seconds": 39.94,
+     "loop_bar": 1.0
+    },
+    "sea": {
+     "bpm": 62.89,
+     "bars": 16.0,
+     "seconds": 45.79,
+     "loop_bar": 1.0
+    },
+    "cafe": {
+     "bpm": 100.0,
+     "bars": 16.0,
+     "seconds": 38.4,
+     "loop_bar": 1.0
+    },
+    "deduce": {
+     "bpm": 71.94,
+     "bars": 16.0,
+     "seconds": 53.38,
+     "loop_bar": 1.0
+    },
+    "dawn": {
+     "bpm": 75.76,
+     "bars": 16.0,
+     "seconds": 50.69,
+     "loop_bar": 1.0
+    }
+   },
+   "song_ids": {
+    "opening": 0,
+    "title": 1,
+    "investigate": 2,
+    "sea": 3,
+    "cafe": 4,
+    "deduce": 5,
+    "dawn": 6
+   },
+   "echo": {
+    "start": "$D000",
+    "edl": 5,
+    "fir": [
+     12,
+     33,
+     43,
+     43,
+     19,
+     254,
+     243,
+     249
+    ],
+    "feedback": 56,
+    "volume": 28
+   },
+   "bank": 13
+  }
+ },
+ "art_records": {
+  "prepared": "4d41a497c655a3e7b66c26c9ec019230ebf93cc30436f5b95b8c662f8c33f77a",
+  "art": "dae0452ce2e5039c760cf2e9af21aadd65bc5b72563c9976c52c23786ab745cc"
+ }
+}

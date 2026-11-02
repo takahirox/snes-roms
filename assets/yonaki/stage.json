@@ -1,0 +1,367 @@
+{
+ "_about": "Staged silhouettes: for every background / character / position the scenario uses, the background photo is edited by the Codex CLI's image generation to hold that person in a fitting pose, painted flat magenta; tools/yonaki/pictures.py cuts the magenta out as the mask. Keys are bg/character/position. 'who' overrides the character's description, 'where' the position's region.",
+ "_common": "Edit the attached photograph. Keep every part of the photo exactly as it is: the same framing, perspective, lighting, colours and objects; do not redraw, crop, shift or restyle anything. Add exactly one person: {who}, {pose}. Place the person {where}. The person is a main character seen up close: put them in the near foreground or the near middle ground, so that a standing person is at least half the image height (a sitting person or one partly hidden by furniture proportionally), in correct perspective with the floor and furniture. Do not make the person small or far away unless the pose below says so. Anything in front of the person (furniture, seat backs, counters, tub rims, water, railings) must stay in front and hide those parts of the person. Paint the person ONLY as one completely flat, uniform, pure magenta (#FF00FF) silhouette: no shading, texture, outline, glow or soft edge, no shadow or reflection, and no other magenta anywhere in the image. Keep the same image size.",
+ "_where": {
+  "l": "in the left part of the image, the whole person between 5% and 40% of the image width from the left edge",
+  "c": "near the horizontal centre of the image, the whole person between 32% and 68% of the image width",
+  "r": "in the right part of the image, the whole person between 60% and 95% of the image width from the left edge"
+ },
+ "_who": {
+  "chihiro": "a Japanese woman of about 30 with short bob hair, a loose jacket and slim trousers, a camera hanging from a shoulder strap",
+  "chihiro2": "a Japanese woman of about 30 with short bob hair and a jacket, holding a camera up to her face, taking a photograph, seen from the side",
+  "shino": "a Japanese woman in her late fifties in a kimono with her hair in a neat bun",
+  "keisuke": "a Japanese man in his early thirties wearing a happi coat over a sweater and trousers",
+  "gondo": "a stocky Japanese man in his sixties in a cook's white coat with a tied headband",
+  "gondo2": "a stocky Japanese man in his sixties in a cook's white coat and headband, raising a large log of firewood in one hand, menacing",
+  "sayo": "a young Japanese woman of about 19 in a ryokan maid's kimono with an apron and a high ponytail",
+  "kugayama": "a heavy-set Japanese man in his late forties in a loose yukata robe",
+  "shiga": "a thin old Japanese man in his seventies with round glasses, a cardigan and a walking cane",
+  "ryo": "a slim young Japanese man of about 28 with tidy hair, in a sweater and slacks",
+  "emi": "a young Japanese woman of about 26 with long hair, a cardigan and a long skirt",
+  "sumiko": "a Japanese woman of about 35 with long straight hair down her back, in a long plain dress",
+  "sumiko2": "a Japanese woman with very long straight hair in a long loose yukata",
+  "chizuru": "a Japanese girl of about 17 in a 1960s ryokan maid's kimono with an apron, her hair tied back",
+  "oyura": "a Japanese girl of about 16 in an Edo-period kimono with long loose hair falling forward over her face",
+  "driver": "an old Japanese bus driver in a uniform cap and jacket",
+  "gondo_y": "a sturdy Japanese man of about 36 with short cropped hair, in a cook's white coat with a tied headband",
+  "shino_y": "a slender Japanese woman of about 33 in a kimono, her hair in a neat bun, standing very upright",
+  "tatsuya": "a tall slim young Japanese man of about 22 with longish 1960s hair, in a loose yukata robe",
+  "sumiko10": "a small Japanese girl of about 10 with a short bob haircut, a pinafore dress and a school randoseru backpack on her back",
+  "keichan": "a small Japanese boy of about 7 with a close-cropped haircut, in shorts, a sweater and knee socks",
+  "haha": "a Japanese woman of about 38 in a 1960s kappogi apron over a plain kimono, her hair tied back",
+  "oodanna": "an old Japanese innkeeper of about 65, thin and stern, in a kimono with a haori jacket"
+ },
+ "stage": {
+  "annex/chihiro/c": {
+   "pose": "standing in the covered walkway in the middle ground, holding a flashlight, facing the detached room"
+  },
+  "annex/shiga/c": {
+   "pose": "standing at the sliding door of the detached room, leaning on his cane, turning back toward the viewer"
+  },
+  "annex_room/chihiro/c": {
+   "pose": "kneeling upright (seiza) on the tatami on the near side of the low desk, her whole body visible as one connected shape, head bowed, looking down at the papers on the desk"
+  },
+  "bridge_walk/chihiro/c": {
+   "pose": "standing safely on the wet road surface of the bridge deck a few steps ahead of the viewer, on the near (road) side of the left railing and never beyond it: her feet are clearly on the deck in front of the railing, the railing is beside and behind her, and nothing hides her legs. She is turned toward the valley, holding a camera up to her face and photographing the river over the top of the railing. The whole figure about half the image height"
+  },
+  "bus/chihiro/c": {
+   "pose": "sitting in the nearest seat across the aisle, close to the camera, seen from the side, a camera bag on her lap; only her head, shoulders and upper body show above the seat backs in front of her",
+   "where": "in the right half of the image, the whole person between 55% and 95% of the image width"
+  },
+  "bus/driver/c": {
+   "pose": "sitting in the driver's seat seen from behind, small in the distance: only his head with the cap and his shoulders show above the driver's seat back. Japanese buses are right-hand drive: the driver's seat and the steering wheel are at the front RIGHT corner of the bus, in front of the right-hand row of seats, under the right half of the windshield, not in the middle and not on the left",
+   "where": "at the front right of the bus, the whole person between 70% and 92% of the image width"
+  },
+  "bus_door/chihiro/c": {
+   "pose": "standing in the aisle near the open front door, close to the viewer and facing the viewer, a camera bag on her shoulder, seen from the waist up; the seat backs in the foreground hide her lower body"
+  },
+  "cellar/gondo2/c": {
+   "pose": "standing at the foot of the stone steps close to the viewer, looming large and filling most of the image height"
+  },
+  "corridor/chihiro/l": {
+   "pose": "standing in the corridor in the middle ground, looking along the corridor"
+  },
+  "corridor/chihiro2/c": {
+   "pose": "standing in the middle of the corridor in the middle ground, photographing down the corridor"
+  },
+  "corridor/emi/r": {
+   "pose": "standing in the corridor in the middle ground, shrinking back with her arms wrapped around herself"
+  },
+  "corridor/ryo/l": {
+   "pose": "standing in the corridor in the middle ground, one hand reaching to his right as if supporting someone's arm"
+  },
+  "corridor/sayo/c": {
+   "pose": "walking ahead along the corridor away from the viewer, seen from behind, in the middle ground"
+  },
+  "corridor/sayo/r": {
+   "pose": "standing in the corridor in the middle ground, turned toward the viewer, hands folded in front"
+  },
+  "corridor_dark/chihiro/c": {
+   "pose": "standing in the dark corridor in the middle ground, leaning with her back against the wall"
+  },
+  "corridor_dark/chizuru/c": {
+   "pose": "standing in the dark corridor in the middle ground, facing the viewer, holding a small candle stand in front of her"
+  },
+  "corridor_dark/shiga/c": {
+   "pose": "standing in the dark corridor in the middle ground, stopped and turned toward the viewer, leaning on his cane"
+  },
+  "corridor_dark/sumiko2/c": {
+   "pose": "standing far down the dark corridor, small in the distance, facing the viewer, holding a candle in front of her with both hands, ghostly and still"
+  },
+  "dawn/chihiro/c": {
+   "pose": "standing in the near foreground at the bottom of the image, seen from behind from the waist up, looking out over the valley"
+  },
+  "dining/chihiro/c": {
+   "pose": "sitting formally behind a dinner tray in the middle ground, loading film into a camera"
+  },
+  "dining/emi/r": {
+   "pose": "sitting formally behind a dinner tray in the middle ground, head lowered, shoulders hunched"
+  },
+  "dining/keisuke/c": {
+   "pose": "standing at the far end of the hall in the middle ground, facing the guests, making an announcement"
+  },
+  "dining/kugayama/c": {
+   "pose": "sitting cross-legged behind a dinner tray at the head of the hall, holding a sake cup, chin raised arrogantly"
+  },
+  "dining/kugayama/r": {
+   "pose": "sitting cross-legged behind a dinner tray, holding a sake cup, chin raised arrogantly"
+  },
+  "dining/ryo/l": {
+   "pose": "sitting formally behind a dinner tray in the middle ground, glancing to his right"
+  },
+  "dining/sayo/l": {
+   "pose": "kneeling beside a dinner tray, offering a sake flask with both hands toward the right"
+  },
+  "dining/shiga/c": {
+   "pose": "sitting behind a dinner tray in the middle ground, his cane beside him, talking"
+  },
+  "dining/shino/c": {
+   "pose": "kneeling formally at the far end of the hall in the middle ground, bowing slightly with her hands on the tatami"
+  },
+  "dining/sumiko/c": {
+   "pose": "sitting formally behind a dinner tray in the middle ground, holding a small plate and gazing at it"
+  },
+  "edo_bath/chizuru/c": {
+   "pose": "standing beside the wooden tub in the middle ground, facing the viewer"
+  },
+  "edo_bath/chizuru/l": {
+   "pose": "standing at the edge of the wooden tub, looking toward the water"
+  },
+  "edo_bath/chizuru/r": {
+   "pose": "standing beside the tub, facing left toward the middle of the room"
+  },
+  "edo_bath/kugayama/c": {
+   "pose": "sitting hunched on the rim of the tub with his legs in the water, staring down into the water"
+  },
+  "edo_bath/oyura/c": {
+   "pose": "standing in the middle of the wooden tub, waist-deep in the water, head bowed, arms hanging; the water and the tub hide her lower body"
+  },
+  "edo_bath/oyura/l": {
+   "pose": "standing beside the tub, head bowed, arms hanging"
+  },
+  "genkan/chihiro/c": {
+   "pose": "standing on the wooden floor in the middle ground, folding up a tripod"
+  },
+  "genkan/chihiro2/l": {
+   "pose": "standing on the wooden floor behind a camera on a tripod, looking through the camera toward the right"
+  },
+  "genkan/sayo/c": {
+   "pose": "standing on the wooden floor in the middle ground, holding a round tray against her chest"
+  },
+  "genkan/sayo/r": {
+   "pose": "kneeling on the raised wooden floor at the edge of the step, setting out slippers, facing the viewer"
+  },
+  "genkan/shino/c": {
+   "pose": "standing on the raised wooden floor in the near middle ground in front of the reception counter, very upright, hands folded in front, the whole figure visible"
+  },
+  "genkan/shino/l": {
+   "pose": "kneeling formally on the raised wooden floor at the edge of the step, bowing in welcome"
+  },
+  "genkan/shino/r": {
+   "pose": "sitting formally (seiza) on the raised wooden floor in the near middle ground, very upright, hands on her lap"
+  },
+  "inn_dawn/chihiro/c": {
+   "pose": "running toward the viewer along the path in the middle ground"
+  },
+  "inn_dawn/gondo/c": {
+   "pose": "standing in front of the inn entrance in the middle ground, wearing a hooded raincoat, head lowered"
+  },
+  "inn_dawn/sumiko/c": {
+   "pose": "standing still in the middle ground, facing the viewer, arms at her sides"
+  },
+  "inn_dusk/gondo/c": {
+   "pose": "standing on the stone path in front of the entrance, arms crossed"
+  },
+  "inn_dusk/shino/c": {
+   "pose": "standing on the stone path at the entrance holding an open Japanese umbrella, bowing slightly in welcome"
+  },
+  "kamaba/keisuke/c": {
+   "pose": "standing next to the big red valve wheel, one hand resting on it"
+  },
+  "kitchen/gondo/c": {
+   "pose": "standing behind the counter in the middle ground, working at a cutting board, head down; the counter hides his lower body"
+  },
+  "kitchen/sayo/c": {
+   "pose": "standing in the foreground, holding a tray, leaning back in surprise"
+  },
+  "lobby/emi/r": {
+   "pose": "sitting on the floor in the middle ground near the hearth, wrapped in a blanket"
+  },
+  "lobby/keisuke/c": {
+   "pose": "standing in the middle ground, scratching the back of his head awkwardly"
+  },
+  "lobby/keisuke/r": {
+   "pose": "standing in the middle ground, facing left, shoulders tense"
+  },
+  "lobby/kugayama/l": {
+   "pose": "standing in the middle ground, facing right, holding a teacup, glaring"
+  },
+  "lobby/ryo/l": {
+   "pose": "sitting on the floor in the middle ground near the hearth, holding a folded blanket"
+  },
+  "lobby/shiga/c": {
+   "pose": "sitting by the hearth in the middle ground, his cane beside him, looking into the fire"
+  },
+  "lobby/sumiko/c": {
+   "pose": "sitting on the floor in the far corner of the room, hugging her knees"
+  },
+  "lobby_dark/chihiro/c": {
+   "pose": "sitting on the floor near the hearth in the middle ground, facing the viewer, a camera on her lap"
+  },
+  "lobby_dark/chihiro/l": {
+   "pose": "sitting on the floor at the left side of the room, facing right",
+   "where": "entirely inside the left third of the image: no part of the person, arms and held objects included, may reach further right than 33% of the image width"
+  },
+  "lobby_dark/chizuru/c": {
+   "pose": "standing near the viewer in the foreground, facing the viewer, hands folded in front"
+  },
+  "lobby_dark/emi/r": {
+   "pose": "sitting on the floor with a blanket over her shoulders, hugging her knees, facing left",
+   "where": "entirely inside the right third of the image: no part of the person, arms and held objects included, may reach further left than 66% of the image width"
+  },
+  "lobby_dark/gondo/c": {
+   "pose": "sitting cross-legged on the far side of the hearth, arms folded"
+  },
+  "lobby_dark/gondo/r": {
+   "pose": "standing in the middle ground holding a kerosene lamp at his side"
+  },
+  "lobby_dark/keisuke/c": {
+   "pose": "kneeling on the floor near the hearth, leaning forward, speaking"
+  },
+  "lobby_dark/keisuke/l": {
+   "pose": "standing in the middle ground holding a flashlight"
+  },
+  "lobby_dark/keisuke/r": {
+   "pose": "sitting on the floor at the right side of the room, facing left",
+   "where": "entirely inside the right third of the image: no part of the person, arms and held objects included, may reach further left than 66% of the image width"
+  },
+  "lobby_dark/ryo/c": {
+   "pose": "standing up in the middle ground, fists clenched"
+  },
+  "lobby_dark/ryo/l": {
+   "pose": "sitting on the floor wrapped in a blanket, leaning to the right"
+  },
+  "lobby_dark/sayo/c": {
+   "pose": "sitting on the floor in the middle ground, both hands covering her face"
+  },
+  "lobby_dark/sayo/r": {
+   "pose": "sitting formally on the floor, leaning forward a little, one hand raised timidly"
+  },
+  "lobby_dark/shiga/c": {
+   "pose": "sitting on the floor by the hearth in the middle ground, his cane beside him"
+  },
+  "lobby_dark/shino/c": {
+   "pose": "kneeling formally on the floor, bowing with both hands on the floor"
+  },
+  "lobby_dark/shino/l": {
+   "pose": "sitting formally on the floor at the left side of the room, very upright, facing right",
+   "where": "entirely inside the left third of the image: no part of the person, arms and held objects included, may reach further right than 33% of the image width"
+  },
+  "lobby_dark/sumiko/c": {
+   "pose": "sitting on the floor in the corner of the room, hugging her knees"
+  },
+  "office_tokyo/chihiro/c": {
+   "pose": "standing beside a desk in the middle ground, holding two cans of coffee"
+  },
+  "office_tokyo/chihiro/r": {
+   "pose": "sitting on the edge of a desk, facing left"
+  },
+  "office_tokyo/keisuke/c": {
+   "who": "a stocky middle-aged Japanese magazine editor in shirt sleeves",
+   "pose": "standing behind a desk at the back, hands on his hips, shouting"
+  },
+  "office_tokyo/shino/l": {
+   "pose": "standing in the middle ground, facing right, holding a letter"
+  },
+  "oldbath/chihiro2/c": {
+   "pose": "standing beside the empty tub, photographing it with an instant camera"
+  },
+  "oldbath_ext/chihiro/l": {
+   "pose": "standing in the middle ground, facing right"
+  },
+  "oldbath_ext/sumiko/r": {
+   "pose": "standing still in the middle ground, facing the viewer, arms at her sides"
+  },
+  "oldbath_ext/sumiko2/c": {
+   "pose": "standing on a stone base under the bell at the eaves, stretching up on tiptoe, one hand raised high holding the end of a broken bell rope"
+  },
+  "oldbath_night/gondo/c": {
+   "pose": "standing in the steam beside the tub in the middle ground, looking down at the water, holding a lamp at his side, half turned away from the viewer"
+  },
+  "oldbath_night/kugayama/c": {
+   "who": "a tall young Japanese man of about 22 in a yukata",
+   "pose": "standing beside the steaming tub, one hand on his hip, leering"
+  },
+  "oldbath_night/sumiko/l": {
+   "pose": "standing in the steam near the left wall, one hand reaching forward, calling out",
+   "where": "entirely inside the left third of the image: no part of the person, arms and held objects included, may reach further right than 33% of the image width"
+  },
+  "room/chihiro/c": {
+   "pose": "standing in the middle ground in a yukata, holding two cans of beer"
+  },
+  "stairs/kugayama/c": {
+   "pose": "standing unsteadily halfway down the steps, drunk, his yukata loose"
+  },
+  "storeroom/chihiro/c": {
+   "pose": "standing in the foreground, leaning in as if looking over someone's shoulder"
+  },
+  "storeroom/chihiro2/c": {
+   "pose": "standing in the middle ground, photographing the shelves"
+  },
+  "storeroom/sayo/c": {
+   "pose": "standing in the middle ground near the shelves, leaning forward, whispering"
+  },
+  "watari/chizuru/c": {
+   "pose": "standing in the covered walkway in the middle ground, facing the viewer, hands folded in front"
+  },
+  "inn_dusk/gondo_y/c": {
+   "pose": "standing on the stone path in front of the entrance, half turned toward the viewer, a cloth bundle hanging from one hand"
+  },
+  "kitchen/gondo_y/c": {
+   "pose": "standing behind the counter in the middle ground, working at a cutting board with a knife, head down; the counter hides his lower body"
+  },
+  "bridge_walk/gondo_y/c": {
+   "pose": "walking away from the viewer along the middle of the bridge deck, seen from behind, a few metres ahead, hands in his coat pockets"
+  },
+  "genkan/shino_y/c": {
+   "pose": "standing behind the reception counter in the middle ground, smiling, hands folded; the counter hides her lower body"
+  },
+  "lobby/shino_y/c": {
+   "pose": "standing beside the sunken hearth in the middle ground, looking down kindly toward the viewer"
+  },
+  "office/oodanna/c": {
+   "pose": "sitting on the chair at the desk, bent over an open notebook, writing with a pen, seen from the side; the desk hides his legs"
+  },
+  "genkan/oodanna/r": {
+   "pose": "standing in the entrance hall bowing deeply toward the left, hands on his knees"
+  },
+  "garden/keichan/c": {
+   "pose": "standing on the wet stone path in the middle ground, looking up at the viewer with a mischievous grin, hands behind his back"
+  },
+  "dining/keichan/l": {
+   "pose": "running across the tatami room, small, arms swinging, in the middle ground"
+  },
+  "dining/tatsuya/c": {
+   "pose": "sitting cross-legged at the low table, leaning back on one arm, holding a sake cup, the yukata loose; the table hides his legs"
+  },
+  "oldbath_ext/sumiko10/r": {
+   "pose": "standing on tiptoe on a stone step under the eaves, both hands reaching up to pull a rope, seen from the side"
+  },
+  "corridor/sumiko10/c": {
+   "pose": "sitting on the wooden floor of the corridor with her knees drawn up, a notebook on her knees, the randoseru beside her"
+  },
+  "inn_dawn/sumiko10/c": {
+   "pose": "running along the wet stone path toward the viewer mid-stride, both legs clearly visible, a randoseru on her back, one arm raised high waving"
+  },
+  "cz_home/haha/c": {
+   "pose": "standing behind the low round table in the middle ground, setting down a rice bowl with both hands, face turned toward the viewer"
+  },
+  "lobby_dark/shino/r": {
+   "pose": "standing very upright in the near middle ground, facing the viewer, hands folded in front of her, having just risen from the floor",
+   "where": "in the near middle ground, slightly right of the center of the image"
+  },
+  "room/chihiro/l": {
+   "pose": "standing by the window, leaning one shoulder against the window frame, arms folded, head lowered, tired"
+  }
+ }
+}

@@ -1,0 +1,123 @@
+# 夜鳴き鐘 test fixture: every op, choices, gated choices, several endings.
+*start
+@bgm stop
+@bg black cut
+@fx wait 20
+@chapter 序章　テスト
+@bgm journey
+@bg bus fade
+@amb rain
+
+テストの一行目。ここから文章が始まる。
+二つ目の段落。少し長めの文章を書いて、自動で折り返すかどうかを確かめる。「かぎかっこ」と、句読点の禁則も見る。ＡＢＣ　abc 123!
+@sil chihiro c
+「わたしは千尋。中央に立っている」
+@sil gondo l red
+@sil shiga r white
+三人のシルエットが並んだ。
+@sil - c
+真ん中が消えた。
+@silclear
+誰もいなくなった。
+
+空行のあとの段落。
+@page
+改ページのあとの段落。
+@se bell
+鐘の音がした。
+@choice
+> 宿のことを話す -> m_inn
+> カメラのことを聞く。この選択肢は長いので二行に折り返される -> m_camera
+> {cleared_main} 古い写真のことを聞く -> extra_start
+
+*m_inn
+宿の話をした。
+@set talked_inn
+@goto m_common
+
+*m_camera
+カメラの話をした。
+@clr talked_inn
+@goto m_common
+
+*m_common
+@ifnot talked_inn m_skip
+宿の話をしたので、この段落が出る。
+*m_skip
+@bg genkan white
+@sil sayo x=4
+白い光のあとで玄関に着いた。
+@fx shake
+画面が揺れた。
+@fx flash
+白い閃光。
+@fx redflash
+赤い閃光。
+@bg lobby mosaic
+モザイクで談話室へ。
+@fx ripple on
+水面のゆらぎ。
+@fx wait 30
+@fx ripple off
+@fx dark
+暗くなった。
+@fx light
+明るくなった。
+@bgm horror
+これは十三行を超える長い段落のテストです。一行に十八文字まで入るので、十三行を超えるには二百文字以上が必要になります。そこで、同じような文をいくつも重ねていきます。夜の宿は静かで、雨の音だけが屋根を打っている。廊下の明かりは暗く、遠くで時計が鳴った。僕は手帳を閉じて、もう一度窓の外を見た。霧が谷を埋めて、川の音も聞こえない。千尋さんはカメラを膝にのせたまま、黙って座っている。誰かが廊下を歩く音がした。足音は近づいて、また遠ざかっていった。時計の針は十一時を指している。もうすぐ鐘が鳴るのだろうか。僕は息をひそめて、その時を待った。
+長い段落のあとの段落。
+@choice
+> {!visited_a} 部屋Ａを見る -> hub_a
+> {!visited_b} 部屋Ｂを見る -> hub_b
+> {visited_a} {visited_b} 推理する -> deduce
+
+*hub_a
+部屋Ａを見た。
+@set visited_a
+@goto m_hub_back
+
+*hub_b
+部屋Ｂを見た。
+@set visited_b
+@goto m_hub_back
+
+*m_hub_back
+@ifg cleared_main m_hub_g
+戻った。
+@goto m_hub
+*m_hub_g
+クリア後なので、ここに来た。
+*m_hub
+@choice
+> {!visited_a} 部屋Ａを見る -> hub_a
+> {!visited_b} 部屋Ｂを見る -> hub_b
+> {visited_a} {visited_b} 推理する -> deduce
+
+*deduce
+@bgm deduce
+犯人は誰か。
+@choice
+> 権藤さん -> d_gondo
+> 黒井さん -> d_kuroi
+
+*d_gondo
+動機は。
+@choice
+> 千鶴の父だから -> end_true
+> わからない -> end_normal
+
+*d_kuroi
+@bg oldbath_night fade
+@sil sumiko2 c white
+@fx redflash
+@end F02
+
+*end_true
+@bg dawn fade
+夜が明けた。
+@end F01
+
+*end_normal
+@bg river_night fade
+迷宮入りだ。
+@end F03

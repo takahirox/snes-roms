@@ -1,0 +1,102 @@
+# 潮鳴りの密室 — speech blips (built by tools/adv/build.py with tools/adv/voice.py into the SPC700 driver)
+#
+# While the body of a spoken page is typed ("NAME> text" lines: the six people and わたし), a short
+# round blip sounds on voice 1 of the driver, at most once every "gap" frames, on drawn voiced glyphs
+# only.  No sound for the narration, the yellow names, notebook/hint/system headings, menus, the
+# characters of "silent:", during the pause after punctuation (the mouth's GlyphPause), in page / end
+# waits, and with the sound off.  Every blip is an original waveform computed here (no recorded sound).
+#
+#   @timbre NAME            harmonics: amplitude of partial 1, 2, 3, ... (sine partials)
+#   @voice SPEAKER          a person's name of the script, or わたし
+#     timbre:   timbre name
+#     pitch:    fundamental at the start of the blip, Hz
+#     glide:    pitch change over the blip, % (negative: falls, the round "po")
+#     length:   blip length, ms (attack + decay to silence)
+#     attack:   rise time, ms (raised cosine; the decay is a raised cosine too)
+#     volume:   DSP voice volume 0-127 (left = right; set over the songs, which duck 10 dB under messages)
+#     gap:      frames from one blip to the next at the least (2 frames = one glyph at normal speed)
+#   silent:     characters that never start a blip (punctuation, brackets, marks, the space)
+#   contour:    8 pitch offsets in % for the blips of a phrase (1st .. 8th; then the 5th-8th repeat);
+#               a phrase starts on a page and after every pause
+
+silent: 、。，．・：；？！ー…‥〜「」『』（）［］〔〕　―－
+contour: 2.0 0.5 1.0 0.0 0.5 -1.0 0.0 -1.5
+
+@timbre round
+harmonics: 1.0 0.32 0.10 0.04
+
+@timbre dark
+harmonics: 1.0 0.22 0.05
+
+@timbre soft
+harmonics: 1.0 0.45 0.20 0.08 0.03
+
+# 汐見署の刑事: 落ち着いた中くらいの声
+@voice 波多野
+timbre: round
+pitch: 370
+glide: -7
+length: 24
+attack: 3
+volume: 55
+gap: 4
+
+# 古賀: 年配、低く丸い
+@voice 古賀
+timbre: dark
+pitch: 300
+glide: -8
+length: 28
+attack: 3.5
+volume: 60
+gap: 4
+
+# 辰巳: やや明るい男声
+@voice 辰巳
+timbre: soft
+pitch: 345
+glide: -6
+length: 24
+attack: 3
+volume: 50
+gap: 4
+
+# ゆき子: 高めでやわらかい
+@voice ゆき子
+timbre: soft
+pitch: 540
+glide: -5
+length: 22
+attack: 2.5
+volume: 56
+gap: 4
+
+# 大河内: 低めでかたい
+@voice 大河内
+timbre: dark
+pitch: 325
+glide: -6
+length: 26
+attack: 3
+volume: 58
+gap: 4
+
+# 修一: 若い男声
+@voice 修一
+timbre: round
+pitch: 420
+glide: -6
+length: 23
+attack: 3
+volume: 62
+gap: 4
+
+# わたし: 中性的で控えめ
+@voice わたし
+timbre: round
+pitch: 455
+glide: -5
+length: 22
+attack: 3
+volume: 52
+gap: 4

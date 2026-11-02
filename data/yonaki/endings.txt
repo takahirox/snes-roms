@@ -1,0 +1,23 @@
+# 夜鳴き鐘: endings.  One per line: ID KIND SCENARIO TITLE
+#   KIND: true | normal | bad      SCENARIO: main | oyura | chizuru | omake
+# The order here is the order of the 結末の一覧 screen.
+E01 true   main    夜明けの鐘
+E02 normal main    迷宮
+E12 normal main    告白
+E03 bad    main    濡れ衣
+E04 bad    main    駆け落ちの果て
+E11 bad    main    若旦那
+E05 bad    main    おゆらさまの夜
+E06 bad    main    白い影
+E07 bad    main    酒蔵
+E08 bad    main    ひとりきりの楓の間
+E09 bad    main    眠り
+E10 bad    main    濁流
+E14 bad    main    早すぎた言葉
+E13 bad    main    引き返す
+O01 true   oyura   湯明かり
+O02 bad    oyura   百年の湯
+O03 bad    oyura   数えうた
+C01 true   chizuru 十七の秋
+C02 normal chizuru 嵐のあと
+X01 true   omake   校了

@@ -1,0 +1,7 @@
+# fixture endings (tests/yonaki): ID KIND SCENARIO TITLE
+F01 true   main    夜明けの鐘
+F03 normal main    迷宮
+F02 bad    main    濡れ衣
+G01 true   extra   湯明かり
+G02 bad    extra   百年の湯
+X01 true   omake   校了

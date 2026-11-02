@@ -1,0 +1,5 @@
+yonakigane_mask.png (夜鳴き鐘) and owari_mask.png (終) rendered (tools/yonaki/make_logo_mask.py) from
+Noto Serif CJK JP Regular (Google / Adobe), licensed under the SIL Open Font License, Version 1.1
+(https://openfontlicense.org).  The OFL allows the font to be used to create images and documents; this
+file is such a rendering (a greyscale coverage image), not a copy or modification of the font software.
+tools/yonaki/logo.py styles it (outline, fill, shadow) for the title picture of 夜鳴き鐘.

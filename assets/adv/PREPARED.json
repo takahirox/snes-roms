@@ -1,0 +1,172 @@
+{
+  "method": "ffmpeg area resampling, RGB24, no external game art",
+  "tool_sha256": "ccfafda879adea4a930bf33c77142f576cde2f6f37f356efb211381d2a086d97",
+  "scenes": {
+    "harbor": {
+      "source": "assets/adv/harbor-source.png",
+      "source_sha256": "cf47a5d8bb9ab72984ce0c3ca4ad27761feae4133b9b960aad0817fb09e554c1",
+      "native": "assets/adv/harbor-256.png",
+      "native_sha256": "cd9d58692822028961df7b3ff0c8c54218ef47fb370700d7a11af8a5da0da9a2",
+      "size": [
+        256,
+        128
+      ]
+    },
+    "harbor-night": {
+      "source": "assets/adv/harbor-night-source.png",
+      "source_sha256": "67ebe98fcc90f6cb343d41168180caab9972063b600acaf7a872e6aaf86c32a0",
+      "native": "assets/adv/harbor-night-256.png",
+      "native_sha256": "29dcd22e5352651816d91c18c1fef45a29d6053d6185f1f2b88fa8903a11713d",
+      "size": [
+        256,
+        128
+      ]
+    },
+    "signal": {
+      "source": "assets/adv/signal-v2-source.png",
+      "source_sha256": "9be78207d291c4e725837f64a06b335c2fc26cb5a691e2c4a9793d8494d8de0a",
+      "native": "assets/adv/signal-256.png",
+      "native_sha256": "d2c6cae75b86218aa820632a77f2fce2422aff3dc42b806fed5436ddde2143c8",
+      "size": [
+        256,
+        128
+      ]
+    },
+    "cafe": {
+      "source": "assets/adv/cafe-v2-source.png",
+      "source_sha256": "97e432da9fc2f7c99d2d783339b39bda063c04e9b02268392da0862cae8ecfa6",
+      "native": "assets/adv/cafe-256.png",
+      "native_sha256": "6cdbc015c62f93b3132aa4b662a539648600e2f0497049418d9f48af6e929ea6",
+      "size": [
+        256,
+        128
+      ]
+    },
+    "lighthouse": {
+      "source": "assets/adv/lighthouse-source.png",
+      "source_sha256": "e6eb71f1e112afc97671d7d79ca9177667549d0f03cf6be0839166a0d0bff8d9",
+      "native": "assets/adv/lighthouse-256.png",
+      "native_sha256": "f22ead7eda7bd76356edc5e71c3aa130dfc6e92a5f8f5cb445296360dfa4b149",
+      "size": [
+        256,
+        128
+      ]
+    },
+    "station": {
+      "source": "assets/adv/station-source.png",
+      "source_sha256": "32a19cc2dedbf86a84fdf021186855c6406d48b956f5c8c9ac081cc751fd0dc4",
+      "native": "assets/adv/station-256.png",
+      "native_sha256": "6e631176acbdb448d7da818a4aaf72ecd32070ee68afeaa7a3fdd65203ec6a8c",
+      "size": [
+        256,
+        128
+      ]
+    },
+    "warehouse": {
+      "source": "assets/adv/warehouse-v3-source.png",
+      "source_sha256": "ea156ece6f1ba7f90b4998474022703696fc9377bc5e225890091e0315811510",
+      "native": "assets/adv/warehouse-256.png",
+      "native_sha256": "65dcb15abcaa901160856b35f4732f11138a6209eec67ae41f883b7a482194d5",
+      "size": [
+        256,
+        128
+      ]
+    },
+    "portrait_detective": {
+      "source": "assets/adv/portrait-detective-source.png",
+      "source_sha256": "4b6cbb24b403227159f9c0527913ed788b0e5c9dc354e57e830675c8a96c1b92",
+      "native": "assets/adv/portrait-detective-72.png",
+      "native_sha256": "59543e43e9f8000074c48a8ea157f0e653da5bbcbca8a11a07986f20b630dbbf",
+      "size": [
+        72,
+        104
+      ],
+      "source_alpha_bbox": [
+        11,
+        86,
+        1026,
+        1371
+      ]
+    },
+    "portrait_owner": {
+      "source": "assets/adv/portrait-owner-source.png",
+      "source_sha256": "f711ee13a2520bf2541b86b54166ae9f110371563b24265a496237ea95a42618",
+      "native": "assets/adv/portrait-owner-72.png",
+      "native_sha256": "180a58fbf91918aa236ab06f73eeb58fd1a77d32358b82e64cc3cc5b22e7e9c9",
+      "size": [
+        72,
+        104
+      ],
+      "source_alpha_bbox": [
+        6,
+        11,
+        1034,
+        1486
+      ]
+    },
+    "portrait_keeper": {
+      "source": "assets/adv/portrait-keeper-source.png",
+      "source_sha256": "c9191be41eabf9e7d94157a1c76445a7d8a16741d0910ddcdc3f7df68c89135d",
+      "native": "assets/adv/portrait-keeper-72.png",
+      "native_sha256": "055a644c66ca4cb333bc0abe8453f87a0285cc05daf17b16ce68130cea2e15d3",
+      "size": [
+        72,
+        104
+      ],
+      "source_alpha_bbox": [
+        0,
+        89,
+        1073,
+        1354
+      ]
+    },
+    "portrait_director": {
+      "source": "assets/adv/portrait-director-source.png",
+      "source_sha256": "6d5362a293ed9ed536da5c68ffe197b21785d15f912175fe446226bebb147857",
+      "native": "assets/adv/portrait-director-72.png",
+      "native_sha256": "7f9839009a11b969d5444e9530c507f3a49e6ef5007c3b90886f535e83134d88",
+      "size": [
+        72,
+        104
+      ],
+      "source_alpha_bbox": [
+        12,
+        89,
+        1020,
+        1376
+      ]
+    },
+    "portrait_koga": {
+      "source": "assets/adv/portrait-koga-source.png",
+      "source_sha256": "d01388d8492b79622f63191015a47402257da222f314c295e77dce42dfc2cd73",
+      "native": "assets/adv/portrait-koga-72.png",
+      "native_sha256": "8e10561b9dc178b0354e5f55eb2ad6b79d4d62c0e6fc53133644c9d51d907f4f",
+      "size": [
+        72,
+        104
+      ],
+      "source_alpha_bbox": [
+        0,
+        62,
+        1024,
+        1474
+      ]
+    },
+    "portrait_tatsumi": {
+      "source": "assets/adv/portrait-tatsumi-source.png",
+      "source_sha256": "95b2e302f552d3e70a30198d0a82edfc683f17bbb2113961492000f84217d57d",
+      "native": "assets/adv/portrait-tatsumi-72.png",
+      "native_sha256": "15b52c1e8b3282c922bf55576ceb1f3d65ebe74ad0ddc019f21334ef1c2f7b4c",
+      "size": [
+        72,
+        104
+      ],
+      "source_alpha_bbox": [
+        0,
+        13,
+        1024,
+        1523
+      ]
+    }
+  }
+}

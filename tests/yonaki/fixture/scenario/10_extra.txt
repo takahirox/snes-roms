@@ -1,0 +1,34 @@
+# the unlocked scenario (cleared_main) and the omake (title)
+*extra_start
+@chapter 外伝　湯明かり
+@bg edo_bath fade
+@sil oyura c white
+古い写真の話。
+@if F01 extra_seen_true
+真エンドを見ていないのに、ここへは来られないはず。
+*extra_seen_true
+@choice
+> 湯に入る -> extra_bad
+> 帰る -> extra_true
+
+*extra_bad
+@bg oldbath_night cut
+@end G02
+
+*extra_true
+@setg seen_extra
+@ifg seen_extra extra_true2
+ここには来ない。
+*extra_true2
+@clrg seen_extra
+@amb off
+@se clock3
+@bg inn_dawn fade
+@end G01
+
+*omake
+@chapter おまけ　編集部
+@bg office_tokyo fade
+@bgm omake
+おまけの文章。
+@end X01

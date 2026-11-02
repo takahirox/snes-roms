@@ -1,0 +1,6 @@
+{
+  "cc65": {"version": "2.19", "directory": "cc65-2.19", "url": "https://codeload.github.com/cc65/cc65/tar.gz/refs/tags/V2.19", "sha256": "157b8051aed7f534e5093471e734e7a95e509c577324099c3c81324ed9d0de77"},
+  "snes9x": {"version": "1.63", "directory": "snes9x-1.63", "url": "https://codeload.github.com/snes9xgit/snes9x/tar.gz/refs/tags/1.63", "sha256": "84560ce38a734ac8299645883d8e0c0423b7da2430bde5f88276bba1be6d5330"},
+  "bsnes": {"version": "115 (libretro/bsnes 63ee22f7af8f5d1ada295c2c98fd7bf261fa62a7)", "directory": "bsnes-63ee22f7af8f", "url": "https://codeload.github.com/libretro/bsnes/tar.gz/63ee22f7af8f5d1ada295c2c98fd7bf261fa62a7", "sha256": "63ceded7a53e8bc5d9088f503330a79c5740b83525ffebabd6c3e2ec174b7c8b", "strip": "bsnes-63ee22f7af8f5d1ada295c2c98fd7bf261fa62a7"},
+  "pylib": {"directory": "pylib", "packages": ["pillow==13.0.0", "numpy==2.5.4"]}
+}

@@ -1,0 +1,110 @@
+{
+  "warehouse_v3": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-72868fe5-058c-413a-8fce-0f95c602c8f0.png",
+    "prompt": "Edit only the closed metal safe in the back-right middle of this original Japanese harbor office pixel illustration: swing its thick safe door open toward the left to show the dark interior with two shelves. One shelf is conspicuously empty (a missing ledger is the game clue); the other can have a few small paper bundles. Keep the safe's metallic hinges and frame credible and the open door clearly readable at a final scene size of 256x128. Preserve EVERYTHING ELSE, especially the clock's exact 10:15 hands (minute right at 3, hour up-left at 10), the two telephones, the broken entrance glass, desk, red ledger, brass key, lamps, dark-night window and camera viewpoint. Maintain clean rich pixel-art style, 2:1 landscape, no added people, blood, text, logos or UI.",
+    "method": "built-in image_gen edit",
+    "target": "assets/adv/warehouse-v3-source.png"
+  },
+  "harbor": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-06f43b92-901f-481d-b154-80241fb747fd.png",
+    "prompt": "Use case: illustration-story. Asset type: original SNES mystery adventure background, a single landscape image with no UI or text. Scene: fictional Japanese fishing harbor in 1987, after sunset, moody blue twilight and warm amber lamps; weathered wooden harbor signal office in right middle distance, moored fishing boats, coiled ropes, wet concrete quay in foreground leading into scene, distant white lighthouse on dark headland far left; a yellow safety barrier; no people, no writing. Style: exquisite hand placed-looking pixel art for a premium 1990s Super Famicom command adventure, NOT an RPG overhead map, cinematic eye-level perspective, restrained 48-colour navy/teal/rust/amber palette, distinct clusters and clean hard edges, atmospheric layers, no photorealism, no blur, no faux scanlines, no border, no collage. Composition very wide 2:1 landscape, complete scene edge to edge, will be reduced to 256x128 pixels so large readable shapes and strong light composition, minimal tiny noise. Entirely original scenery; do not reproduce an existing game's art.",
+    "method": "built-in image_gen",
+    "target": "assets/adv/harbor-source.png"
+  },
+  "signal": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-b45d8325-e8e4-47e6-92e2-87f617cb30db.png",
+    "prompt": "Use case: illustration-story. Asset type: one original background painting for a SNES Japanese mystery command adventure set in a fictional fishing harbor in 1987. Premium 1990s console adventure mood, refined cinematic pixel illustration with clean colour clusters and crisp edges, subdued navy/teal/rust and amber palette, no blur, no photorealism, no scanlines, no interface, no text or logos, no collage, no existing game imagery. Very wide 2:1 landscape composition edge to edge, to be reduced to 256x128 so use strong readable large shapes, minimal tiny texture noise. No people or bodies. Interior of the old wooden harbor signal office at blue twilight. A rotary black desk telephone with a separate wire leading into a wall terminal box, a substantial ledger open on a wooden desk with one page missing, old brass analog wall clock behind it, enamel lampshade with warm light, maritime charts without legible marks, closed rear window overlooking wet quay, rain droplets, dark wooden floorboards. Eye-level three-quarter view, phone foreground left, ledger middle, window right. This is the crime scene but show no violence.",
+    "method": "built-in image_gen",
+    "target": "assets/adv/signal-source.png"
+  },
+  "cafe": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-d2129dc5-3968-492b-a3e4-464e4b33cfc7.png",
+    "prompt": "Use case: illustration-story. Asset type: one original background painting for a SNES Japanese mystery command adventure set in a fictional fishing harbor in 1987. Premium 1990s console adventure mood, refined cinematic pixel illustration with clean colour clusters and crisp edges, subdued navy/teal/rust and amber palette, no blur, no photorealism, no scanlines, no interface, no text or logos, no collage, no existing game imagery. Very wide 2:1 landscape composition edge to edge, to be reduced to 256x128 so use strong readable large shapes, minimal tiny texture noise. No people or bodies. Inside a small Japanese harbor kissaten cafe at dusk in 1987. Honey-amber pendant lights, walnut counter, coffee siphon equipment and cream cups, upholstered burgundy booths left foreground, wide rain-spattered window showing a blue fishing harbor and distant lighthouse, old wooden wall clock, brass coat hooks, subtle lived-in cozy melancholy, eye-level from doorway. Unbranded and no writing.",
+    "method": "built-in image_gen",
+    "target": "assets/adv/cafe-source.png"
+  },
+  "lighthouse": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-0c5f0065-9a42-40ce-a943-1d2c3dac0268.png",
+    "prompt": "Use case: illustration-story. Asset type: one original background painting for a SNES Japanese mystery command adventure set in a fictional fishing harbor in 1987. Premium 1990s console adventure mood, refined cinematic pixel illustration with clean colour clusters and crisp edges, subdued navy/teal/rust and amber palette, no blur, no photorealism, no scanlines, no interface, no text or logos, no collage, no existing game imagery. Very wide 2:1 landscape composition edge to edge, to be reduced to 256x128 so use strong readable large shapes, minimal tiny texture noise. No people or bodies. Inside the control room at the base of a small Japanese lighthouse at night in 1987. Dark sea glimpsed through a tall window on the left, cream-painted curved masonry wall, desk with bound maintenance log and fountain pen foreground, old analog electrical breaker panel with toggle switches and voltmeter on the right, warm green-shaded desk lamp, heavy coat on hook. Eye-level view. No markings, labels or legible text.",
+    "method": "built-in image_gen",
+    "target": "assets/adv/lighthouse-source.png"
+  },
+  "station": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-6c181aec-0d9f-4014-9775-f1f81204cd06.png",
+    "prompt": "Use case: illustration-story. Asset type: one original background painting for a SNES Japanese mystery command adventure set in a fictional fishing harbor in 1987. Premium 1990s console adventure mood, refined cinematic pixel illustration with clean colour clusters and crisp edges, subdued navy/teal/rust and amber palette, no blur, no photorealism, no scanlines, no interface, no text or logos, no collage, no existing game imagery. Very wide 2:1 landscape composition edge to edge, to be reduced to 256x128 so use strong readable large shapes, minimal tiny texture noise. No people or bodies. Interior of a small Japanese coastal police station investigation room in 1987, evening. Green-grey institutional walls, wooden desk with notebook, rotary telephone, metal gooseneck lamp casting a warm pool of light, filing cabinets and a cork investigation board with a few blank pinned photographs and strings, window overlooking rainy street and a vintage bicycle, thoughtful calm atmosphere, eye-level perspective. No readable text or badges.",
+    "method": "built-in image_gen",
+    "target": "assets/adv/station-source.png"
+  },
+  "warehouse": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-bce866a5-c170-4a1e-af37-26d0e9cd0230.png",
+    "prompt": "Use case: illustration-story. Asset type: one original background painting for a SNES Japanese mystery command adventure set in a fictional fishing harbor in 1987. Premium 1990s console adventure mood, refined cinematic pixel illustration with clean colour clusters and crisp edges, subdued navy/teal/rust and amber palette, no blur, no photorealism, no scanlines, no interface, no text or logos, no collage, no existing game imagery. Very wide 2:1 landscape composition edge to edge, to be reduced to 256x128 so use strong readable large shapes, minimal tiny texture noise. No people or bodies. Interior of a harbor shipping company office adjoining a warehouse in Japan in 1987 at night. An expensive dark wooden desk with red leather document folder and an ornate brass key, cigarette ashtray, heavy safe at rear, tall window with venetian blind stripes and blue cargo cranes outside, warm desk lamp, freight crates glimpsed through doorway, tension between orderly office and industry. Eye-level three-quarter view. No writing.",
+    "method": "built-in image_gen",
+    "target": "assets/adv/warehouse-source.png"
+  },
+  "portrait_detective": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-2a7135aa-e6ae-4275-8d67-41f8829936aa.png",
+    "prompt": "Use case: illustration-story. Asset type: one original character bust portrait for a Super Famicom Japanese detective adventure set in 1987. Transparent background. Exactly one Japanese adult, head and shoulders with complete hair, upper chest and both shoulders; no cropped head, no hands or accessories extending outside bust, no text, no symbols, no borders. Pixel art: premium early-1990s adventure game portrait, grounded Japanese cel-animation drawing with mature realistic proportions, restrained warm skin shading, sharply delineated clusters, clean dark-blue outlines, limited rich colour palette, no photorealism, no painterly blur, no 3D. Portrait will be reduced to 72x104 pixels, so large readable shapes and expressive eyes. Three-quarter front view facing slightly toward the viewer's left. Entirely original character. A perceptive Japanese woman detective aged 35, short straight dark-brown hair tucked behind one ear, muted beige blazer over navy blouse, composed observant expression and slightly tired eyes, calm authority, no badge.",
+    "method": "built-in image_gen",
+    "transparent_background": true,
+    "target": "assets/adv/portrait-detective-source.png"
+  },
+  "portrait_owner": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-21e01b50-6a13-425e-b2a2-65d36275ff07.png",
+    "prompt": "Use case: illustration-story. Asset type: one original character bust portrait for a Super Famicom Japanese detective adventure set in 1987. Transparent background. Exactly one Japanese adult, head and shoulders with complete hair, upper chest and both shoulders; no cropped head, no hands or accessories extending outside bust, no text, no symbols, no borders. Pixel art: premium early-1990s adventure game portrait, grounded Japanese cel-animation drawing with mature realistic proportions, restrained warm skin shading, sharply delineated clusters, clean dark-blue outlines, limited rich colour palette, no photorealism, no painterly blur, no 3D. Portrait will be reduced to 72x104 pixels, so large readable shapes and expressive eyes. Three-quarter front view facing slightly toward the viewer's left. Entirely original character. A Japanese woman cafe proprietor aged 52, dark wavy hair in a low bun with a subtle grey streak, warm russet cardigan and cream apron, kind but worried expression, thoughtful downturned eyes, dignified everyday appearance.",
+    "method": "built-in image_gen",
+    "transparent_background": true,
+    "target": "assets/adv/portrait-owner-source.png"
+  },
+  "portrait_keeper": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-36eaa56d-0f97-4b70-b179-2aa54957234b.png",
+    "prompt": "Use case: illustration-story. Asset type: one original character bust portrait for a Super Famicom Japanese detective adventure set in 1987. Transparent background. Exactly one Japanese adult, head and shoulders with complete hair, upper chest and both shoulders; no cropped head, no hands or accessories extending outside bust, no text, no symbols, no borders. Pixel art: premium early-1990s adventure game portrait, grounded Japanese cel-animation drawing with mature realistic proportions, restrained warm skin shading, sharply delineated clusters, clean dark-blue outlines, limited rich colour palette, no photorealism, no painterly blur, no 3D. Portrait will be reduced to 72x104 pixels, so large readable shapes and expressive eyes. Three-quarter front view facing slightly toward the viewer's left. Entirely original character. A Japanese lighthouse technician aged 63, weatherbeaten face, short salt-and-pepper hair and neat moustache, faded navy work jacket over grey shirt, no hat, wary serious expression but honest eyes.",
+    "method": "built-in image_gen",
+    "transparent_background": true,
+    "target": "assets/adv/portrait-keeper-source.png"
+  },
+  "portrait_director": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-882ed647-22f7-4347-962d-a3f7c053a968.png",
+    "prompt": "Use case: illustration-story. Asset type: one original character bust portrait for a Super Famicom Japanese detective adventure set in 1987. Transparent background. Exactly one Japanese adult, head and shoulders with complete hair, upper chest and both shoulders; no cropped head, no hands or accessories extending outside bust, no text, no symbols, no borders. Pixel art: premium early-1990s adventure game portrait, grounded Japanese cel-animation drawing with mature realistic proportions, restrained warm skin shading, sharply delineated clusters, clean dark-blue outlines, limited rich colour palette, no photorealism, no painterly blur, no 3D. Portrait will be reduced to 72x104 pixels, so large readable shapes and expressive eyes. Three-quarter front view facing slightly toward the viewer's left. Entirely original character. A Japanese shipping-company director aged 47, neatly combed black hair with a slight receding hairline, charcoal suit, white shirt and muted burgundy tie, square jaw, reserved tense expression, upper-class but not caricatured villain.",
+    "method": "built-in image_gen",
+    "transparent_background": true,
+    "target": "assets/adv/portrait-director-source.png"
+  },
+  "warehouse_v2": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-59e79e5f-3824-4514-834e-a03e9e3322ab.png",
+    "prompt": "Edit this original pixel-art background for an original 1987 Japanese harbor detective game. Preserve the overall 2:1 landscape composition, viewpoint, wooden desk, red ledger and brass keys, safe, lighting and high quality clean pixel illustration. Add a clearly readable wooden wall-mounted pendulum clock with a glass-front pendulum compartment on the left wall. Its hands must show TEN FIFTEEN: minute hand points exactly right at 3, shorter hour hand points up-left toward 10, slightly toward 11. This stopped clock is an investigation clue. Add a modest grey private intercom handset next to the existing black rotary public telephone: make them visibly two different phones. The right-hand entrance door should include a broken glass pane, subtle damage, no violence or people. Outside is deep blue night, no sunset. Preserve empty scene, no text, labels, interface or logos. Keep objects large enough to read when the whole picture is reduced to 256x128.",
+    "method": "built-in image_gen edit",
+    "target": "assets/adv/warehouse-v2-source.png"
+  },
+  "signal_v2": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-ce92b485-b952-4bb0-9059-ea0bb3357817.png",
+    "prompt": "Edit this original 2:1 Japanese harbor signal office pixel illustration. Preserve the layout, lamp, telephone, desk, open ledger, window, palette and clean pixel style. Replace the wall clock's face with an opaque frosted or strongly reflective glass face so NO hour or minute hands can be read; keep the wooden pendulum clock shape and pendulum. Add an open small mechanical private-telephone switchboard box with a few clear wires on the left wall, appropriate to a 1987 port office, without readable labels. Through the window, it is after midnight, no sunset or bright horizon. No people, text, UI, or logos. This is a carefully preserved edit, not a new composition.",
+    "method": "built-in image_gen edit",
+    "target": "assets/adv/signal-v2-source.png"
+  },
+  "harbor_night": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-e8c0a29d-4c20-442c-ab73-5257c3169f01.png",
+    "prompt": "Make a deep-night variant of this original Japanese fishing harbor pixel-art background. Preserve the same harbor geography, lighthouse far left, wooden harbor hut on right, viewpoint, 2:1 layout, ropes, concrete quay and lighting reflections. Remove the orange sunset completely: dark navy cloudy sky and dark blue sea, after midnight, a few soft amber lights. Put one small open wooden workboat tied alongside the right quay in the foreground-middle, with an outboard motor, rope, simple tiller and covered storage locker clearly visible; no people. The little harbor hut windows glow warm amber. Clean premium 1990s SNES adventure pixel illustration, readable shapes at 256x128, no text, no UI, no scanlines.",
+    "method": "built-in image_gen edit",
+    "target": "assets/adv/harbor-night-source.png"
+  },
+  "cafe_v2": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-8e1da563-34ce-4f8f-bcb1-d0bf9ae251d8.png",
+    "prompt": "Change only two details in this original 2:1 Japanese harbor cafe pixel illustration. First make the wall clock face strongly reflective/opaque so no exact hands/time can be read, but keep the clock casing and pendulum. Second replace the orange sunset outside the window with deep navy after-midnight sky; retain amber lighthouse and harbor lights reflected in dark water. Preserve the counter, siphons, mugs, booths, lamps, composition and warm indoor palette exactly. No people, writing, logos or UI. Retain crisp pixel-art style and readable shapes.",
+    "method": "built-in image_gen edit",
+    "target": "assets/adv/cafe-v2-source.png"
+  },
+  "portrait_koga": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-69e04586-efdf-4ddd-bde1-98688f367e68.png",
+    "prompt": "Use case: illustration-story. One original transparent-background character head-and-shoulders bust for a 1987 Japanese port murder-mystery SNES command adventure. Vertical 2:3 composition, entire hair, neck and upper chest and both shoulders in frame. Mature grounded early-1990s Japanese cel anime pixel portrait with realistic proportions, clean dark navy outlines, crisp large colour clusters, warm skin tones and simple 3-tone shadows. Designed to remain legible when reduced to 72x104. Facing slightly left toward viewer, three quarter view. No other people, no objects in hands, no text, no logo, no badge, no border, no photorealism or 3D. Match an understated serious detective drama, not a caricature. A 58-year-old Japanese harbor signal operator, short square-cut grey hair, sun-weathered face and stocky shoulders, grey-blue practical work uniform jacket over muted shirt. Plainspoken earnest expression, heavy eyebrows, clean shaven.",
+    "method": "built-in image_gen",
+    "transparent_background": true,
+    "target": "assets/adv/portrait-koga-source.png"
+  },
+  "portrait_tatsumi": {
+    "generated_path": "~/.codex/generated_images/01a16bdf-2b0e-7c03-bced-5cda7a132351/exec-49a5e712-eb3d-484c-b09d-7e7309b5b22a.png",
+    "prompt": "Use case: illustration-story. One original transparent-background character head-and-shoulders bust for a 1987 Japanese port murder-mystery SNES command adventure. Vertical 2:3 composition, entire hair, neck and upper chest and both shoulders in frame. Mature grounded early-1990s Japanese cel anime pixel portrait with realistic proportions, clean dark navy outlines, crisp large colour clusters, warm skin tones and simple 3-tone shadows. Designed to remain legible when reduced to 72x104. Facing slightly left toward viewer, three quarter view. No other people, no objects in hands, no text, no logo, no badge, no border, no photorealism or 3D. Match an understated serious detective drama, not a caricature. A 38-year-old Japanese shipping company accountant, thin narrow face, neatly side-parted black hair, thin silver rectangular eyeglasses, navy winter work jacket over white shirt. Tired eyes, reserved uneasy expression; an ordinary plausible person, do not make him look like a cartoon villain.",
+    "method": "built-in image_gen",
+    "transparent_background": true,
+    "target": "assets/adv/portrait-tatsumi-source.png"
+  }
+}
