@@ -131,6 +131,7 @@
       doc.querySelector("#dialog select").value = "demo";
       return submitDialog();
     };
+    const dialog = byId("dialog");
 
     const write = gate();
     const a = folder("folder-a", undefined, { beforeWrite: write.pause });
@@ -203,6 +204,42 @@
     await openDemo();
     equal(byId("project-title").textContent, originalName, "Opened the demo without concurrent edits");
 
+    const mapAssets = (source) => ({
+      ground: { kind: "tileset", data: { tiles: [], metatiles: [] } },
+      map: { kind: "map", data: {
+        tileset: "ground", width: 1, height: 1, cell_width: 1, cell_height: 1,
+        layers: [{ id: `${source}-layer`, visible: true, cells: [null] }], metadata: { source },
+      } },
+    });
+    await open(folder("map-a", project("Map project A", mapAssets("a"))));
+    const mapRead = gate();
+    const mapB = folder("map-b", project("Map project B", mapAssets("b")), { beforeRead: mapRead.pause });
+    const openingMapB = open(mapB);
+    await mapRead.entered;
+    const addLayer = () => Array.from(byId("inspector").querySelectorAll("button"))
+      .find((node) => node.textContent === "Add").click();
+    addLayer();
+    equal(byId("dialog-title").textContent, "Add map layer", "Opened A's map dialog during the read");
+    dialog.querySelector("input").value = "extra-layer";
+    const staleLayerSubmit = byId("dialog-content").onsubmit;
+    mapRead.resume();
+    await openingMapB;
+    const wasOpen = dialog.open;
+    await staleLayerSubmit(new iframe.contentWindow.Event("submit"));
+    equal(byId("project-title").textContent, "Map project B", "Submitting A's stale dialog left B clean");
+    equal(wasOpen, false, "Replacing A dismissed its map dialog");
+    equal(byId("undo").disabled, true, "A's stale dialog created no history in B");
+    byId("save").click();
+    await submitDialog();
+    const savedMap = JSON.parse(new TextDecoder().decode(mapB.files.get("studio.json"))).assets.map.data;
+    equal(savedMap.metadata.source, "b", "B kept its own map metadata");
+    equal(savedMap.layers.map((layer) => layer.id).join(","), "b-layer", "B kept its own map layers");
+    addLayer();
+    dialog.querySelector("input").value = "extra-layer";
+    await submitDialog();
+    equal(byId("project-title").textContent, "Map project B · Edited", "B's new map dialog applied its edit");
+    byId("undo").click();
+
     await open(folder("save-source", project("Original revision")));
     const olderWrite = gate();
     const olderFolder = folder("older-save", undefined, { beforeWrite: olderWrite.pause });
@@ -242,7 +279,6 @@
     });
     await open(destinationFolder);
     rename("Edited before Cancel");
-    const dialog = byId("dialog");
     const cancelButton = () => dialog.querySelector("button[type=button]");
     byId("save").click();
     const canceledSave = submitDialog();
@@ -314,7 +350,7 @@
       await staleRead.entered;
       replacementRead.resume();
       await replacing;
-      equal(dialog.open, true, "The pending import dialog was still open when its project was replaced");
+      equal(dialog.open, false, "Replacing the project dismissed its pending import dialog");
       staleRead.resume();
       await staleImport;
       equal(hasAsset(id), false, `The replacement project did not receive ${filename}`);

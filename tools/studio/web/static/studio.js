@@ -47,12 +47,12 @@ function status(text, error = false) {
   }
 }
 
-async function guarded(callback) {
+async function guarded(callback, reportError = () => true) {
   try {
     await callback();
     return true;
   } catch (error) {
-    if (error?.name !== "AbortError") status(message(error), true);
+    if (error?.name !== "AbortError" && reportError()) status(message(error), true);
     return false;
   }
 }
@@ -74,15 +74,18 @@ function modal(title, fields, label, submit, extra, onCancel) {
     el("p", "", { id: "dialog-error", role: "alert" }), actions);
   dialog.setAttribute("aria-labelledby", heading.id);
   dialog.oncancel = onCancel ?? null;
+  const isActive = () => dialog.open && form.firstElementChild === heading;
   form.onsubmit = async (event) => {
     event.preventDefault();
+    if (!isActive()) return;
     if (!submit) { dialog.close(); return; }
     if (apply.disabled) return;
     $("dialog-error").textContent = "";
     apply.disabled = true;
-    if (await guarded(() => submit(fields.map((item) => item[1])))) {
-      if (form.firstElementChild === heading) dialog.close();
-    } else if (form.firstElementChild === heading) apply.disabled = false;
+    const submitted = await guarded(() => submit(fields.map((item) => item[1])), isActive);
+    if (!isActive()) return;
+    if (submitted) dialog.close();
+    else apply.disabled = false;
   };
   if (!dialog.open) dialog.showModal();
   return { cancel, apply };
@@ -122,6 +125,10 @@ function selectAsset(id) {
 
 function load(bytes, { initial = false, folder = null, revision = null } = {}) {
   const next = bytes ? new Studio(bytes) : Studio.empty();
+  dialog.close();
+  dialog.oncancel = null;
+  form.onsubmit = null;
+  form.replaceChildren();
   studio?.free();
   studio = next;
   directory = folder;
