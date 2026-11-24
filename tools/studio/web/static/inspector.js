@@ -153,6 +153,10 @@ export function inspector(app, asset) {
     });
     root.append(...lists);
   } else if (kind === "map") {
+    const metadataField = (layer, rows) => el("textarea", null, {
+      defaultValue: app.mapMetadata(layer), rows, spellcheck: false,
+    });
+    const changedMetadata = (field) => field.value === field.defaultValue ? undefined : field.value;
     const choices = mapBrushes(project, data);
     if (state.brush && !choices.some(([id]) => id === state.brush)) state.brush = "";
     const layer = data.layers.find((layer) => layer.id === state.layer) ?? data.layers[0];
@@ -178,14 +182,16 @@ export function inspector(app, asset) {
       }))));
     const visible = checkbox(layer?.visible);
     const layerId = input(layer?.id, { required: true });
-    const layerMeta = textarea(layer?.metadata ?? {}, 3);
+    const layerMeta = layer ? metadataField(layer.id, 3) : null;
     const layerIndex = data.layers.indexOf(layer);
     const moveLayer = (direction) => update((d) => {
       const other = layerIndex + direction;
       [d.layers[layerIndex], d.layers[other]] = [d.layers[other], d.layers[layerIndex]];
     });
     root.append(details("Layers", layer ? form(() => {
-      update((d) => Object.assign(d.layers[layerIndex], { id: layerId.value, visible: visible.checked, metadata: JSON.parse(layerMeta.value) }));
+      edit("set_map_layer_settings", {
+        layer: layer.id, layer_id: layerId.value, visible: visible.checked, metadata_json: changedMetadata(layerMeta),
+      });
       setMapLayer(layerId.value);
       refresh();
     }, field("Layer ID", layerId), field("Visible", visible), field("Layer metadata", layerMeta), apply()) : null,
@@ -203,9 +209,10 @@ export function inspector(app, asset) {
     const tileset = choice("tileset", data.tileset);
     const cellWidth = number(data.cell_width, 1, 512);
     const cellHeight = number(data.cell_height, 1, 512);
-    const metadata = textarea(data.metadata ?? {}, 4);
-    root.append(dimensions(true), details("Map settings", form(() => update((d) => {
-      Object.assign(d, { tileset: tileset.value, cell_width: cellWidth.valueAsNumber, cell_height: cellHeight.valueAsNumber, metadata: JSON.parse(metadata.value) });
+    const metadata = metadataField(undefined, 4);
+    root.append(dimensions(true), details("Map settings", form(() => edit("set_map_settings", {
+      tileset: tileset.value, cell_width: cellWidth.valueAsNumber, cell_height: cellHeight.valueAsNumber,
+      metadata_json: changedMetadata(metadata),
     }), field("Tileset", tileset), field("Cell width in tiles", cellWidth), field("Cell height in tiles", cellHeight), field("Map metadata", metadata), apply())));
   } else if (kind === "sprite") {
     const width = number(data.width, 1, 256);

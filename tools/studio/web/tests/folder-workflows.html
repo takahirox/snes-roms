@@ -3,7 +3,8 @@
 <meta charset="utf-8">
 <title>Studio project workflow regressions</title>
 <!-- After web/build.sh, serve tools/studio over localhost and open /web/tests/folder-workflows.html.
-     Launch Chrome with --autoplay-policy=no-user-gesture-required for the scripted playback tests. -->
+     Launch Chrome with --autoplay-policy=no-user-gesture-required for the scripted playback tests.
+     To include the CLI round trip, run node web/tests/browser-cli.mjs /path/to/chrome from tools/studio. -->
 <pre id="result" data-result="running">Running…</pre>
 <iframe id="workbench" title="Studio under test"></iframe>
 <script type="module">
@@ -12,6 +13,7 @@
   const picks = [];
   let confirmations = 0;
   let demoRead;
+  const checkWithCli = new URLSearchParams(location.search).has("cli");
   window.pickFolder = () => {
     if (!picks.length) throw new Error("No test folder queued");
     return picks.shift();
@@ -68,6 +70,7 @@
   function report(state, text) {
     result.dataset.result = state;
     result.textContent = text;
+    if (checkWithCli) fetch("/test-result", { method: "POST", body: JSON.stringify({ state, text }) });
   }
 
   const timeout = setTimeout(() => report("failed", "Timed out waiting for Studio or test I/O."), 10000);
@@ -524,6 +527,67 @@
       map: { kind: "map", data: { width: 5, height: 2, cell_width: 1, cell_height: 1, tileset: "tiles",
         layers: [{ id: "overlay", visible: true, cells: Array(10).fill(null) }, { id: "ground", visible: true, cells }] } },
     });
+
+    const withMetadata = JSON.parse(new TextDecoder().decode(mapFixture("Map metadata")));
+    const mapData = withMetadata.assets.map.data;
+    const numberMarkers = { metadata: { nested: ["float", "negative-zero"] } };
+    Object.assign(mapData, numberMarkers);
+    for (const layer of mapData.layers) Object.assign(layer, numberMarkers);
+    Object.assign(mapData.layers[1].cells[3], numberMarkers);
+    withMetadata.assets["other-tiles"] = withMetadata.assets.tiles;
+    const originalMap = JSON.stringify(withMetadata).replaceAll('"float"', "1.0").replaceAll('"negative-zero"', "-0.0");
+    await openFile("map-metadata.json", new TextEncoder().encode(originalMap));
+    const control = (label) => Array.from(doc.querySelectorAll("#inspector label"))
+      .find((node) => node.firstElementChild.textContent === label).control;
+    const visible = control("Visible");
+    visible.checked = false;
+    visible.form.requestSubmit();
+    const tileset = control("Tileset");
+    tileset.value = "other-tiles";
+    tileset.form.requestSubmit();
+    equal(byId("status").textContent, "Edit applied", "Applied map settings");
+    const downloadManifest = async () => {
+      // Read the same Blob the download action hands to the browser.
+      const anchor = browser.HTMLAnchorElement.prototype;
+      const click = anchor.click;
+      let response;
+      anchor.click = function () { response = browser.fetch(this.href); };
+      try {
+        byId("save").click();
+        dialog.querySelector("select").value = "json";
+        await submitDialog();
+        return (await response).text();
+      } finally {
+        anchor.click = click;
+      }
+    };
+    const savedMapJson = await downloadManifest();
+    equal(savedMapJson.match(/\b1\.0\b/g)?.length, 4, "Preserved the floating-point metadata in the download");
+    equal(savedMapJson.match(/-0\.0\b/g)?.length, 4, "Preserved negative zero metadata in the download");
+    const savedData = JSON.parse(savedMapJson).assets.map.data;
+    equal(savedData.layers[1].visible, false, "Downloaded the layer visibility change");
+    equal(savedData.tileset, "other-tiles", "Downloaded the map tileset change");
+    if (checkWithCli) {
+      const response = await fetch("/cli-diff", {
+        method: "POST", body: JSON.stringify({ before: originalMap, after: savedMapJson }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const changes = (await response.json()).changes.map(({ path, before, after }) => [path, before, after]);
+      equal(JSON.stringify(changes), JSON.stringify([
+        ["/assets/map/data/layers/1/visible", true, false],
+        ["/assets/map/data/tileset", "tiles", "other-tiles"],
+      ]), "CLI diff of the browser download");
+    }
+    const mapMetadata = control("Map metadata");
+    mapMetadata.value = mapMetadata.value.replace('"nested"', '"renamed"');
+    mapMetadata.form.requestSubmit();
+    const editedMapJson = await downloadManifest();
+    equal(editedMapJson.match(/\b1\.0\b/g)?.length, 4, "Editing metadata preserved its untouched floating-point value");
+    equal(editedMapJson.match(/-0\.0\b/g)?.length, 4, "Editing metadata preserved its untouched negative zero");
+    equal(Object.hasOwn(JSON.parse(editedMapJson).assets.map.data.metadata, "renamed"), true, "Saved the metadata edit");
+    for (let i = 0; i < 3; i++) byId("undo").click();
+    equal(byId("project-title").textContent, "Map metadata", "Undid the metadata and settings edits");
+
     await open(folder("stroke-source", mapFixture("Stroke source")));
     const strokeRead = gate();
     const openingStrokeTarget = open(folder("stroke-target", mapFixture("Stroke target"), { beforeRead: strokeRead.pause }));

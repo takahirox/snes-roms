@@ -188,6 +188,7 @@ function refresh() {
     inspector({
       state, project, id: selected, commands, guarded, refresh, modal, selectAsset, setMapLayer,
       paletteRgb: palette_rgb, quantizeColor: quantize_color, objSize: obj_size,
+      mapMetadata: (layer) => studio.mapMetadata(selected, layer),
     }, item);
   } catch (error) {
     if (!diagnostics.some((item) => item.severity === "error")) throw error;

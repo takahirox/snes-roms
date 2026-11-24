@@ -48,7 +48,7 @@ Each entry is an object with a `kind` discriminator and a `data` object.
 | Palette / OBJ CGRAM | Little-endian 16-bit BGR555 words. A plain palette writes its entries in order. Sprite CGRAM writes eight padded 16-entry OBJ slots (256 bytes) for CGRAM entries 128–255. |
 | OBJ OAM and CHR | 544 bytes of OAM, and 16,384 bytes of 4bpp tile data arranged as two contiguous pages of 16×16 tiles. Load the pages at a 16 KiB-aligned OBJ base with a zero name-select register field. Use the sprite's `size_mode` for OBSEL. Empty slots use offscreen X. A deterministic first-fit packer puts larger rectangles first and reuses identical rectangles. Frames can have different page and palette data, so export matching files for each frame. |
 | WAV | RIFF PCM format 1, 16-bit mono. One optional forward, continuous `smpl` loop ends on the final sample. |
-| BRR | Raw S-DSP blocks of nine bytes for 16 samples, with filters and range encoded in each block header. Studio tests legal shifts and predictors and uses a history-independent first and loop-target block. Partial last audio blocks are padded with silence or the beginning of the loop. One-shot exports append a silent END block after the audio, which Studio omits from the imported PCM. Looping exports set END and LOOP on the last audio block. Store the sample rate and loop offset externally. Rate defaults to 32 kHz on import. The byte offset of a loop is `loop_start / 16 × 9`. Import requires that explicit offset for looping data. |
+| BRR | Raw S-DSP blocks of nine bytes for 16 samples, with filters and range encoded in each block header. Studio tests legal shifts and predictors and uses a history-independent first and loop-target block. One-shot exports pad a partial last audio block with silence and append a silent END block, which Studio omits from the imported PCM. Looping exports require both the loop start and loop length to be divisible by 16 samples and set END and LOOP on the last audio block. Store the sample rate and loop offset externally. Rate defaults to 32 kHz on import. The byte offset of a loop is `loop_start / 16 × 9`. Import requires that explicit offset for looping data. |
 | Studio RLE | Magic bytes `53 52 4c 01` and a little-endian 32-bit decoded length. A packet header's low seven bits hold length minus one. A clear high bit precedes that many literal bytes. A set high bit precedes one byte to repeat. This is an interchange codec. An engine chooses whatever runtime codec it supports. |
 | ROM header inspection | Read-only inspection uses explicit LoROM, HiROM or ExHiROM offsets. File length modulo 32 KiB detects a possible 512-byte copier header. The checksum-pair flag compares the two header words. It does not recompute a cartridge checksum. The report includes the reset vector and decodes the title as lossy UTF-8. |
 
@@ -66,8 +66,12 @@ Each entry is an object with a `kind` discriminator and a `data` object.
 | `set_pixel` | Tile `id`, zero-based `x` and `y`, `index` |
 | `set_metatile_cell` | Metatile `id`, `x`, `y`, `cell` or `null` |
 | `resize_metatile`, `resize_map` | `id`, `width`, `height` and preserve cells inside the new top-left-anchored bounds |
+| `set_map_settings` | Map `id`, `tileset`, `cell_width`, `cell_height`, and optional `metadata_json` containing a JSON object as text |
+| `set_map_layer_settings` | Map `id`, current `layer` ID, resulting `layer_id`, `visible`, and optional `metadata_json` containing a JSON object as text |
 | `place`, `fill` | Map `id`, `layer` ID, `x`, `y`, `cell` or `null`. Fill follows four-way neighbors identical to the starting cell, including its metadata. |
 | `paste` | Map `id`, `layer` ID, destination `x`, `y`, `selection` with `width`, `height` and row-major `cells`. The full selection must fit. |
 | `trim_sample` | Sample `id`, inclusive `start` and exclusive `end` sample offsets |
+
+Omitting `metadata_json` from a settings edit preserves existing metadata. Pass `"{}"` to clear it.
 
 Diagnostics contain `severity`, `code`, `path` and `message`. Paths within a manifest use JSON Pointer escaping. `diff` and `edit --dry-run` report an ordered list of JSON Pointer paths with `before` and `after` values. An added or deleted value omits the unavailable field. A changed array length reports the whole array, while equal-length arrays report individual changes.
