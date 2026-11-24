@@ -354,11 +354,8 @@ fn one_shot_brr_preserves_audio_before_dsp_mutes() {
         let brr = write_brr(&pulse).unwrap();
         // The S-DSP mutes when it sees END without LOOP. Verify every block
         // carrying the pulse comes before that header, including the tail.
-        let mute_offset = brr
-            .chunks_exact(9)
-            .position(|block| block[0] & 3 == 1)
-            .unwrap()
-            * 9;
+        let (blocks, _) = brr.as_chunks::<9>();
+        let mute_offset = blocks.iter().position(|block| block[0] & 3 == 1).unwrap() * 9;
         assert_eq!(mute_offset, length.div_ceil(16) * 9);
         assert_eq!(&brr[mute_offset..], &[1, 0, 0, 0, 0, 0, 0, 0, 0]);
         let decoded = read_brr(&brr, 32_000, None).unwrap();
