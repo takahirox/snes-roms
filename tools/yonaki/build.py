@@ -8,12 +8,13 @@ usage: python3 -I tools/yonaki/build.py [--scenario DIR] [--endings FILE] [--all
   --strict              warnings are errors (unreachable labels, unreached endings, kinsoku, unknown names)
   --unknown-sound-error an unknown song / sound effect name is an error (default: warning, nothing plays)
   --out DIR             output directory (default build/yonaki; the tests build the fixture into build/yonaki-test)
+  --benchmark-assets    write a comparison of asset compression sizes to assets-benchmark.json
   --omake-endings N     endings to see before the title shows おまけ (default 10)
   --debug-start         review builds (tests/yonaki/shots.py): はじめから starts at the address in the battery RAM
                         at $1FF2 when $1FF0 holds "DB" at power-on (the battery is reset afterwards as usual)
 
-writes build/yonaki/const.inc, data.inc, yonaki.cfg (ld65 config, generated: as many 32 KiB banks as needed,
-rounded up to a ROM size the header can state), the bank blobs, layout.json (for the tests and the tools),
+writes build/yonaki/const.inc, data.inc, yonaki.cfg (ld65 config, generated for the selected LoROM size),
+the bank blobs, layout.json (for the tests and the tools),
 report.txt (diagnostics) and previews/ (every picture as the SNES shows it).
 See docs/yonaki/ENGINE.md for the formats.
 """
@@ -26,11 +27,13 @@ import font as fontmod          # noqa: E402
 import script as sc             # noqa: E402
 import pictures                 # noqa: E402
 import logo as logomod          # noqa: E402
+import asset_codec              # noqa: E402
 import numpy as np              # noqa: E402
 from PIL import Image           # noqa: E402
 
 OUT = ROOT / 'build/yonaki'
 BANK = 0x8000
+PHOTO_ROW = 2048
 MAX_BANKS = 128                 # 4 MiB LoROM
 SPEEDS = ['遅い', '普通', '速い', '瞬間']
 OMAKE_ENDINGS = 10              # the title's おまけ needs this many endings seen
@@ -189,47 +192,34 @@ class Rom:
     def __init__(self):
         self.banks = []           # bytearrays (bank 1 = index 0)
         self.names = []
+        self.asset_bytes = collections.Counter()
 
-    def new_bank(self, name):
+    def add_bank(self, data, name):
         self.banks.append(bytearray())
-        self.names.append(name)
-        return len(self.banks)    # ROM bank number
+        self.names.append({})
+        return self.append(len(self.banks) - 1, data, name)
 
-    def cur(self):
-        return len(self.banks)
+    def append(self, index, data, name):
+        bank = self.banks[index]
+        assert len(bank) + len(data) <= BANK
+        address = ((0x81 + index) << 16) | (0x8000 + len(bank))
+        bank.extend(data)
+        self.names[index][name] = None
+        self.asset_bytes[name] += len(data)
+        return address
 
-    def free(self):
-        return BANK - len(self.banks[-1]) if self.banks else 0
-
-    def put(self, data, name, align=1):
-        """Place data in the current bank (a new one if it does not fit); returns the CPU long address."""
-        if not self.banks or (-len(self.banks[-1])) % align + len(data) > self.free():
-            self.new_bank(name)
-        b = self.banks[-1]
-        b += bytes((-len(b)) % align)
-        a = ((0x80 + len(self.banks)) << 16) | (0x8000 + len(b))
-        b += data
-        return a
-
-    def linear(self, data, name, align=2048):
-        """Place data (any size) contiguously across banks from an aligned offset; returns the long address of
-        every align-sized piece (the pieces never cross a bank)."""
-        assert BANK % align == 0 and len(data) % align == 0
-        if not self.banks or self.free() < align:
-            self.new_bank(name)
-        else:
-            b = self.banks[-1]
-            b += bytes((-len(b)) % align)
-            if self.free() < align:
-                self.new_bank(name)
-        addrs = []
-        for i in range(0, len(data), align):
-            if self.free() < align:
-                self.new_bank(name)
-            b = self.banks[-1]
-            addrs.append(((0x80 + len(self.banks)) << 16) | (0x8000 + len(b)))
-            b += data[i:i + align]
-        return addrs
+    def pack(self, assets):
+        """Pack bank-local blobs largest first into the tightest available bank tail."""
+        addresses = {}
+        for key in sorted(assets, key=lambda key: -len(assets[key])):
+            data = assets[key]
+            if len(data) > BANK:
+                raise BuildError(f'{key}: asset exceeds a 32 KiB bank')
+            name = key[0]
+            bank_sizes = [(-len(bank), index) for index, bank in enumerate(self.banks) if len(bank) + len(data) <= BANK]
+            best = min(bank_sizes, default=None)
+            addresses[key] = self.append(best[1], data, name) if best else self.add_bank(data, name)
+        return addresses
 
 
 # ------------------------------------------------------------------ builder
@@ -477,16 +467,14 @@ class Builder:
         self.rom = rom
         # font first
         fb = enc.font_blob()
-        self.font_bank = rom.cur() + 1
+        self.font_bank = len(rom.banks) + 1
         for i in range(0, len(fb), BANK):
-            rom.new_bank('font')
-            rom.banks[-1] += fb[i:i + BANK]
-        self.font_banks = rom.cur() - self.font_bank + 1
+            rom.add_bank(fb[i:i + BANK], 'font')
         # script: two passes (the addresses do not change the sizes)
         labels_at = collections.defaultdict(list)
         for name, idx in self.prog.labels.items():
             labels_at[idx].append(name)
-        first_script_bank = rom.cur() + 1
+        first_script_bank = len(rom.banks) + 1
         for pas in (1, 2):
             banks = [bytearray()]
             self.op_addr = []
@@ -507,11 +495,9 @@ class Builder:
                 self.addr[n] = a
             banks[-1] += bytes([OP['HALT']])
         for b in banks:
-            rom.new_bank('script')
-            rom.banks[-1] += b
-        self.script_banks = (first_script_bank, len(banks))
+            rom.add_bank(b, 'script')
         self.script_bytes = sum(len(b) for b in banks)
-        self.build_id = int(sha(b''.join(banks) + enc.font_blob())[:8], 16)
+        self.build_id = int(sha(b''.join(banks) + fb)[:8], 16)
         # resume tables: text id -> op address, choice id -> op address (one bank)
         tx = [0] * prog.text_count
         ch = [0] * prog.choice_count
@@ -524,35 +510,60 @@ class Builder:
         ctbl = b''.join(struct.pack('<I', a)[:3] for a in ch)
         if len(tbl) + len(ctbl) > BANK:
             raise BuildError(f'{prog.text_count} paragraphs: the resume table is over one bank')
-        self.text_table = rom.put(tbl + ctbl, 'tables', align=BANK) if (tbl + ctbl) else rom.put(b'\0\0\0', 'tables')
-        self.choice_table = self.text_table + len(tbl)
-        # pictures: tiles linear (2048-byte rows), then the palettes
-        self.pic_rows = []
-        for p in self.pics:
-            if p['tiles'] == b'\xff' * len(p['tiles']):
-                self.pic_rows.append(None)
-            else:
-                self.pic_rows.append(rom.linear(p['tiles'], 'pictures'))
-        self.pic_pal = [rom.put(struct.pack('<240H', *p['palette']), 'palettes') for p in self.pics]
-        self.pic_tint = [rom.put(struct.pack('<224H', *p['tints']), 'palettes') if 'tints' in p else 0
-                         for p in self.pics]
-        self.sil_addr = [rom.put(s['mask'], 'silhouettes') for s in self.sils]
+        # The SPC loader advances to $8000 in the next bank at wraparound.
         img = self.audio['image']
-        self.spc_addr = None
+        self.spc_addr = ((0x81 + len(rom.banks)) << 16) | 0x8000
         for i in range(0, len(img), BANK):
-            rom.new_bank('sound')
-            rom.banks[-1] += img[i:i + BANK]
-            if self.spc_addr is None:
-                self.spc_addr = ((0x80 + rom.cur()) << 16) | 0x8000
+            rom.add_bank(img[i:i + BANK], 'sound')
         self.spc_len = len(img)
-        total = rom.cur() + 1
+
+        # The remaining assets are independently addressable and only need to fit inside one bank.
+        assets = {('tables',): tbl + ctbl or bytes(3)}
+        for i, p in enumerate(self.pics):
+            tiles = p['tiles']
+            if tiles != b'\xff' * len(tiles):
+                for row, start in enumerate(range(0, len(tiles), PHOTO_ROW)):
+                    assets['pictures', i, row] = tiles[start:start + PHOTO_ROW]
+            assets['palettes', i, 'base'] = struct.pack('<240H', *p['palette'])
+            if 'tints' in p:
+                assets['palettes', i, 'tint'] = struct.pack('<224H', *p['tints'])
+        mask_offsets = []
+        for i, s in enumerate(self.sils):
+            data, offset = asset_codec.encode_mask(s['mask'])
+            if asset_codec.decode_mask(data, offset) != s['mask']:
+                raise BuildError(f'{self.sil_names[i]}: mask round trip failed')
+            assets['silhouettes', i] = data
+            mask_offsets.append(offset)
+
+        addr = rom.pack(assets)
+        self.text_table = addr['tables',]
+        self.choice_table = self.text_table + len(tbl)
+        self.pic_rows = [[addr['pictures', i, row] for row in range(24)] if ('pictures', i, 0) in addr else None
+                         for i in range(len(self.pics))]
+        self.pic_pal = [addr['palettes', i, 'base'] for i in range(len(self.pics))]
+        self.pic_tint = [addr.get(('palettes', i, 'tint'), 0) for i in range(len(self.pics))]
+        self.sil_addr = [addr['silhouettes', i] for i in range(len(self.sils))]
+        self.sil_dict = [(address + offset) & 0xFFFF if offset else 0
+                         for address, offset in zip(self.sil_addr, mask_offsets)]
+        if self.args.benchmark_assets:
+            photo_rows = [data for key, data in assets.items() if key[0] == 'pictures']
+            masks = [s['mask'] for s in self.sils]
+            photo_tiles = {row[i:i + 64] for row in photo_rows for i in range(0, len(row), 64)}
+            report = dict(
+                picture_rows=asset_codec.benchmark(photo_rows),
+                unique_photo_tiles=len(photo_tiles), photo_tiles=sum(map(len, photo_rows)) // 64,
+                silhouette_masks=asset_codec.benchmark(masks),
+                indexed_masks=sum(bool(offset) for offset in mask_offsets),
+                stored_mask_bytes=rom.asset_bytes['silhouettes'],
+                script_banks=asset_codec.benchmark(banks),
+            )
+            (OUT / 'assets-benchmark.json').write_text(json.dumps(report, indent=2) + '\n')
+
+        total = len(rom.banks) + 1
         if total > MAX_BANKS:
             raise BuildError(f'ROM full: {total} banks of 32 KiB (at most {MAX_BANKS})')
-        size = 512 * 1024
-        while size < total * BANK:
-            size *= 2
-        self.rom_size = size
-        self.nbanks = size // BANK
+        self.nbanks = next(size for size in (16, 32, 64, 96, 128) if total <= size)
+        self.rom_size = self.nbanks * BANK
 
     # -- outputs
     def emit(self):
@@ -560,11 +571,12 @@ class Builder:
         prog = self.prog
         files = {}
         seg = []
+        bank_names = [' + '.join(names) for names in self.rom.names]
         for i, b in enumerate(self.rom.banks):
             n = f'bank{i + 1:03d}.bin'
             (OUT / n).write_bytes(bytes(b))
             files[n] = bytes(b)
-            seg.append(f'.segment "BANK{i + 1}"\n    .incbin "{OUT.relative_to(ROOT)}/{n}"   ; {self.rom.names[i]}')
+            seg.append(f'.segment "BANK{i + 1}"\n    .incbin "{OUT.relative_to(ROOT)}/{n}"   ; {bank_names[i]}')
         # ld65 config
         mem = [' ZP:    start=$000000, size=$0100, type=rw;',
                ' RAM:   start=$000100, size=$1D00, type=rw;     # $1E00-$1FFF: stack',
@@ -580,7 +592,8 @@ class Builder:
             '# generated by tools/yonaki/build.py -- 夜鳴き鐘: LoROM (FastROM mirror $80-$FF), '
             f'{self.rom_size // 1024} KiB, 8 KiB battery SRAM\nMEMORY {{\n' + '\n'.join(mem) +
             '\n}\nSEGMENTS {\n' + '\n'.join(segs) + '\n}\n')
-        rom_size_byte = {512: 9, 1024: 10, 2048: 11, 4096: 12}[self.rom_size // 1024]
+        # The header field is an exponent: a 3 MiB image mirrors its last MiB to 4 MiB.
+        rom_size_byte = (self.rom_size - 1).bit_length() - 10
         A = self.addr
         songs, sfx = self.audio['songs'], self.audio['sfx']
         title_song = next((songs[n] for n in ('title', 'yonaki', 'theme') if n in songs), 0xFF)
@@ -621,11 +634,12 @@ class Builder:
             ent += struct.pack('<I', self.pic_tint[i])[:3]
             ent += bytes(80 - len(ent))
             d.append('    .byte ' + ', '.join(f'${x:02X}' for x in ent) + f'   ; {self.pic_names[i]}')
-        d.append('SilTable:   ; width, height (tiles), mask address, bank, top row, 0, 0')
+        d.append('SilTable:   ; width, height (tiles), mask address, bank, top row, dictionary (0 = raw)')
         for i, s in enumerate(self.sils):
             a = self.sil_addr[i]
             top = s.get('top', 24 - s['h'])
-            d.append(f'    .byte {s["w"]}, {s["h"]}\n    .word ${a & 0xFFFF:04X}\n    .byte ${a >> 16:02X}, {top}, 0, 0'
+            d.append(f'    .byte {s["w"]}, {s["h"]}\n    .word ${a & 0xFFFF:04X}\n    .byte ${a >> 16:02X}, {top}'
+                     f'\n    .word ${self.sil_dict[i]:04X}'
                      f'   ; {self.sil_names[i]}')
         d.append('    .byte 0')
         strings = {}
@@ -720,12 +734,15 @@ class Builder:
             sil_size={n: [s['w'], s['h']] for n, s in zip(self.sil_names, self.sils)},
             songs=songs, sfx=sfx, audio=self.audio['info'], ui=strings, speeds=SPEEDS,
             glyphs=enc.glyphs, omake_endings=self.args.omake_endings, title_bg=self.title_bg,
-            rom_size=self.rom_size, banks=self.rom.names, script_bytes=self.script_bytes,
+            rom_size=self.rom_size, banks=bank_names, script_bytes=self.script_bytes,
             reached_ops=sorted(self.reached),
         )
         (OUT / 'layout.json').write_text(json.dumps(layout, ensure_ascii=False, indent=0) + '\n')
         manifest = dict(outputs={k: sha(v) for k, v in files.items()}, rom_size=self.rom_size,
                         banks=len(self.rom.banks) + 1, glyphs=len(enc.glyphs),
+                        asset_bytes=dict(self.rom.asset_bytes),
+                        data_bank_padding=sum(BANK - len(bank) for bank in self.rom.banks),
+                        empty_bank_padding=(self.nbanks - len(self.rom.banks) - 1) * BANK,
                         one_byte_glyphs=min(224, len(enc.glyphs)), texts=prog.text_count,
                         choices=prog.choice_count, script_bytes=self.script_bytes,
                         pictures={n: p['stats'] for n, p in zip(self.pic_names, self.pics)})
@@ -781,6 +798,7 @@ def main():
     ap.add_argument('--unknown-sound-error', action='store_true')
     ap.add_argument('--quiet', action='store_true')
     ap.add_argument('--out', default=str(OUT))
+    ap.add_argument('--benchmark-assets', action='store_true')
     ap.add_argument('--omake-endings', type=int, default=OMAKE_ENDINGS)
     ap.add_argument('--debug-start', action='store_true')
     args = ap.parse_args()

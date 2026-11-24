@@ -730,6 +730,14 @@ Composite:
     lda SilTable+4,y
     and #$00FF
     sta p0+2
+    sta p1+2
+    stz p1                      ; raw masks use the running byte offset in Y
+    lda SilTable+6,y
+    beq :+
+    ldx p0                      ; indexed masks use p1 for the index stream and p0 for the dictionary
+    stx p1
+    sta p0
+:
     lda SilTable+5,y
     and #$00FF
     sta c_row
@@ -746,6 +754,17 @@ Composite:
     jsr PacedWait
     ply
 :   inc work_count
+    lda p1
+    beq @position
+    lda [p1]                    ; index byte followed by another index or the dictionary
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a
+    tay
+    inc p1                      ; even when the tile is clipped at the right edge
+@position:
     lda c_x
     clc
     adc c_tx

@@ -3,14 +3,17 @@
 For each trace: the recorded pad masks only, the session's initial battery image as <dir>/yonaki.srm (bsnes loads
 it at load_game and writes it back at unload), captures at the same frames.  Compared with the Snes9x run: the
 final battery image (byte-equal) and every capture (max RGB difference per pixel; at most 2 = the cores' 5-bit to
-8-bit expansion).  tools/host_libretro_replay.Frontend, read-only.  Results: build/yonaki-test/bsnes/RESULTS.json.
+8-bit expansion). Also checks the ROM's V-blank counters from a final read-only save state.
+Results: build/yonaki-test/bsnes/RESULTS.json.
 
 usage: python3 -I tests/yonaki/bsnes.py [--real] [test ...]   (--real: also the real scenario's traces, slow)
 """
-import sys, json, hashlib, pathlib, shutil
+import sys, json, hashlib, pathlib, shutil, ctypes, struct
 ROOT = pathlib.Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(ROOT / 'tools'))
 sys.path.insert(0, str(ROOT / 'tools/vendor/pylib'))
+from emu import labels                         # noqa: E402
 from host_libretro_replay import Frontend     # noqa: E402
 import numpy as np                             # noqa: E402
 from PIL import Image                          # noqa: E402
@@ -19,6 +22,25 @@ CORE = ROOT / 'tools/vendor/bsnes-63ee22f7af8f' / ('bsnes_libretro.' + ('dylib' 
 TR = ROOT / 'build/yonaki-test/traces'
 OUT = ROOT / 'build/yonaki-test/bsnes'
 sha = lambda b: hashlib.sha256(b).hexdigest()
+
+
+def timing(core, label_file):
+    """Read WRAM via serialization because bsnes 115 exposes no libretro system RAM pointer."""
+    core.retro_serialize_size.restype = ctypes.c_size_t
+    core.retro_serialize.argtypes = [ctypes.c_void_p, ctypes.c_size_t]
+    core.retro_serialize.restype = ctypes.c_bool
+    state = ctypes.create_string_buffer(core.retro_serialize_size())
+    assert core.retro_serialize(state, len(state)), 'bsnes state unavailable'
+    assert struct.unpack_from('<4sI16s', state) == (b'BST1', len(state), b'115'.ljust(16, b'\0'))
+    # Pinned bsnes System::serializeAll and CPU::serialize: header, RNG, cartridge SRAM,
+    # WDC65816 registers, Thread and PPUcounter precede the 128 KiB WRAM array.
+    wram = 538 + 20 + 8192 + 48 + 12 + 26
+    assert len(state) >= wram + 128 * 1024
+    addresses = labels(label_file)
+    names = ('spc_ready', 'lag_count', 'vblank_overrun_count', 'nmi_end_line_max', 'dma_bytes_max', 'dma_deferred')
+    counters = {name: struct.unpack_from('<H', state, wram + addresses[name])[0] for name in names}
+    assert counters.pop('spc_ready') == 1, 'expected sound driver ready in WRAM'
+    return counters
 
 
 def replay(name):
@@ -42,6 +64,7 @@ def replay(name):
             e.step(mask)
             for c in caps.get(e.frames, []):
                 got.append((c, e.capture(pathlib.Path(c['path']).stem)))
+        counters = timing(e.lib, rom_src.with_name('labels.txt'))
     finally:
         e.close()
     final = (out / 'yonaki.srm').read_bytes()[:8192]
@@ -56,8 +79,11 @@ def replay(name):
             b = b.resize(a.size, Image.NEAREST)
         d = np.abs(np.asarray(a, int) - np.asarray(b, int)).max()
         worst = max(worst, int(d))
-    res = dict(frames=len(t['masks']), captures=len(got), battery_equal=final == want, max_rgb_difference=worst)
-    res['ok'] = res['battery_equal'] and worst <= 2
+    res = dict(frames=len(t['masks']), captures=len(got), battery_equal=final == want, max_rgb_difference=worst,
+               **counters)
+    res['ok'] = (res['battery_equal'] and worst <= 2 and res['vblank_overrun_count'] == 0
+                 and 225 <= res['nmi_end_line_max'] <= 261 and 0 < res['dma_bytes_max'] <= 3072
+                 and res['dma_deferred'] == 0)
     return res
 
 

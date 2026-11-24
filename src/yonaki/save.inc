@@ -637,7 +637,8 @@ LoadGame:
     tax
     lda f:CHOICE_TABLE,x
     sta vp
-    lda f:CHOICE_TABLE+2,x
+    lda f:CHOICE_TABLE+1,x      ; the upper word stays inside the three-byte entry
+    xba
     and #$00FF
     sta vp+2
     rts
@@ -651,7 +652,8 @@ TextAddr:
     tax
     lda f:TEXT_TABLE,x
     sta vp
-    lda f:TEXT_TABLE+2,x
+    lda f:TEXT_TABLE+1,x        ; the packed table can end at the bank boundary
+    xba
     and #$00FF
     sta vp+2
     rts

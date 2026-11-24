@@ -7,7 +7,7 @@ build (`tools/yonaki/`) and the tests (`tests/yonaki/`).
 
 ```
 make yonaki          # build/yonaki/yonaki.sfc from data/yonaki/scenario + endings.txt + pictures + sound
-make yonaki-test     # fixture tests + every ending of the real scenario on Snes9x, then the traces on bsnes
+make yonaki-test     # mask round trips, fixture and all real endings on Snes9x, then fixture replays on bsnes
 make yonaki-clean
 YONAKI_FLAGS="--allow-missing-art --strict" make yonaki
 ```
@@ -15,7 +15,8 @@ YONAKI_FLAGS="--allow-missing-art --strict" make yonaki
 `tools/yonaki/build.py` options: `--scenario DIR` (default `data/yonaki/scenario`, every `*.txt` sorted by
 name), `--endings FILE` (default: `endings.txt` beside the scenario directory), `--allow-missing-art` (a missing
 background is black, a missing silhouette a plain figure), `--strict` (warnings are errors),
-`--unknown-sound-error`, `--out DIR`, `--omake-endings N` (default 10), `--debug-start` (review builds).
+`--unknown-sound-error`, `--out DIR`, `--omake-endings N` (default 10), `--debug-start` (review builds),
+`--benchmark-assets` (write compression measurements to `assets-benchmark.json`).
 Diagnostics go to stderr and `build/yonaki/report.txt`; `build/yonaki/previews/` has every picture as the SNES
 shows it.  Python needs Pillow and numpy: `python3 -m pip install --target tools/vendor/pylib pillow numpy`
 (the tools add that directory to `sys.path`, so `python3 -I` works).
@@ -34,6 +35,7 @@ Review tools:
 |---|---|
 | `tools/yonaki/script.py` | parser, text normalization, wrapping (kinsoku), checks, VM simulation / routes |
 | `tools/yonaki/build.py` | encoding, bank layout, `const.inc`, `data.inc`, `yonaki.cfg`, `layout.json` |
+| `tools/yonaki/asset_codec.py` | mask tile dictionaries and asset compression benchmarks |
 | `tools/yonaki/pictures.py` | photos → 240 colours (112 + their translucent-figure versions where silhouettes appear) + 8bpp tiles; silhouettes → masks (cached in `build/yonaki/cache`) |
 | `tools/yonaki/font.py`, `logo.py` | Shinonome 12-dot glyphs; the title logo |
 | `tools/yonaki/romfix.py` | header checks and checksum |
@@ -80,11 +82,16 @@ WRAM: `$0000-$00FF` direct page, `$0100-$1DFF` variables, `$1E00-$1FFF` stack; `
 (11 520 bytes, tile (c, r) at (r·30 + c)·16); `$7E:5000` BG2 map shadow; `$7E:5800` the bitmap under the
 START menu; `$7F:0000-$BFFF` the photo tiles (silhouettes are composited here).
 
-ROM: LoROM, FastROM ($30), up to 4 MiB; code and tables in bank 0 (`$00:8000`), data banks read at `$81:8000…`.
-Bank order: font (32 bytes a glyph: 12 rows as words, bit 15 leftmost, byte 24 = width; 1024 glyphs a bank),
-script (ops never cross a bank; a bank ends with GOTO to the next), resume tables (text id / choice id → op
-address), pictures (48 KiB each, 2 KiB rows that never cross a bank), palettes, silhouette masks (16 bytes a
-tile: 8 × (cover, rim)), the SPC image.  The ROM size is rounded up to 512 KiB / 1 / 2 / 4 MiB.
+LoROM uses FastROM ($30) for data banks starting at `$81:8000`. Code and tables are in bank 0 (`$00:8000`).
+The font, script, and SPC image each start at a bank boundary. The font has 1,024 32-byte glyphs per full bank.
+Each glyph has 12 rows as words, bit 15 leftmost, and its width at byte 24. Script ops fit within one bank
+and a GOTO links each full script bank to the next. The builder fits resume tables, picture rows, palettes,
+and masks into available bank tails, largest blob first. The resume table stays together and maps text and
+choice IDs to op addresses. Each 2 KiB picture row, palette block, and mask fits within one bank.
+
+The file size rounds up to 512 KiB, 1 MiB, 2 MiB, 3 MiB or 4 MiB. For a 3 MiB image the header uses
+`$0C` and the checksum counts the upper MiB twice, as specified for 24-Mbit cartridges.
+[Nintendo SNES Development Manual, Book I, pp. 1-2-19 to 1-2-21](https://floating.muncher.se/bot/manual/book1_text.pdf)
 
 SRAM (8 KiB at `$70:0000`, all little-endian, every block with a 16-bit sum and its complement):
 
@@ -131,6 +138,85 @@ Figures are translucent: compositing keeps the photo's pixel under the figure an
 the tinted version), rim included, so it has no outline.  Only one tint is in CGRAM at a time: white
 before red before blue among the slots (`PickTint`); a figure of another colour, or any figure on a picture without
 tinted colours (black, white, the title), is drawn solid in colours 8–13 as before.
+
+## ROM asset measurements
+
+Independent reverse-engineering notes on *Kamaitachi no Yoru* document separate compression
+for background tilesets, tilemaps and silhouettes, with an LZSS variant for name-entry font graphics.
+Notes on Konami's SFC games document a combination of RLE and LZ-style references. These examples
+motivated measuring each Yonaki asset class independently. The mask format below was developed for Yonaki.
+[Kamaitachi no Yoru research notes](https://github.com/ButThouMust/kamaitachi-sfc-english#graphics-compression-formats),
+[Konami SFC compression notes](https://github.com/gocha/sfc-goemon-3-disassembly/blob/main/docs/konami-snes-compression.md)
+
+Run `YONAKI_FLAGS="--benchmark-assets --quiet" make yonaki` to reproduce the size measurements.
+Each codec gets independent input blocks of one 2 KiB photo row, one full mask, or one script bank.
+The comparison uses PackBits-style packets of up to 128 bytes with runs encoded from length three,
+and raw DEFLATE at zlib's default level as an LZ77-based size reference. Figures exclude pointer metadata.
+Solid photo fills already occupy zero tile bytes and are omitted.
+
+| Input | Blocks | Raw bytes | PackBits model | Raw DEFLATE | Stored bytes |
+|---|---:|---:|---:|---:|---:|
+| Photo rows | 1,008 | 2,064,384 | 1,900,482 | 1,673,646 | 2,064,384 |
+| Silhouette masks | 106 | 154,512 | 89,872 | 32,895 | 81,583 |
+| Script banks | 3 | 93,080 | 93,803 | 60,808 | 93,080 |
+
+- **Photos.** All 32,256 stored tiles are distinct, so a tile dictionary would only add indices.
+  PackBits saves about 8% and can generate 145 packets in one row. Its savings would still leave the
+  payload above 2 MiB. The DEFLATE result suggests a smaller ROM could be possible with a photo
+  decoder. A row decoder would need up to 2 KiB of output storage per row and backreference handling,
+  plus work to extract the requested tile range when restoring only some columns. Raw rows support
+  direct DMA of any column span. A full scene uses six 8 KiB restore slices and, in forced blank,
+  three 16 KiB VRAM upload slices.
+- **Masks.** An indexed mask has one byte per tile in row-major order, followed by up to 256 unique
+  16-byte tiles. Each tile stores eight `(cover, rim)` byte pairs. The former reserved word at
+  `SilTable+6` gives the dictionary's address within the same bank, with zero selecting the raw form.
+  The builder chooses raw when an index would exceed one byte or the indexed form would equal or
+  exceed the raw size. It round-trips every mask and selects the dictionary for 105 of 106 masks.
+  Any tile takes one indexed lookup, with no scratch buffer or added WRAM. The lookup costs about
+  33 CPU cycles per tile plus per-mask setup and runs under the existing 12-tiles-per-frame limit.
+  A DEFLATE mask stream would save more bytes but would need up to 12 KiB of expanded mask storage
+  for a full-screen mask and a decode step before compositing.
+- **Script.** PackBits grows the already glyph-coded script. Bank-wide DEFLATE would save about
+  32 KiB, with up to a 32 KiB expansion buffer and a decode on first access and after a bank cache miss.
+  Direct reads preserve random access for the VM's jumps, lookahead, choices and bookmarks.
+
+| Real scenario ROM category | Before (bytes) | After (bytes) |
+|---|---:|---:|
+| Code, resident tables and header | 23,243 | 23,276 |
+| Font | 40,992 | 40,992 |
+| Script | 93,080 | 93,080 |
+| Resume tables | 7,587 | 7,587 |
+| Photo rows | 2,064,384 | 2,064,384 |
+| Photo palettes and tint tables | 34,112 | 34,112 |
+| Silhouette masks | 154,512 | 81,583 |
+| SPC image | 48,523 | 48,523 |
+| **Payload** | **2,466,433** | **2,393,537** |
+| Padding inside occupied banks | 89,471 | 31,295 |
+| Whole empty banks | 1,638,400 | 720,896 |
+| **Linked ROM** | **4,194,304** | **3,145,728** |
+
+The baseline is `6da6766`. The occupied banks drop from 78 to 76 with packing alone and to 74
+with indexed masks. The masks save 72,929 bytes (47.2%). The 3 MiB size tier accounts for the
+1 MiB file reduction. The builder records data payload and padding separately in `manifest.json`.
+Bank 0 payload comes from the linker map. Comparison of linked ROMs recovered byte-identical picture
+tiles, palettes, masks, font, bytecode, resume pointers and SPC image, with the same save build ID.
+
+The Snes9x runs produced identical pad inputs, screenshots, screenshot frame numbers and SRAM for all
+41 traces before and after the change. The fixture effects trace took 1,301 frames in both builds.
+The background operations also spent the same number of frames in the fixture's `BUSY` state. Old Bath cut
+took 12 frames, Bus fade 40, Genkan white 69, and Lobby mosaic 84.
+
+| VBlank measurement | Worst NMI end line before and after | Peak DMA bytes before and after |
+|---|---:|---:|
+| Snes9x 1.63 fixture | 251 | 3,072 |
+| Snes9x 1.63 real scenario, all 20 endings and the ending list | 255 | 3,072 |
+| bsnes 115 fixture replays | 251 | 3,072 |
+| bsnes 115 real scenario replays, E01 and the ending list | 254 | 3,072 |
+
+Both cores reported zero VBlank overruns and zero deferred DMA jobs in these checks. The bsnes
+test reads the counters from WRAM in the final save state using the pinned core. The fixture replays
+and the two real replays matched Snes9x SRAM byte for byte and differed by at most two RGB levels.
+After `make yonaki-test`, run `python3 -I tests/yonaki/bsnes.py real_E01 real_list` for those real replays.
 
 ## Script VM
 
