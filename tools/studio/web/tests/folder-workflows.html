@@ -111,16 +111,19 @@
       equal(byId("project-title").textContent, `${editedName} · Edited`, "Kept the project's redo history");
       byId("undo").click();
     };
-    const openFile = (name, bytes, beforeRead) => {
-      const picker = byId("project-file");
-      picker.click = () => {};
-      byId("open").click();
+    const chooseFile = (picker, name, bytes, beforeRead) => {
       const file = new iframe.contentWindow.File([bytes], name);
       const read = file.arrayBuffer.bind(file);
       file.arrayBuffer = async () => { await beforeRead?.(); return read(); };
       const transfer = new iframe.contentWindow.DataTransfer();
       transfer.items.add(file);
       picker.files = transfer.files;
+    };
+    const openFile = (name, bytes, beforeRead) => {
+      const picker = byId("project-file");
+      picker.click = () => {};
+      byId("open").click();
+      chooseFile(picker, name, bytes, beforeRead);
       return picker.onchange({ target: picker });
     };
     const openDemo = () => {
@@ -270,24 +273,74 @@
     equal(savedName(destinationFolder), "Edited before Cancel", "Retry committed the edited manifest");
     equal(byId("project-title").textContent, "Edited before Cancel", "Commit marked the edit saved");
 
+    const demo = new Studio(new Uint8Array(await (await fetch(site + "demo/studio.json")).arrayBuffer()));
+    const png = demo.export("compass", '{"format":"indexed-png"}');
+    const wav = demo.export("test-pulse", '{"format":"wav"}');
+    demo.free();
+
+    const startImport = async (action, filename, bytes, beforeRead) => {
+      byId("tools").click();
+      dialog.querySelector("select").value = action;
+      await submitDialog();
+      if (action === "image") dialog.querySelector('input[type="checkbox"]').checked = true;
+      chooseFile(dialog.querySelector('input[type="file"]'), filename, bytes, beforeRead);
+      return submitDialog();
+    };
+    const hasAsset = (id) => Array.from(byId("assets").querySelectorAll("button"))
+      .some((node) => node.textContent === id);
+    for (const [action, filename, bytes, id] of [
+      ["image", "compass.png", png, "imported-tiles"],
+      ["sample", "test-pulse.wav", wav, "sample"],
+    ]) {
+      const sourceName = `Project before ${filename}`;
+      await open(folder("import-source", project(sourceName)));
+      const canceledRead = gate();
+      const canceledImport = startImport(action, filename, bytes, canceledRead.pause);
+      await canceledRead.entered;
+      if (action === "image") cancelButton().click();
+      else dialog.requestClose();
+      equal(dialog.open, false, `Dismissed the ${filename} import while reading`);
+      canceledRead.resume();
+      await canceledImport;
+      equal(hasAsset(id), false, `Cancel prevented the ${filename} import`);
+      equal(byId("project-title").textContent, sourceName, "Cancel left the project clean");
+
+      const replacementName = `Replacement during ${filename}`;
+      const replacementRead = gate();
+      const replacing = open(folder("import-replacement", project(replacementName), { beforeRead: replacementRead.pause }));
+      await replacementRead.entered;
+      const staleRead = gate();
+      const staleImport = startImport(action, filename, bytes, staleRead.pause);
+      await staleRead.entered;
+      replacementRead.resume();
+      await replacing;
+      equal(dialog.open, true, "The pending import dialog was still open when its project was replaced");
+      staleRead.resume();
+      await staleImport;
+      equal(hasAsset(id), false, `The replacement project did not receive ${filename}`);
+      equal(byId("project-title").textContent, replacementName, "The replacement project stayed clean");
+      equal(byId("status").textContent, "Project ready", "A stale import left the replacement status intact");
+
+      await startImport(action, filename, bytes);
+      equal(hasAsset(id), true, `An active import added ${filename}`);
+      byId("undo").click();
+    }
+
     const sampleRate = 32000;
     const loopStart = sampleRate / 10;
     const pcm = [...Array(loopStart).fill(-8192), ...Array(loopStart).fill(16384)];
-    const audioPreview = (loop_start) => ({ kind: "sample", data: { sample_rate: sampleRate, pcm, loop_start } });
+    const lowRate = 1000;
+    const lowRatePcm = pcm.slice(0, lowRate / 5);
     await open(folder("audio-preview", project("Audio preview", {
-      "one-shot": audioPreview(null),
-      "with-loop": audioPreview(loopStart),
+      "one-shot": { kind: "sample", data: { sample_rate: lowRate, pcm: lowRatePcm, loop_start: null } },
+      "with-loop": { kind: "sample", data: { sample_rate: sampleRate, pcm, loop_start: loopStart } },
     })));
-    const play = (id) => {
-      Array.from(byId("assets").querySelectorAll("button")).find((node) => node.textContent === id).click();
-      Array.from(byId("toolbar").querySelectorAll("button")).find((node) => node.textContent === "Play audio").click();
-    };
     const browser = iframe.contentWindow;
     const AudioContext = browser.AudioContext;
     let playback;
     let source;
     let analyser;
-    browser.AudioContext = class extends AudioContext {
+    class TestAudioContext extends AudioContext {
       constructor() {
         super({ sinkId: { type: "none" } });
         playback = this;
@@ -298,8 +351,16 @@
         source.connect(analyser);
         return source;
       }
+    }
+    const play = (id) => {
+      source = undefined;
+      browser.AudioContext = TestAudioContext;
+      try {
+        Array.from(byId("assets").querySelectorAll("button")).find((node) => node.textContent === id).click();
+        Array.from(byId("toolbar").querySelectorAll("button")).find((node) => node.textContent === "Play audio").click();
+      } finally { browser.AudioContext = AudioContext; }
     };
-    try { play("with-loop"); } finally { browser.AudioContext = AudioContext; }
+    play("with-loop");
     equal(source?.loop, true, "Sample with a loop point used looping playback");
     const loopSeconds = source.loopStart / source.playbackRate.value;
     if (Math.abs(loopSeconds - 0.1) > 0.00001) throw new Error(`Unexpected loop start at ${loopSeconds} s`);
@@ -321,14 +382,19 @@
     await closedPlayback;
 
     play("one-shot");
-    const audio = dialog.querySelector("audio");
-    equal(audio?.loop, false, "Sample without a loop point used one-shot playback");
-    await new Promise((resolve, reject) => {
-      audio.addEventListener("ended", resolve, { once: true });
-      audio.addEventListener("error", () => reject(audio.error), { once: true });
-    });
-    equal(audio.ended, true, "One-shot preview stopped at the end of the sample");
-    cancelButton().click();
+    equal(source?.loop, false, "Low-rate sample used one-shot PCM playback");
+    equal(source.buffer.length, lowRatePcm.length, "One-shot preview kept every authored sample");
+    const duration = source.buffer.duration / source.playbackRate.value;
+    if (Math.abs(duration - lowRatePcm.length / lowRate) > 0.00001) {
+      throw new Error(`Unexpected one-shot duration of ${duration} s`);
+    }
+    await new Promise((resolve) => source.addEventListener("ended", resolve, { once: true }));
+    const replay = Array.from(dialog.querySelectorAll("button")).find((node) => node.textContent === "Play");
+    equal(Boolean(replay), true, "One-shot preview offered replay after ending");
+    const firstSource = source;
+    replay.click();
+    equal(source === firstSource, false, "Replay started a fresh one-shot source");
+    Array.from(dialog.querySelectorAll("button")).find((node) => node.textContent === "Close").click();
 
     report("passed", "Studio project and audio workflow regressions passed.");
   } catch (error) {

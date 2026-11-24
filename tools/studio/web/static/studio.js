@@ -457,8 +457,8 @@ function history(forward) {
 
 function playAudio() {
   const { kind, data } = project.assets[selected];
-  if (kind === "sample" && data.loop_start != null) {
-    playSampleLoop(data);
+  if (kind === "sample") {
+    playSample(data);
     return;
   }
   const bytes = studio.export(selected, JSON.stringify({ format: "wav" }));
@@ -478,7 +478,7 @@ function stopAudioOnClose(control, stop) {
   });
 }
 
-function playSampleLoop(sample) {
+function playSample(sample) {
   const pcm = studio.audioPreviewPcm(selected);
   const playback = new AudioContext();
   try {
@@ -486,20 +486,40 @@ function playSampleLoop(sample) {
     // AudioBuffer does not accept. The source rate restores the authored timing.
     const buffer = playback.createBuffer(1, pcm.length, playback.sampleRate);
     buffer.copyToChannel(pcm, 0);
-    const source = playback.createBufferSource();
-    source.buffer = buffer;
-    source.playbackRate.value = sample.sample_rate / buffer.sampleRate;
-    source.loop = true;
-    source.loopStart = sample.loop_start / buffer.sampleRate;
-    source.connect(playback.destination);
+    let source;
+    const toggle = button("Play", () => guarded(() => {
+      if (!source) {
+        start();
+        return playback.resume();
+      }
+      return playback.state === "running" ? playback.suspend() : playback.resume();
+    }));
+    const updateToggle = () => {
+      toggle.textContent = source && playback.state === "running" ? "Pause" : "Play";
+    };
+    function start() {
+      const node = playback.createBufferSource();
+      node.buffer = buffer;
+      node.playbackRate.value = sample.sample_rate / buffer.sampleRate;
+      node.loop = sample.loop_start != null;
+      if (node.loop) node.loopStart = sample.loop_start / buffer.sampleRate;
+      node.connect(playback.destination);
+      node.onended = () => {
+        source = undefined;
+        updateToggle();
+      };
+      node.start();
+      source = node;
+      updateToggle();
+    }
 
-    const toggle = button(playback.state === "running" ? "Pause" : "Play", () => guarded(() =>
-      playback.state === "running" ? playback.suspend() : playback.resume()));
-    playback.onstatechange = () => { toggle.textContent = playback.state === "running" ? "Pause" : "Play"; };
-    source.start();
+    playback.onstatechange = updateToggle;
+    start();
     modal(`Play ${selected}`, [], null, null, toggle);
     stopAudioOnClose(toggle, () => { void playback.close(); });
-    playback.resume().catch(() => {});
+    playback.resume().catch((error) => {
+      if (dialog.open && form.contains(toggle)) status(message(error), true);
+    });
   } catch (error) {
     void playback.close();
     throw error;
@@ -635,6 +655,19 @@ function addAsset() {
 
 function fileInput(accept) { return input("", { type: "file", required: true, accept }); }
 
+async function importAsset(file, apply) {
+  const importingStudio = studio;
+  const isActive = () => studio === importingStudio && dialog.open && form.contains(file);
+  let bytes;
+  try {
+    bytes = await readFileBytes(file.files[0]);
+  } catch (error) {
+    if (isActive()) throw error;
+    return;
+  }
+  if (isActive()) apply(bytes);
+}
+
 function toolsMenu() {
   const tool = select([
     ["new", "New project"], ["demo", "Open demo"], ["image", "Import PNG tiles"],
@@ -665,12 +698,12 @@ function imageDialog() {
   modal("Import PNG tiles", [
     ["PNG file", file], ["New tileset ID", set], ["Subpalette ID", palette], ["Bit depth", depth],
     ["Preserve PNG indices and create a new subpalette", preserve],
-  ], "Import PNG", async () => {
-    studio.importImage(await readFileBytes(file.files[0]), JSON.stringify({
+  ], "Import PNG", () => importAsset(file, (bytes) => {
+    studio.importImage(bytes, JSON.stringify({
       tileset: set.value, palette: palette.value, bpp: Number(depth.value), preserve_indices: preserve.checked,
     }));
     dataChanged(); selectAsset(set.value); status("PNG imported");
-  });
+  }));
 }
 function sampleDialog() {
   const file = fileInput(".wav,.brr");
@@ -679,11 +712,11 @@ function sampleDialog() {
   const rate = number("", 1, 192000);
   const offset = number("", 0, 2160000);
   rate.required = offset.required = false;
-  modal("Import audio sample", [["Audio file", file], ["Asset ID", id], ["Format", format], ["BRR source rate (optional)", rate], ["BRR loop byte offset (optional)", offset]], "Import sample", async () => {
-    studio.importSample(await readFileBytes(file.files[0]), id.value, JSON.stringify(format.value),
+  modal("Import audio sample", [["Audio file", file], ["Asset ID", id], ["Format", format], ["BRR source rate (optional)", rate], ["BRR loop byte offset (optional)", offset]], "Import sample", () => importAsset(file, (bytes) => {
+    studio.importSample(bytes, id.value, JSON.stringify(format.value),
       rate.value ? rate.valueAsNumber : undefined, offset.value ? offset.valueAsNumber : undefined);
     dataChanged(); selectAsset(id.value); status("Sample imported");
-  });
+  }));
 }
 function romDialog() {
   const file = fileInput(".smc,.sfc,.bin,.rom");
