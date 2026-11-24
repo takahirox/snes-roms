@@ -199,6 +199,34 @@
     await openDemo();
     equal(byId("project-title").textContent, originalName, "Opened the demo without concurrent edits");
 
+    await open(folder("save-source", project("Original revision")));
+    const olderWrite = gate();
+    const olderFolder = folder("older-save", undefined, { beforeWrite: olderWrite.pause });
+    const newerFolder = folder("newer-save");
+    const saveAs = (directory) => {
+      byId("save").click();
+      doc.querySelector("#dialog select").value = "new-folder";
+      picks.push(directory);
+      return submitDialog();
+    };
+
+    const olderSave = saveAs(olderFolder);
+    await olderWrite.entered;
+    byId("dialog").close();
+    rename("Newer revision");
+    await saveAs(newerFolder);
+    equal(byId("project-title").textContent, "Newer revision", "Newer save marked its revision clean");
+    olderWrite.resume();
+    await olderSave;
+    equal(savedName(olderFolder), "Original revision", "Older save wrote its own revision");
+    equal(savedName(newerFolder), "Newer revision", "Newer save wrote the edited revision");
+    equal(byId("project-title").textContent, "Newer revision", "Late save kept the newer revision clean");
+    equal(byId("status").textContent, "Saved studio.json in newer-save", "Late save kept the newer save status");
+    byId("save").click();
+    equal(doc.querySelector("#dialog select").selectedOptions[0].textContent, "Save in newer-save", "Late save kept the newer destination");
+    await submitDialog();
+    equal(byId("status").textContent, "Saved studio.json in newer-save", "Next save used the newer destination's fingerprint");
+
     report("passed", "Studio project workflow regressions passed.");
   } catch (error) {
     report("failed", error.stack);

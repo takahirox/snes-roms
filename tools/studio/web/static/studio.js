@@ -10,6 +10,8 @@ let cleanRevision;
 let dirty = false;
 let directory;
 let diskRevision;
+let folderSaveSequence = 0;
+let completedFolderSave = 0;
 let playing = 0;
 let clipboard;
 let gesture;
@@ -494,13 +496,15 @@ async function openFolder() {
 
 async function saveFolder(asNew) {
   if (!window.showDirectoryPicker) throw new Error("Folder access is unavailable here. Download JSON or ZIP instead.");
+  const saveSequence = ++folderSaveSequence;
   const savingStudio = studio;
   const savingRevision = savingStudio.revision();
   const content = savingStudio.save(false);
   const expected = asNew ? null : diskRevision;
   const folder = asNew ? await window.showDirectoryPicker({ mode: "readwrite" }) : directory;
   const warning = await saveFolderManifest(folder, content, expected);
-  if (studio !== savingStudio) return;
+  if (studio !== savingStudio || saveSequence < completedFolderSave) return;
+  completedFolderSave = saveSequence;
   directory = folder;
   diskRevision = fingerprint(content);
   cleanRevision = savingRevision;

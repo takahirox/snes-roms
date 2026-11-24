@@ -154,7 +154,7 @@ impl<'a> Validator<'a> {
                         "Use 1–192,000 Hz and 1–3,840,000 PCM samples",
                     );
                 }
-                if sample.pcm.len().div_ceil(16) * 9 > 65_536 {
+                if brr_size(sample) > 65_536 {
                     self.warn(
                         "sample_aram_budget",
                         path,

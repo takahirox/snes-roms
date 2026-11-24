@@ -1,6 +1,7 @@
 use crate::*;
 
 const PREVIEW_RATE: u32 = 32_000;
+const BRR_SILENT_END: [u8; 9] = [1, 0, 0, 0, 0, 0, 0, 0, 0];
 
 fn sample_ok(sample: &Sample) -> Result<()> {
     if !(1..=192_000).contains(&sample.sample_rate)
@@ -201,7 +202,12 @@ impl History {
 }
 
 pub fn read_brr(bytes: &[u8], rate: u32, loop_offset: Option<u32>) -> Result<Sample> {
-    if bytes.is_empty() || !bytes.len().is_multiple_of(9) || bytes.len() / 9 > MAX_SAMPLES / 16 {
+    // A silent terminator after the audio is a playback marker, not PCM.
+    let audio = bytes
+        .strip_suffix(&BRR_SILENT_END)
+        .filter(|audio| !audio.is_empty())
+        .unwrap_or(bytes);
+    if bytes.is_empty() || !bytes.len().is_multiple_of(9) || audio.len() / 9 > MAX_SAMPLES / 16 {
         return Err(invalid(
             "Expected one or more complete nine-byte BRR blocks",
         ));
@@ -214,9 +220,9 @@ pub fn read_brr(bytes: &[u8], rate: u32, loop_offset: Option<u32>) -> Result<Sam
             "A looping BRR stream needs an in-range loop byte offset divisible by 9",
         ));
     }
-    let mut pcm = Vec::with_capacity(bytes.len() / 9 * 16);
+    let mut pcm = Vec::with_capacity(audio.len() / 9 * 16);
     let mut history = History::default();
-    for (index, block) in bytes.chunks_exact(9).enumerate() {
+    for (index, block) in audio.chunks_exact(9).enumerate() {
         let header = block[0];
         if (header & 1 != 0) != (index + 1 == bytes.len() / 9) {
             return Err(invalid("BRR end flag must appear on the final block only"));
@@ -239,13 +245,16 @@ pub fn read_brr(bytes: &[u8], rate: u32, loop_offset: Option<u32>) -> Result<Sam
     Ok(sample)
 }
 
+pub(crate) fn brr_size(sample: &Sample) -> usize {
+    (sample.pcm.len().div_ceil(16) + usize::from(sample.loop_start.is_none())) * 9
+}
+
 pub fn write_brr(sample: &Sample) -> Result<Vec<u8>> {
     sample_ok(sample)?;
     if sample.loop_start.is_some_and(|start| start % 16 != 0) {
         return Err(invalid("BRR loop start must be divisible by 16 samples"));
     }
-    let blocks = sample.pcm.len().div_ceil(16);
-    let mut bytes = Vec::with_capacity(blocks * 9);
+    let mut bytes = Vec::with_capacity(brr_size(sample));
     let mut history = History::default();
     for (index, chunk) in sample.pcm.chunks(16).enumerate() {
         let mut pcm = [0; 16];
@@ -258,12 +267,16 @@ pub fn write_brr(sample: &Sample) -> Result<Vec<u8>> {
             }
         }
         let reset = index == 0 || sample.loop_start == Some(index as u32 * 16);
-        let (mut block, next) = encode_block(&pcm, history, reset);
-        if index + 1 == blocks {
-            block[0] |= 1 | (u8::from(sample.loop_start.is_some()) << 1);
-        }
+        let (block, next) = encode_block(&pcm, history, reset);
         bytes.extend_from_slice(&block);
         history = next;
+    }
+    if sample.loop_start.is_some() {
+        let last_header = bytes.len() - 9;
+        bytes[last_header] |= 3;
+    } else {
+        // END without LOOP mutes the S-DSP voice as soon as it sees the header.
+        bytes.extend_from_slice(&BRR_SILENT_END);
     }
     Ok(bytes)
 }

@@ -1,4 +1,4 @@
-use std::io::Cursor;
+use std::io::{Cursor, Write};
 use studio_core::*;
 
 fn fixture() -> Project {
@@ -29,6 +29,41 @@ fn canonical_json_and_zip_round_trip() {
             .unwrap_err()
             .to_string()
             .contains("Duplicate asset ID p")
+    );
+}
+
+#[test]
+fn project_zip_rejects_duplicate_manifest_entries() {
+    let zip = |entries: &[(&str, &str)]| {
+        let mut writer = zip::ZipWriter::new(Cursor::new(Vec::new()));
+        let options = zip::write::SimpleFileOptions::default()
+            .compression_method(zip::CompressionMethod::Deflated);
+        for &(path, name) in entries {
+            writer.start_file(path, options).unwrap();
+            write!(writer, r#"{{"version":1,"name":"{name}","assets":{{}}}}"#).unwrap();
+        }
+        writer.finish().unwrap().into_inner()
+    };
+    assert_eq!(
+        load_project(&zip(&[(PROJECT_FILE, "First")])).unwrap().name,
+        "First"
+    );
+    let mut archive = zip(&[(PROJECT_FILE, "First"), ("backup.json", "Second")]);
+    // The writer rejects duplicate names. Rename the second entry in both headers.
+    let offsets: Vec<_> = archive
+        .windows(PROJECT_FILE.len())
+        .enumerate()
+        .filter_map(|(offset, name)| (name == b"backup.json").then_some(offset))
+        .collect();
+    assert_eq!(offsets.len(), 2);
+    for offset in offsets {
+        archive[offset..offset + PROJECT_FILE.len()].copy_from_slice(PROJECT_FILE.as_bytes());
+    }
+    assert!(
+        load_project(&archive)
+            .unwrap_err()
+            .to_string()
+            .contains("ZIP must contain exactly one studio.json at its root")
     );
 }
 
@@ -271,6 +306,53 @@ fn wav_and_brr_round_trip_and_require_explicit_loop_offset() {
     assert_eq!(preview.sample_rate, 32_000);
     assert!(preview.pcm.iter().any(|&value| value != 0));
     assert_eq!(audio_preview(&project, "lab-chime").unwrap(), preview);
+}
+
+#[test]
+fn one_shot_brr_preserves_audio_before_dsp_mutes() {
+    for (length, pulse_start) in [(16, 0), (19, 16)] {
+        let mut pcm = vec![0; length];
+        pcm[pulse_start..].fill(4096);
+        let pulse = Sample {
+            sample_rate: 32_000,
+            pcm,
+            loop_start: None,
+        };
+        let brr = write_brr(&pulse).unwrap();
+        // The S-DSP mutes when it sees END without LOOP. Verify every block
+        // carrying the pulse comes before that header, including the tail.
+        let mute_offset = brr
+            .chunks_exact(9)
+            .position(|block| block[0] & 3 == 1)
+            .unwrap()
+            * 9;
+        assert_eq!(mute_offset, length.div_ceil(16) * 9);
+        assert_eq!(&brr[mute_offset..], &[1, 0, 0, 0, 0, 0, 0, 0, 0]);
+        let decoded = read_brr(&brr, 32_000, None).unwrap();
+        assert_eq!(&decoded.pcm[..length], &pulse.pcm);
+        assert_eq!(decoded.pcm.len(), length.next_multiple_of(16));
+    }
+}
+
+#[test]
+fn one_shot_brr_terminator_is_excluded_from_sample_and_included_in_aram_budget() {
+    let mut brr = vec![0; (MAX_SAMPLES / 16 + 1) * 9];
+    let terminator = brr.len() - 9;
+    brr[terminator] = 1;
+    assert_eq!(read_brr(&brr, 32_000, None).unwrap().pcm.len(), MAX_SAMPLES);
+
+    let mut project = fixture();
+    project.assets.insert(
+        "budget-sample".into(),
+        Asset::Sample(Sample {
+            sample_rate: 32_000,
+            pcm: vec![0; (65_536 / 9) * 16],
+            loop_start: None,
+        }),
+    );
+    assert!(validate(&project).iter().any(|diagnostic| {
+        diagnostic.code == "sample_aram_budget" && diagnostic.path == "/assets/budget-sample/data"
+    }));
 }
 
 #[test]
