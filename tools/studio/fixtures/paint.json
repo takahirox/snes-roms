@@ -1,0 +1,23 @@
+[
+  {
+    "op": "set_pixel",
+    "id": "compass",
+    "x": 0,
+    "y": 0,
+    "index": 8
+  },
+  {
+    "op": "place",
+    "id": "chromatic-lab",
+    "layer": "signals",
+    "x": 4,
+    "y": 4,
+    "cell": {
+      "asset": "compass",
+      "flip_x": true,
+      "metadata": {
+        "fixture": true
+      }
+    }
+  }
+]

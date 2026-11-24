@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Studio project workflow regressions</title>
+<!-- After web/build.sh, serve tools/studio over localhost and open /web/tests/folder-workflows.html.
+     Launch Chrome with --autoplay-policy=no-user-gesture-required for the scripted playback tests.
+     To include the CLI round trip, run node web/tests/browser-cli.mjs /path/to/chrome from tools/studio. -->
+<pre id="result" data-result="running">Running…</pre>
+<iframe id="workbench" title="Studio under test"></iframe>
+<script type="module">
+  const result = document.getElementById("result");
+  const iframe = document.getElementById("workbench");
+  const picks = [];
+  let confirmations = 0;
+  let demoRead;
+  const checkWithCli = new URLSearchParams(location.search).has("cli");
+  window.pickFolder = () => {
+    if (!picks.length) throw new Error("No test folder queued");
+    return picks.shift();
+  };
+  window.confirmDiscard = () => { confirmations++; return false; };
+  window.pauseDemoRead = () => demoRead?.pause();
+
+  function equal(actual, expected, description) {
+    if (actual !== expected) throw new Error(`${description}: expected ${expected}, got ${actual}`);
+  }
+
+  function folder(name, content, { beforeRead, beforeWrite, beforeClose, onAbort } = {}) {
+    const files = new Map(content ? [["studio.json", content]] : []);
+    return {
+      name, files,
+      async *keys() { yield* files.keys(); },
+      async getFileHandle(key, { create = false } = {}) {
+        if (!files.has(key)) {
+          if (!create) throw new DOMException("Missing file", "NotFoundError");
+          files.set(key, new Uint8Array());
+        }
+        return {
+          async getFile() {
+            const file = new Blob([files.get(key)]);
+            return {
+              size: file.size,
+              async arrayBuffer() { await beforeRead?.(); return file.arrayBuffer(); },
+            };
+          },
+          async createWritable() {
+            let pending;
+            return {
+              async write(bytes) { await beforeWrite?.(); pending = bytes; },
+              async close() { await beforeClose?.(); files.set(key, pending); },
+              async abort() { pending = undefined; onAbort?.(); },
+            };
+          },
+        };
+      },
+      async removeEntry(key) { files.delete(key); },
+    };
+  }
+
+  function gate() {
+    const entered = Promise.withResolvers();
+    const released = Promise.withResolvers();
+    return {
+      entered: entered.promise,
+      pause() { entered.resolve(); return released.promise; },
+      resume: released.resolve,
+    };
+  }
+
+  function report(state, text) {
+    result.dataset.result = state;
+    result.textContent = text;
+    if (checkWithCli) fetch("/test-result", { method: "POST", body: JSON.stringify({ state, text }) });
+  }
+
+  const timeout = setTimeout(() => report("failed", "Timed out waiting for Studio or test I/O."), 10000);
+  try {
+    const site = "../../_site/";
+    const response = await fetch(site + "index.html");
+    if (!response.ok) throw new Error("Build Studio with web/build.sh before running these tests.");
+    const html = await response.text();
+    const loaded = new Promise((resolve) => { iframe.onload = resolve; });
+    iframe.srcdoc = html.replace("<head>", `<head><base href="${site}">
+      <script>
+        window.showDirectoryPicker = parent.pickFolder;
+        window.confirm = parent.confirmDiscard;
+        const fetchStudio = window.fetch.bind(window);
+        window.fetch = async (url, options) => {
+          if (url === "./demo/studio.json") await parent.pauseDemoRead();
+          return fetchStudio(url, options);
+        };
+      <\/script>`);
+    await loaded;
+    const browser = iframe.contentWindow;
+    const doc = iframe.contentDocument;
+    const byId = (id) => doc.getElementById(id);
+    while (doc.querySelector("header").inert) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      if (result.dataset.result === "failed") throw new Error(byId("status").textContent);
+    }
+
+    const project = (name, assets = {}) => new TextEncoder().encode(JSON.stringify({ version: 1, name, assets }));
+    const savedName = (directory) => JSON.parse(new TextDecoder().decode(directory.files.get("studio.json"))).name;
+    const open = (directory) => { picks.push(directory); return byId("directory").onclick(); };
+    const submitDialog = () => byId("dialog-content").onsubmit(new iframe.contentWindow.Event("submit"));
+    const rename = (name) => {
+      doc.querySelector("#inspector input").value = name;
+      doc.querySelector("#inspector form").requestSubmit();
+    };
+    const expectEditAndHistory = (name, editedName) => {
+      equal(byId("project-title").textContent, `${editedName} · Edited`, "Kept the edit when discard was declined");
+      byId("undo").click();
+      equal(byId("project-title").textContent, name, "Kept the project's undo history");
+      byId("redo").click();
+      equal(byId("project-title").textContent, `${editedName} · Edited`, "Kept the project's redo history");
+      byId("undo").click();
+    };
+    const chooseFile = (picker, name, bytes, beforeRead) => {
+      const file = new iframe.contentWindow.File([bytes], name);
+      const read = file.arrayBuffer.bind(file);
+      file.arrayBuffer = async () => { await beforeRead?.(); return read(); };
+      const transfer = new iframe.contentWindow.DataTransfer();
+      transfer.items.add(file);
+      picker.files = transfer.files;
+    };
+    const openFile = (name, bytes, beforeRead) => {
+      const picker = byId("project-file");
+      picker.click = () => {};
+      byId("open").click();
+      chooseFile(picker, name, bytes, beforeRead);
+      return picker.onchange({ target: picker });
+    };
+    const openDemo = () => {
+      byId("tools").click();
+      doc.querySelector("#dialog select").value = "demo";
+      return submitDialog();
+    };
+    const dialog = byId("dialog");
+    const cancelButton = () => dialog.querySelector("button[type=button]");
+
+    const write = gate();
+    const a = folder("folder-a", undefined, { beforeWrite: write.pause });
+    const b = folder("folder-b", project("Project B"));
+    const originalName = byId("project-title").textContent;
+    byId("save").click();
+    doc.querySelector("#dialog select").value = "new-folder";
+    picks.push(a);
+    const savingA = submitDialog();
+    await write.entered;
+    byId("dialog").close();
+    await open(b);
+    equal(byId("project-title").textContent, "Project B", "Opened B while A was writing");
+    write.resume();
+    await savingA;
+    equal(savedName(a), originalName, "A received its own manifest");
+    byId("save").click();
+    const destination = doc.querySelector("#dialog select").selectedOptions[0].textContent;
+    equal(destination, "Save in folder-b", "B kept its save destination after A finished");
+    await submitDialog();
+    equal(byId("status").textContent, "Saved studio.json in folder-b", "B's folder save completed");
+    equal(savedName(b), "Project B", "B saved with its own disk fingerprint");
+    equal(savedName(a), originalName, "B did not overwrite A");
+
+    const read = gate();
+    const openingC = open(folder("folder-c", project("Project C"), { beforeRead: read.pause }));
+    await read.entered;
+    rename("Edited B");
+    equal(byId("project-title").textContent, "Edited B · Edited", "Edited B while C was loading");
+    read.resume();
+    await openingC;
+    equal(confirmations, 1, "Asked whether to discard the edit made during the read");
+    expectEditAndHistory("Project B", "Edited B");
+
+    const fileRead = gate();
+    const openingFile = openFile("studio.json", project("File project"), fileRead.pause);
+    await fileRead.entered;
+    rename("Edited during file open");
+    fileRead.resume();
+    await openingFile;
+    equal(confirmations, 2, "Asked whether to discard the edit made during the file read");
+    expectEditAndHistory("Project B", "Edited during file open");
+
+    const { default: init, Studio } = await import(site + "pkg/studio_web.js");
+    await init();
+    const zipProject = new Studio(project("ZIP project"));
+    const zip = zipProject.save(true);
+    zipProject.free();
+    const zipRead = gate();
+    const openingZip = openFile("studio-project.zip", zip, zipRead.pause);
+    await zipRead.entered;
+    await open(folder("folder-d", project("Project D")));
+    zipRead.resume();
+    await openingZip;
+    equal(byId("project-title").textContent, "Project D", "A pending ZIP never replaces a different active project");
+    equal(confirmations, 2, "No discard prompt for a stale ZIP read");
+    await openFile("studio-project.zip", zip);
+    equal(byId("project-title").textContent, "ZIP project", "Opened a ZIP without concurrent edits");
+
+    demoRead = gate();
+    const openingDemo = openDemo();
+    await demoRead.entered;
+    rename("Edited during demo open");
+    demoRead.resume();
+    await openingDemo;
+    equal(confirmations, 3, "Asked whether to discard the edit made during the demo fetch");
+    expectEditAndHistory("ZIP project", "Edited during demo open");
+    for (const cancel of [() => cancelButton().click(), () => dialog.requestClose()]) {
+      demoRead = gate();
+      const canceledDemo = openDemo();
+      await demoRead.entered;
+      cancel();
+      equal(dialog.open, false, "Dismissed Open demo during the fetch");
+      demoRead.resume();
+      await canceledDemo;
+      equal(byId("project-title").textContent, "ZIP project", "Cancel kept the active project after the demo fetch");
+      equal(confirmations, 3, "Cancel did not prompt to replace the project");
+    }
+    demoRead = undefined;
+    await openDemo();
+    equal(byId("project-title").textContent, originalName, "Opened the demo without concurrent edits");
+
+    const undoFolder = folder("open-after-save", project("Before the saves"));
+    await open(undoFolder);
+    rename("First saved revision");
+    byId("save").click();
+    await submitDialog();
+    equal(byId("project-title").textContent, "First saved revision", "Started the open from a clean revision");
+    const savedRevisionRead = gate();
+    const openingAfterSave = openFile("replacement.json", project("Replacement"), savedRevisionRead.pause);
+    await savedRevisionRead.entered;
+    rename("Second saved revision");
+    byId("save").click();
+    await submitDialog();
+    equal(savedName(undoFolder), "Second saved revision", "Saved the new edit during the pending read");
+    byId("undo").click();
+    equal(byId("project-title").textContent, "First saved revision · Edited", "Undo returned to the opening revision with unsaved changes");
+    savedRevisionRead.resume();
+    await openingAfterSave;
+    equal(confirmations, 4, "Asked whether to discard the unsaved undo after the save");
+    equal(byId("project-title").textContent, "First saved revision · Edited", "Declining discard kept the current project");
+    byId("undo").click();
+    equal(byId("project-title").textContent, "Before the saves · Edited", "Kept undo history after declining discard");
+    byId("redo").click();
+    byId("redo").click();
+    equal(byId("project-title").textContent, "Second saved revision", "Kept redo history and the saved revision");
+
+    const mapAssets = (source) => ({
+      ground: { kind: "tileset", data: { tiles: [], metatiles: [] } },
+      map: { kind: "map", data: {
+        tileset: "ground", width: 1, height: 1, cell_width: 1, cell_height: 1,
+        layers: [{ id: `${source}-layer`, visible: true, cells: [null] }], metadata: { source },
+      } },
+    });
+    await open(folder("map-a", project("Map project A", mapAssets("a"))));
+    const mapRead = gate();
+    const mapB = folder("map-b", project("Map project B", mapAssets("b")), { beforeRead: mapRead.pause });
+    const openingMapB = open(mapB);
+    await mapRead.entered;
+    const addLayer = () => Array.from(byId("inspector").querySelectorAll("button"))
+      .find((node) => node.textContent === "Add").click();
+    addLayer();
+    equal(byId("dialog-title").textContent, "Add map layer", "Opened A's map dialog during the read");
+    dialog.querySelector("input").value = "extra-layer";
+    const staleLayerSubmit = byId("dialog-content").onsubmit;
+    mapRead.resume();
+    await openingMapB;
+    const wasOpen = dialog.open;
+    await staleLayerSubmit(new iframe.contentWindow.Event("submit"));
+    equal(byId("project-title").textContent, "Map project B", "Submitting A's stale dialog left B clean");
+    equal(wasOpen, false, "Replacing A dismissed its map dialog");
+    equal(byId("undo").disabled, true, "A's stale dialog created no history in B");
+    byId("save").click();
+    await submitDialog();
+    const savedMap = JSON.parse(new TextDecoder().decode(mapB.files.get("studio.json"))).assets.map.data;
+    equal(savedMap.metadata.source, "b", "B kept its own map metadata");
+    equal(savedMap.layers.map((layer) => layer.id).join(","), "b-layer", "B kept its own map layers");
+    addLayer();
+    dialog.querySelector("input").value = "extra-layer";
+    await submitDialog();
+    equal(byId("project-title").textContent, "Map project B · Edited", "B's new map dialog applied its edit");
+    byId("undo").click();
+
+    await open(folder("save-source", project("Original revision")));
+    const olderWrite = gate();
+    const olderFolder = folder("older-save", undefined, { beforeWrite: olderWrite.pause });
+    const newerFolder = folder("newer-save");
+    const saveAs = (directory) => {
+      byId("save").click();
+      doc.querySelector("#dialog select").value = "new-folder";
+      picks.push(directory);
+      return submitDialog();
+    };
+
+    const olderSave = saveAs(olderFolder);
+    await olderWrite.entered;
+    byId("dialog").close();
+    rename("Newer revision");
+    await saveAs(newerFolder);
+    equal(byId("project-title").textContent, "Newer revision", "Newer save marked its revision clean");
+    olderWrite.resume();
+    await olderSave;
+    equal(savedName(olderFolder), "Original revision", "Older save wrote its own revision");
+    equal(savedName(newerFolder), "Newer revision", "Newer save wrote the edited revision");
+    equal(byId("project-title").textContent, "Newer revision", "Late save kept the newer revision clean");
+    equal(byId("status").textContent, "Saved studio.json in newer-save", "Late save kept the newer save status");
+    byId("save").click();
+    equal(doc.querySelector("#dialog select").selectedOptions[0].textContent, "Save in newer-save", "Late save kept the newer destination");
+    await submitDialog();
+    equal(byId("status").textContent, "Saved studio.json in newer-save", "Next save used the newer destination's fingerprint");
+
+    let stagedWrite = gate();
+    let committing;
+    let abortedWrites = 0;
+    const originalManifest = project("Project before Cancel");
+    const destinationFolder = folder("cancel-save", originalManifest, {
+      beforeWrite: () => stagedWrite?.pause(),
+      beforeClose: () => committing?.pause(),
+      onAbort: () => { abortedWrites++; },
+    });
+    await open(destinationFolder);
+    rename("Edited before Cancel");
+    byId("save").click();
+    const canceledSave = submitDialog();
+    await stagedWrite.entered;
+    equal(cancelButton().textContent, "Cancel", "Found the save dialog's Cancel button");
+    equal(cancelButton().disabled, false, "Cancel was available while the write was staged");
+    cancelButton().click();
+    equal(dialog.open, false, "Cancel closed the save dialog");
+    stagedWrite.resume();
+    await canceledSave;
+    equal(abortedWrites, 1, "Cancel aborted the staged writable");
+    equal(destinationFolder.files.get("studio.json"), originalManifest, "Cancel preserved the on-disk manifest");
+    equal(destinationFolder.files.size, 1, "Cancel removed the save marker");
+    equal(byId("project-title").textContent, "Edited before Cancel · Edited", "Canceled edits stayed unsaved");
+
+    stagedWrite = undefined;
+    committing = gate();
+    byId("save").click();
+    const committedSave = submitDialog();
+    await committing.entered;
+    equal(cancelButton().disabled, true, "Cancel was disabled once commit began");
+    equal(dialog.querySelector("button[type=submit]").textContent, "Saving…", "The dialog showed commit progress");
+    cancelButton().click();
+    dialog.requestClose();
+    equal(dialog.open, true, "A dismissal request could not close the dialog during commit");
+    committing.resume();
+    await committedSave;
+    equal(savedName(destinationFolder), "Edited before Cancel", "Retry committed the edited manifest");
+    equal(byId("project-title").textContent, "Edited before Cancel", "Commit marked the edit saved");
+
+    const demo = new Studio(new Uint8Array(await (await fetch(site + "demo/studio.json")).arrayBuffer()));
+    const png = demo.export("compass", '{"format":"indexed-png"}');
+    const wav = demo.export("test-pulse", '{"format":"wav"}');
+    const originalPcm = JSON.parse(demo.manifest()).assets["test-pulse"].data.pcm;
+    demo.free();
+
+    const startFileTool = async (action, filename, bytes, beforeRead) => {
+      byId("tools").click();
+      dialog.querySelector("select").value = action;
+      await submitDialog();
+      if (action === "image") dialog.querySelector('input[type="checkbox"]').checked = true;
+      chooseFile(dialog.querySelector('input[type="file"]'), filename, bytes, beforeRead);
+      return submitDialog();
+    };
+    const hasAsset = (id) => Array.from(byId("assets").querySelectorAll("button"))
+      .some((node) => node.textContent === id);
+    for (const [action, filename, bytes, id] of [
+      ["image", "compass.png", png, "imported-tiles"],
+      ["sample", "test-pulse.wav", wav, "sample"],
+    ]) {
+      const sourceName = `Project before ${filename}`;
+      await open(folder("import-source", project(sourceName)));
+      const canceledRead = gate();
+      const canceledImport = startFileTool(action, filename, bytes, canceledRead.pause);
+      await canceledRead.entered;
+      if (action === "image") cancelButton().click();
+      else dialog.requestClose();
+      equal(dialog.open, false, `Dismissed the ${filename} import while reading`);
+      canceledRead.resume();
+      await canceledImport;
+      equal(hasAsset(id), false, `Cancel prevented the ${filename} import`);
+      equal(byId("project-title").textContent, sourceName, "Cancel left the project clean");
+
+      const replacementName = `Replacement during ${filename}`;
+      const replacementRead = gate();
+      const replacing = open(folder("import-replacement", project(replacementName), { beforeRead: replacementRead.pause }));
+      await replacementRead.entered;
+      const staleRead = gate();
+      const staleImport = startFileTool(action, filename, bytes, staleRead.pause);
+      await staleRead.entered;
+      replacementRead.resume();
+      await replacing;
+      equal(dialog.open, false, "Replacing the project dismissed its pending import dialog");
+      staleRead.resume();
+      await staleImport;
+      equal(hasAsset(id), false, `The replacement project did not receive ${filename}`);
+      equal(byId("project-title").textContent, replacementName, "The replacement project stayed clean");
+      equal(byId("status").textContent, "Project ready", "A stale import left the replacement status intact");
+
+      await startFileTool(action, filename, bytes);
+      equal(hasAsset(id), true, `An active import added ${filename}`);
+      byId("undo").click();
+    }
+
+    const sampleFolder = folder("sample-submission", project("Sample submission"));
+    await open(sampleFolder);
+    const sampleRead = gate();
+    const importingSample = startFileTool("sample", "first.wav", wav, sampleRead.pause);
+    await sampleRead.entered;
+    chooseFile(dialog.querySelector('input[type="file"]'), "second.wav", new Uint8Array());
+    dialog.querySelector('input:not([type])').value = "second-sample";
+    dialog.querySelector("select").value = "brr";
+    sampleRead.resume();
+    await importingSample;
+    equal(hasAsset("sample"), true, "Import used the submitted asset ID");
+    equal(hasAsset("second-sample"), false, "Later edits to the form did not change the submitted import");
+    byId("save").click();
+    await submitDialog();
+    const importedPcm = JSON.parse(new TextDecoder().decode(sampleFolder.files.get("studio.json"))).assets.sample.data.pcm;
+    equal(JSON.stringify(importedPcm), JSON.stringify(originalPcm), "Import used the submitted WAV bytes");
+
+    const fixtureRom = new Uint8Array(0x8000);
+    fixtureRom.set(new TextEncoder().encode("Studio test"), 0x7fc0);
+    const codecInput = Uint8Array.of(1, 1, 1, 2);
+    const downloads = [];
+    const anchor = browser.HTMLAnchorElement.prototype;
+    const clickLink = anchor.click;
+    anchor.click = function () { downloads.push(this.download); };
+    try {
+      for (const [action, filename, bytes] of [
+        ["rom", "header.sfc", fixtureRom],
+        ["rle", "codec.bin", codecInput],
+      ]) {
+        const read = gate();
+        const pending = startFileTool(action, filename, bytes, read.pause);
+        await read.entered;
+        if (action === "rom") cancelButton().click();
+        else dialog.requestClose();
+        equal(dialog.open, false, `Dismissed ${action} while reading`);
+        byId("save").click();
+        const statusBefore = byId("status").textContent;
+        read.resume();
+        await pending;
+        equal(byId("dialog-title").textContent, "Save project", `Canceled ${action} preserved the new dialog`);
+        equal(byId("status").textContent, statusBefore, `Canceled ${action} preserved status`);
+        equal(downloads.length, 0, `Canceled ${action} produced no download`);
+        cancelButton().click();
+      }
+
+      const romRead = gate();
+      const readingRom = startFileTool("rom", "header.sfc", fixtureRom, romRead.pause);
+      await romRead.entered;
+      dialog.querySelector("select").value = "hi_rom";
+      romRead.resume();
+      await readingRom;
+      equal(byId("dialog-title").textContent, "ROM header", "Active ROM inspection opened its results");
+      equal(JSON.parse(dialog.querySelector("pre").textContent).title, "Studio test", "Read the fixture ROM with the submitted mapping");
+      cancelButton().click();
+      await startFileTool("rle", "codec.bin", codecInput);
+      equal(downloads.join(","), "codec.bin.srl", "Active RLE operation downloaded its result");
+    } finally {
+      anchor.click = clickLink;
+    }
+
+    const sampleRate = 32000;
+    const loopStart = sampleRate / 10;
+    const pcm = [...Array(loopStart).fill(-8192), ...Array(loopStart).fill(16384)];
+    const lowRate = 1000;
+    const lowRatePcm = pcm.slice(0, lowRate / 5);
+    await open(folder("audio-preview", project("Audio preview", {
+      "one-shot": { kind: "sample", data: { sample_rate: lowRate, pcm: lowRatePcm, loop_start: null } },
+      "with-loop": { kind: "sample", data: { sample_rate: sampleRate, pcm, loop_start: loopStart } },
+    })));
+    const AudioContext = browser.AudioContext;
+    let playback;
+    let source;
+    let analyser;
+    class TestAudioContext extends AudioContext {
+      constructor() {
+        super({ sinkId: { type: "none" } });
+        playback = this;
+      }
+      createBufferSource() {
+        source = super.createBufferSource();
+        analyser = this.createAnalyser();
+        source.connect(analyser);
+        return source;
+      }
+    }
+    const play = (id) => {
+      source = undefined;
+      browser.AudioContext = TestAudioContext;
+      try {
+        Array.from(byId("assets").querySelectorAll("button")).find((node) => node.textContent === id).click();
+        Array.from(byId("toolbar").querySelectorAll("button")).find((node) => node.textContent === "Play audio").click();
+      } finally { browser.AudioContext = AudioContext; }
+    };
+    play("with-loop");
+    equal(source?.loop, true, "Sample with a loop point used looping playback");
+    const loopSeconds = source.loopStart / source.playbackRate.value;
+    if (Math.abs(loopSeconds - 0.1) > 0.00001) throw new Error(`Unexpected loop start at ${loopSeconds} s`);
+    while (playback.currentTime < 0.35) {
+      if (result.dataset.result === "failed") {
+        throw new Error(`Looping audio stopped at ${playback.currentTime} s (${playback.state})`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    const output = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(output);
+    if (!output.every((value) => Math.abs(value - 0.5) < 0.01)) {
+      throw new Error("Looping playback did not continue with the authored tail");
+    }
+    const closedPlayback = new Promise((resolve) => playback.addEventListener("statechange", () => {
+      if (playback.state === "closed") resolve();
+    }));
+    Array.from(dialog.querySelectorAll("button")).find((node) => node.textContent === "Close").click();
+    await closedPlayback;
+
+    play("one-shot");
+    equal(source?.loop, false, "Low-rate sample used one-shot PCM playback");
+    equal(source.buffer.length, lowRatePcm.length, "One-shot preview kept every authored sample");
+    const duration = source.buffer.duration / source.playbackRate.value;
+    if (Math.abs(duration - lowRatePcm.length / lowRate) > 0.00001) {
+      throw new Error(`Unexpected one-shot duration of ${duration} s`);
+    }
+    await new Promise((resolve) => source.addEventListener("ended", resolve, { once: true }));
+    const replay = Array.from(dialog.querySelectorAll("button")).find((node) => node.textContent === "Play");
+    equal(Boolean(replay), true, "One-shot preview offered replay after ending");
+    const firstSource = source;
+    replay.click();
+    equal(source === firstSource, false, "Replay started a fresh one-shot source");
+    Array.from(dialog.querySelectorAll("button")).find((node) => node.textContent === "Close").click();
+
+    const largeSample = { kind: "sample", data: { sample_rate: 32000, pcm: Array(2_800_000).fill(0) } };
+    await openFile("oversized.json", project("Oversized samples", { first: largeSample, second: largeSample }));
+    equal(byId("status").textContent, "Loaded with errors. See Validation for details.", "Opening an unsavable manifest flagged an error");
+    byId("validation").click();
+    if (!dialog.querySelector("pre").textContent.includes("Canonical project manifest exceeds 64 MiB")) {
+      throw new Error("Validation did not report the canonical manifest limit");
+    }
+    cancelButton().click();
+
+    const tile = { kind: "tile", data: { bpp: 2, palette: "colors", pixels: Array(64).fill(0) } };
+    const cells = Array(10).fill(null);
+    cells[3] = { asset: "edge" };
+    cells[5] = { asset: "next-row" };
+    const mapFixture = (name) => project(name, {
+      colors: { kind: "palette", data: { colors: [0] } },
+      edge: tile,
+      "next-row": tile,
+      tiles: { kind: "tileset", data: { tiles: ["edge", "next-row"], metatiles: [] } },
+      map: { kind: "map", data: { width: 5, height: 2, cell_width: 1, cell_height: 1, tileset: "tiles",
+        layers: [{ id: "overlay", visible: true, cells: Array(10).fill(null) }, { id: "ground", visible: true, cells }] } },
+    });
+
+    const withMetadata = JSON.parse(new TextDecoder().decode(mapFixture("Map metadata")));
+    const mapData = withMetadata.assets.map.data;
+    const numberMarkers = { metadata: { nested: ["float", "negative-zero", "large-integer"] } };
+    Object.assign(mapData, numberMarkers);
+    for (const layer of mapData.layers) Object.assign(layer, numberMarkers);
+    Object.assign(mapData.layers[1].cells[3], numberMarkers);
+    withMetadata.assets["other-tiles"] = withMetadata.assets.tiles;
+    const typedMapJson = (value) => JSON.stringify(value)
+      .replaceAll('"float"', "1.0").replaceAll('"negative-zero"', "-0.0").replaceAll('"large-integer"', "9007199254740991");
+    const originalMap = typedMapJson(withMetadata);
+    await openFile("map-metadata.json", new TextEncoder().encode(originalMap));
+    const control = (label) => Array.from(doc.querySelectorAll("#inspector label"))
+      .find((node) => node.firstElementChild.textContent === label).control;
+    const visible = control("Visible");
+    visible.checked = false;
+    visible.form.requestSubmit();
+    const tileset = control("Tileset");
+    tileset.value = "other-tiles";
+    tileset.form.requestSubmit();
+    equal(byId("status").textContent, "Edit applied", "Applied map settings");
+    const downloadManifest = async () => {
+      // Read the same Blob the download action hands to the browser.
+      const anchor = browser.HTMLAnchorElement.prototype;
+      const click = anchor.click;
+      let response;
+      anchor.click = function () { response = browser.fetch(this.href); };
+      try {
+        byId("save").click();
+        dialog.querySelector("select").value = "json";
+        await submitDialog();
+        return (await response).text();
+      } finally {
+        anchor.click = click;
+      }
+    };
+    const savedMapJson = await downloadManifest();
+    equal(savedMapJson.match(/\b1\.0\b/g)?.length, 4, "Preserved the floating-point metadata in the download");
+    equal(savedMapJson.match(/-0\.0\b/g)?.length, 4, "Preserved negative zero metadata in the download");
+    const savedData = JSON.parse(savedMapJson).assets.map.data;
+    equal(savedData.layers[1].visible, false, "Downloaded the layer visibility change");
+    equal(savedData.tileset, "other-tiles", "Downloaded the map tileset change");
+    if (checkWithCli) {
+      const response = await fetch("/cli-diff", {
+        method: "POST", body: JSON.stringify({ before: originalMap, after: savedMapJson }),
+      });
+      if (!response.ok) throw new Error(await response.text());
+      const changes = (await response.json()).changes.map(({ path, before, after }) => [path, before, after]);
+      equal(JSON.stringify(changes), JSON.stringify([
+        ["/assets/map/data/layers/1/visible", true, false],
+        ["/assets/map/data/tileset", "tiles", "other-tiles"],
+      ]), "CLI diff of the browser download");
+    }
+    const mapMetadata = control("Map metadata");
+    mapMetadata.value = mapMetadata.value.replace('"nested"', '"renamed"');
+    mapMetadata.form.requestSubmit();
+    const editedMapJson = await downloadManifest();
+    equal(editedMapJson.match(/\b1\.0\b/g)?.length, 4, "Editing metadata preserved its untouched floating-point value");
+    equal(editedMapJson.match(/-0\.0\b/g)?.length, 4, "Editing metadata preserved its untouched negative zero");
+    equal(Object.hasOwn(JSON.parse(editedMapJson).assets.map.data.metadata, "renamed"), true, "Saved the metadata edit");
+    for (let i = 0; i < 3; i++) byId("undo").click();
+    equal(byId("project-title").textContent, "Map metadata", "Undid the metadata and settings edits");
+
+    const clickButton = (id, label) => Array.from(byId(id).querySelectorAll("button"))
+      .find((node) => node.textContent === label).click();
+    const press = (key, shiftKey = false) => byId("preview").dispatchEvent(new browser.KeyboardEvent("keydown", { key, shiftKey }));
+    const beforeAdd = await downloadManifest();
+
+    const openAssetJson = async () => {
+      const editor = Array.from(byId("inspector").querySelectorAll("details"))
+        .find((node) => node.querySelector("summary").textContent === "Asset JSON");
+      const toggled = new Promise((resolve) => editor.addEventListener("toggle", resolve, { once: true }));
+      editor.open = true;
+      await toggled;
+      return control("Asset data");
+    };
+    const advancedData = await openAssetJson();
+    const advancedJson = advancedData.value;
+    equal(advancedJson.match(/\b1\.0\b/g)?.length, 4, "Asset JSON displayed floats from Rust");
+    equal(advancedJson.match(/-0\.0\b/g)?.length, 4, "Asset JSON displayed negative zeros from Rust");
+    equal(advancedJson.match(/9007199254740991/g)?.length, 4, "Asset JSON displayed large integers exactly");
+    advancedData.form.requestSubmit();
+    equal(await downloadManifest(), beforeAdd, "Unchanged Asset JSON Apply preserved the manifest byte for byte");
+    equal(byId("undo").disabled, true, "Unchanged Asset JSON Apply created no undo entry");
+    equal(byId("redo").disabled, false, "Unchanged Asset JSON Apply preserved redo history");
+
+    advancedData.value = advancedJson + "{}";
+    advancedData.form.requestSubmit();
+    equal(byId("status").textContent.includes("trailing characters"), true, "The shared parser rejected trailing Asset JSON");
+    advancedData.value = advancedJson.replace("1.0", "1e400");
+    advancedData.form.requestSubmit();
+    equal(byId("status").textContent.includes("number out of range"), true, "The shared parser rejected Asset JSON overflow");
+    equal(await downloadManifest(), beforeAdd, "Rejected Asset JSON left the manifest unchanged");
+    equal(byId("undo").disabled, true, "Rejected Asset JSON created no undo entry");
+    byId("redo").click();
+    equal(byId("project-title").textContent, "Map metadata · Edited", "Rejected Asset JSON preserved redo history");
+    byId("undo").click();
+
+    const editedAssetData = await openAssetJson();
+    editedAssetData.value = editedAssetData.value.replace('"tileset": "tiles"', '"tileset": "other-tiles"');
+    editedAssetData.form.requestSubmit();
+    equal(await downloadManifest(), beforeAdd.replace('"tileset": "tiles"', '"tileset": "other-tiles"'),
+      "Asset JSON applied the tileset change and preserved metadata");
+    byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo restored the asset after Asset JSON Apply");
+
+    for (let x = 0; x < 3; x++) press("ArrowRight");
+    clickButton("toolbar", "Copy");
+    addLayer();
+    dialog.querySelector("input").value = "extra-layer";
+    await submitDialog();
+    const withLayer = await downloadManifest();
+    const withLayerData = JSON.parse(withLayer).assets.map.data;
+    const addedLayer = withLayerData.layers[2];
+    equal(addedLayer.id, "extra-layer", "Appended the new layer");
+    equal(addedLayer.visible, true, "The new layer is visible");
+    equal(JSON.stringify(addedLayer.cells), JSON.stringify(Array(10).fill(null)), "The new layer is empty");
+    equal(withLayer.match(/\b1\.0\b/g)?.length, 4, "Adding a layer preserved the floating-point metadata");
+    equal(withLayer.match(/-0\.0\b/g)?.length, 4, "Adding a layer preserved negative zero metadata");
+    equal(withLayer.match(/9007199254740991/g)?.length, 4, "Adding a layer preserved large integer metadata");
+
+    clickButton("toolbar", "Paste");
+    const withPaste = await downloadManifest();
+    const pastedLayers = JSON.parse(withPaste).assets.map.data.layers;
+    equal(JSON.stringify(pastedLayers[2].cells[3]), JSON.stringify(pastedLayers[1].cells[3]), "Pasted the copied cell into the new layer");
+    equal(withPaste.match(/\b1\.0\b/g)?.length, 5, "Paste preserved the copied floating-point metadata");
+    equal(withPaste.match(/-0\.0\b/g)?.length, 5, "Paste preserved the copied negative zero");
+    equal(withPaste.match(/9007199254740991/g)?.length, 5, "Paste preserved the copied large integer");
+    byId("undo").click();
+    equal(await downloadManifest(), withLayer, "Undo restored the empty layer and its existing metadata");
+    byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo restored the original map manifest");
+    byId("redo").click();
+    equal(await downloadManifest(), withLayer, "Redo restored the added layer byte for byte");
+    byId("redo").click();
+    equal(await downloadManifest(), withPaste, "Redo restored the pasted cell and its metadata byte for byte");
+    byId("undo").click();
+    byId("undo").click();
+
+    const selectLayer = (layer) => {
+      const menu = doc.querySelector('#toolbar select:has(option[value="overlay"])');
+      menu.value = layer;
+      menu.dispatchEvent(new browser.Event("change"));
+    };
+    selectLayer("ground");
+    clickButton("inspector", "Earlier");
+    const reordered = await downloadManifest();
+    equal(JSON.parse(reordered).assets.map.data.layers.map(({ id }) => id).join(","), "ground,overlay", "Moved the active layer earlier");
+    equal(reordered.match(/\b1\.0\b/g)?.length, 4, "Reordering preserved map, layer, and cell floats");
+    equal(reordered.match(/-0\.0\b/g)?.length, 4, "Reordering preserved map, layer, and cell negative zeros");
+    clickButton("inspector", "Later");
+    equal(await downloadManifest(), beforeAdd, "Moving the layer later restored the original manifest");
+    selectLayer("overlay");
+    clickButton("inspector", "Remove");
+    const removed = await downloadManifest();
+    equal(JSON.parse(removed).assets.map.data.layers.map(({ id }) => id).join(","), "ground", "Removed the selected layer");
+    equal(removed.match(/\b1\.0\b/g)?.length, 3, "Removing a layer preserved all surviving floats");
+    equal(removed.match(/-0\.0\b/g)?.length, 3, "Removing a layer preserved all surviving negative zeros");
+    for (let i = 0; i < 3; i++) byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo restored the original layer order and metadata");
+
+    clickButton("inspector", "Pick from cursor");
+    equal(control("Cell metadata").value.includes("-0.0"), true, "Displayed the picked negative zero");
+    press("ArrowRight");
+    press("Enter");
+    const picked = await downloadManifest();
+    const pickedCells = JSON.parse(picked).assets.map.data.layers[1].cells;
+    equal(JSON.stringify(pickedCells[4]), JSON.stringify(pickedCells[3]), "Painted a copy of the picked cell");
+    equal(picked.match(/\b1\.0\b/g)?.length, 5, "Painting preserved the picked float");
+    equal(picked.match(/-0\.0\b/g)?.length, 5, "Painting preserved the picked negative zero");
+    const setBrushMetadata = (json) => {
+      const field = control("Cell metadata");
+      field.value = json;
+      field.dispatchEvent(new browser.Event("input"));
+    };
+    setBrushMetadata('{"nested":[1.0,0.0,9007199254740991]}');
+    const toolMenu = doc.querySelector('#toolbar select:has(option[value="fill"])');
+    toolMenu.value = "fill";
+    toolMenu.dispatchEvent(new browser.Event("change"));
+    press("Enter");
+    const signedZero = await downloadManifest();
+    equal(signedZero.match(/\b1\.0\b/g)?.length, 5, "Filling preserved the typed float");
+    equal(signedZero.match(/-0\.0\b/g)?.length, 3, "A sign-only fill changed both matching cells");
+    equal(signedZero.match(/(?<!-)\b0\.0\b/g)?.length, 2, "Exported both zeros as positive floating-point values");
+    equal(Object.is(JSON.parse(signedZero).assets.map.data.layers[1].cells[4].metadata.nested[1], 0), true,
+      "Saved the typed positive floating-point zero");
+    byId("undo").click();
+    equal(await downloadManifest(), picked, "Undo restored the picked negative zero");
+    byId("redo").click();
+    equal(await downloadManifest(), signedZero, "Redo restored the sign-only fill");
+    byId("undo").click();
+    byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo removed the painted cell");
+
+    setBrushMetadata('{"overflow":1e400}');
+    press("Enter");
+    equal(byId("status").textContent.includes("number out of range"), true, "The shared parser rejected brush overflow");
+    setBrushMetadata('{"unfinished":');
+    press("Enter");
+    equal(byId("status").classList.contains("error"), true, "The shared parser rejected malformed brush JSON");
+    equal(byId("undo").disabled, true, "The rejected brush edits created no history");
+    equal(await downloadManifest(), beforeAdd, "The rejected brush edits left the manifest unchanged");
+
+    byId("add").click();
+    const assetKind = dialog.querySelector("select");
+    assetKind.value = "map";
+    assetKind.dispatchEvent(new browser.Event("change"));
+    dialog.querySelector("input").value = "new-map";
+    const assetData = dialog.querySelector("textarea");
+    const newMapJson = typedMapJson(mapData);
+    assetData.value = newMapJson.replace("1.0", "1e400");
+    await submitDialog();
+    equal(dialog.open, true, "Asset overflow kept the New asset dialog open");
+    equal(byId("dialog-error").textContent.includes("number out of range"), true, "The shared parser rejected New asset overflow");
+    assetData.value = newMapJson + "{}";
+    await submitDialog();
+    equal(dialog.open, true, "Trailing JSON kept the New asset dialog open");
+    equal(byId("undo").disabled, true, "The rejected asset edits created no history");
+    assetData.value = newMapJson;
+    await submitDialog();
+    equal(dialog.open, false, "Created a map with valid metadata");
+    const newMap = await downloadManifest();
+    equal(newMap.match(/\b1\.0\b/g)?.length, 8, "New asset preserved typed floats throughout the new map");
+    equal(newMap.match(/-0\.0\b/g)?.length, 8, "New asset preserved typed negative zeros throughout the new map");
+    byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo removed the new map");
+
+    byId("tools").click();
+    dialog.querySelector("select").value = "edits";
+    await submitDialog();
+    const edits = dialog.querySelector("textarea");
+    edits.value = `[
+      {"op":"name", "name":"Renamed by invalid batch"},
+      {"op":"place", "id":"map", "layer":"ground", "x":3, "y":0,
+        "cell":{"asset":"edge", "metadata":{"overflow":1e400}}}
+    ]`;
+    await submitDialog();
+    equal(dialog.open, true, "An out-of-range number kept the edit dialog open");
+    if (!byId("dialog-error").textContent.includes("number out of range")) {
+      throw new Error(`Expected the shared JSON parser's diagnostic, got ${byId("dialog-error").textContent}`);
+    }
+    edits.value = '[{"op":"name","name":"Renamed by invalid batch"}]{}';
+    await submitDialog();
+    equal(dialog.open, true, "Trailing JSON kept the edit dialog open");
+    equal(byId("dialog-error").textContent.includes("trailing characters"), true, "The shared parser rejected trailing edit JSON");
+    equal(byId("project-title").textContent, "Map metadata", "The invalid batch left the project clean");
+    equal(byId("undo").disabled, true, "The invalid batch created no undo entry");
+    cancelButton().click();
+    equal(await downloadManifest(), beforeAdd, "The invalid batch left the exported project unchanged");
+
+    await open(folder("stroke-source", mapFixture("Stroke source")));
+    const strokeRead = gate();
+    const openingStrokeTarget = open(folder("stroke-target", mapFixture("Stroke target"), { beforeRead: strokeRead.pause }));
+    await strokeRead.entered;
+    const preview = byId("preview");
+    // A synthetic PointerEvent has no browser-owned pointer to capture.
+    let capturedPointer;
+    preview.setPointerCapture = (id) => { capturedPointer = id; };
+    preview.hasPointerCapture = (id) => id === capturedPointer;
+    preview.releasePointerCapture = () => { capturedPointer = undefined; };
+    const pointer = (type) => {
+      const { left, top } = preview.getBoundingClientRect();
+      preview.dispatchEvent(new browser.PointerEvent(type, { pointerId: 1, clientX: left + 1, clientY: top + 1 }));
+    };
+    pointer("pointerdown");
+    strokeRead.resume();
+    await openingStrokeTarget;
+    equal(capturedPointer, undefined, "Opening the new project released the old stroke's capture");
+    pointer("pointerup");
+    equal(byId("project-title").textContent, "Stroke target", "A stroke from the old project left the new map clean");
+    equal(byId("undo").disabled, true, "The old stroke created no history in the new project");
+    pointer("pointerdown");
+    pointer("pointerup");
+    equal(byId("project-title").textContent, "Stroke target · Edited", "A fresh stroke edited the new map");
+    byId("undo").click();
+    delete preview.setPointerCapture;
+    delete preview.hasPointerCapture;
+    delete preview.releasePointerCapture;
+
+    await open(folder("map-bounds", mapFixture("Map bounds")));
+    const tool = doc.querySelector('#toolbar select:has(option[value="select"])');
+    tool.value = "select";
+    tool.dispatchEvent(new browser.Event("change"));
+    press("ArrowRight", true);
+    press("ArrowRight", true);
+    const layer = doc.querySelector('#toolbar select:has(option[value="overlay"])');
+    layer.value = "overlay";
+    layer.dispatchEvent(new browser.Event("change"));
+    equal(byId("coordinates").textContent, "2, 0  ·  5×2 cells", "Switching layers cleared the selection");
+    press("ArrowRight", true);
+    clickButton("toolbar", "Copy");
+    equal(byId("status").textContent, "Copied 2×1 cells from overlay", "Shift selection started from the cursor on the new layer");
+    const activeLayer = doc.querySelector('#toolbar select:has(option[value="ground"])');
+    activeLayer.value = "ground";
+    activeLayer.dispatchEvent(new browser.Event("change"));
+    for (let x = 0; x < 3; x++) press("ArrowLeft");
+    for (let x = 0; x < 3; x++) press("ArrowRight");
+    press("ArrowRight", true);
+    const resizeColumns = (width) => {
+      const columns = Array.from(doc.querySelectorAll("#inspector label")).find((node) => node.textContent === "Columns").control;
+      columns.value = width;
+      clickButton("inspector", "Resize");
+    };
+    resizeColumns(4);
+    equal(byId("coordinates").textContent, "3, 0  ·  4×2 cells  ·  Selection 1×1", "Resize clamped the cursor and clipped the selection");
+    const brush = doc.querySelector('#inspector select:has(option[value="next-row"])');
+    brush.value = "next-row";
+    brush.dispatchEvent(new browser.Event("change"));
+    clickButton("inspector", "Pick from cursor");
+    equal(doc.querySelector('#inspector select:has(option[value="next-row"])').value, "edge", "Pick used the new edge cell");
+    clickButton("toolbar", "Copy");
+    equal(byId("status").textContent, "Copied 1×1 cells from ground", "The clipped selection could be copied");
+
+    byId("undo").click();
+    press("ArrowRight");
+    press("Enter");
+    equal(byId("coordinates").textContent, "4, 0  ·  5×2 cells  ·  Selection 1×1", "Selected the last column after undo");
+    byId("redo").click();
+    equal(byId("coordinates").textContent, "3, 0  ·  4×2 cells", "Redo cleared the selection that lay outside the map");
+    press("ArrowDown", true);
+    equal(byId("coordinates").textContent, "3, 1  ·  4×2 cells  ·  Selection 1×2", "Shift selection started from the clamped cursor");
+    resizeColumns(5);
+    press("ArrowRight", true);
+    equal(byId("coordinates").textContent, "4, 1  ·  5×2 cells  ·  Selection 2×2", "Extended the selection after expanding the map");
+    byId("undo").click();
+    equal(byId("coordinates").textContent, "3, 1  ·  4×2 cells  ·  Selection 1×2", "Undo of an expansion clamped the cursor and clipped the selection");
+    byId("undo").click();
+
+    const noteCount = 140_001;
+    await openFile("long-sequence.json", project("Long sequence", {
+      music: { kind: "sequence", data: { usage: "music", bpm: 600, ticks_per_beat: 960, tracks: [{
+        id: "lead", voice: { type: "triangle" },
+        notes: Array.from({ length: noteCount }, (_, tick) => ({ tick, length: 1, pitch: 60, velocity: 96 })),
+      }] } },
+    }));
+    equal(byId("status").textContent, "Project ready", "Opened the large valid sequence");
+    const noteButtons = () => Array.from(byId("inspector").querySelectorAll("fieldset button"))
+      .filter((node) => node.textContent.includes(" · tick "));
+    const pageInput = () => doc.querySelector('#inspector fieldset input[type="number"]');
+    equal(noteButtons().length, 100, "Rendered a bounded first page");
+    clickButton("inspector", "Next page");
+    equal(noteButtons()[0].textContent, "60 · tick 100 · 1 ticks", "Next page started at the next note");
+    pageInput().value = pageInput().max;
+    pageInput().form.requestSubmit();
+    equal(noteButtons().length, 1, "Jumped to the partial last page");
+    noteButtons()[0].click();
+    const noteInput = (label) => Array.from(dialog.querySelectorAll("label"))
+      .find((node) => node.firstElementChild.textContent === label).control;
+    equal(noteInput("Start tick").valueAsNumber, noteCount - 1, "Opened the last note for editing");
+    noteInput("Pitch").value = 72;
+    await submitDialog();
+    equal(byId("status").textContent, "Edit applied", "Applied the edit to the long sequence");
+    equal(noteButtons().length, 1, "Kept the last page after editing");
+    equal(noteButtons()[0].textContent, `72 · tick ${noteCount - 1} · 1 ticks`, "Displayed the edited last note");
+    clickButton("inspector", "Previous page");
+    equal(noteButtons().length, 100, "Returned to the previous full page");
+    const savedNotes = JSON.parse(await downloadManifest()).assets.music.data.tracks[0].notes;
+    equal(savedNotes.length, noteCount, "Exported the full track");
+    equal(savedNotes[0].pitch, 60, "Preserved the first note");
+    equal(savedNotes.at(-1).pitch, 72, "Exported the edited last note");
+
+    report("passed", "Studio project, file tool, audio, map, and large sequence workflow regressions passed.");
+  } catch (error) {
+    report("failed", error.stack);
+  } finally {
+    clearTimeout(timeout);
+  }
+</script>

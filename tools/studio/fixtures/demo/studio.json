@@ -1,0 +1,2334 @@
+{
+  "version": 1,
+  "name": "Chromatic Lab",
+  "assets": {
+    "chromatic-lab": {
+      "kind": "map",
+      "data": {
+        "tileset": "lab-tiles",
+        "width": 14,
+        "height": 9,
+        "cell_width": 1,
+        "cell_height": 1,
+        "layers": [
+          {
+            "id": "background",
+            "visible": true,
+            "cells": [
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "deep",
+                "flip_x": false,
+                "flip_y": false
+              }
+            ]
+          },
+          {
+            "id": "floor",
+            "visible": true,
+            "cells": [
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "track",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "track",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "track",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "track",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "asset": "floor",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": true
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": true
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": true
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": true
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": true
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": true
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": true
+              },
+              {
+                "asset": "edge",
+                "flip_x": false,
+                "flip_y": true
+              },
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null
+            ]
+          },
+          {
+            "id": "signals",
+            "visible": true,
+            "cells": [
+              null,
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "compass",
+                "flip_x": false,
+                "flip_y": false,
+                "metadata": {
+                  "marker": "origin"
+                }
+              },
+              {
+                "asset": "compass",
+                "flip_x": false,
+                "flip_y": false,
+                "metadata": {
+                  "marker": "origin"
+                }
+              },
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              {
+                "asset": "star",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              null,
+              null,
+              null
+            ]
+          }
+        ],
+        "metadata": {
+          "purpose": "Original Studio test pattern"
+        }
+      }
+    },
+    "compass": {
+      "kind": "tile",
+      "data": {
+        "bpp": 4,
+        "palette": "signals",
+        "pixels": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          10,
+          8,
+          10,
+          0,
+          0,
+          0,
+          0,
+          10,
+          8,
+          11,
+          8,
+          10,
+          0,
+          0,
+          0,
+          0,
+          10,
+          8,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "console": {
+      "kind": "metatile",
+      "data": {
+        "width": 2,
+        "height": 2,
+        "cells": [
+          {
+            "tile": "console-tl",
+            "flip_x": false,
+            "flip_y": false
+          },
+          {
+            "tile": "console-tl",
+            "flip_x": true,
+            "flip_y": false
+          },
+          {
+            "tile": "console-bl",
+            "flip_x": false,
+            "flip_y": false
+          },
+          {
+            "tile": "console-bl",
+            "flip_x": true,
+            "flip_y": false
+          }
+        ]
+      }
+    },
+    "console-bl": {
+      "kind": "tile",
+      "data": {
+        "bpp": 4,
+        "palette": "signals",
+        "pixels": [
+          0,
+          3,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          0,
+          3,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          0,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          0,
+          3,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          0,
+          3,
+          2,
+          8,
+          10,
+          2,
+          2,
+          4,
+          0,
+          3,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          0,
+          0,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "console-grid": {
+      "kind": "map",
+      "data": {
+        "tileset": "console-tiles",
+        "width": 2,
+        "height": 2,
+        "cell_width": 2,
+        "cell_height": 2,
+        "layers": [
+          {
+            "id": "panels",
+            "visible": true,
+            "cells": [
+              {
+                "asset": "console",
+                "flip_x": false,
+                "flip_y": false
+              },
+              null,
+              null,
+              {
+                "asset": "console",
+                "flip_x": true,
+                "flip_y": true
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "console-tiles": {
+      "kind": "tileset",
+      "data": {
+        "tiles": [],
+        "metatiles": [
+          "console"
+        ]
+      }
+    },
+    "console-tl": {
+      "kind": "tile",
+      "data": {
+        "bpp": 4,
+        "palette": "signals",
+        "pixels": [
+          0,
+          0,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          0,
+          3,
+          11,
+          11,
+          11,
+          11,
+          11,
+          11,
+          0,
+          3,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          0,
+          3,
+          9,
+          7,
+          7,
+          7,
+          7,
+          7,
+          0,
+          3,
+          9,
+          7,
+          6,
+          6,
+          6,
+          6,
+          0,
+          3,
+          9,
+          7,
+          6,
+          6,
+          6,
+          7,
+          0,
+          3,
+          9,
+          7,
+          7,
+          7,
+          7,
+          7,
+          0,
+          3,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9
+        ]
+      }
+    },
+    "deep": {
+      "kind": "tile",
+      "data": {
+        "bpp": 4,
+        "palette": "night",
+        "pixels": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    "edge": {
+      "kind": "tile",
+      "data": {
+        "bpp": 4,
+        "palette": "night",
+        "pixels": [
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          6,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    "floor": {
+      "kind": "tile",
+      "data": {
+        "bpp": 4,
+        "palette": "night",
+        "pixels": [
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          2,
+          7,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          2,
+          2,
+          2,
+          2,
+          3,
+          2,
+          2,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          4,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2,
+          2
+        ]
+      }
+    },
+    "lab-chime": {
+      "kind": "sequence",
+      "data": {
+        "usage": "music",
+        "ticks_per_beat": 96,
+        "bpm": 144,
+        "tracks": [
+          {
+            "id": "lead",
+            "voice": {
+              "type": "triangle"
+            },
+            "notes": [
+              {
+                "tick": 0,
+                "length": 36,
+                "pitch": 60,
+                "velocity": 95
+              },
+              {
+                "tick": 48,
+                "length": 36,
+                "pitch": 67,
+                "velocity": 95
+              },
+              {
+                "tick": 96,
+                "length": 36,
+                "pitch": 72,
+                "velocity": 95
+              },
+              {
+                "tick": 144,
+                "length": 36,
+                "pitch": 76,
+                "velocity": 95
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "lab-font": {
+      "kind": "font",
+      "data": {
+        "glyphs": {
+          "C": {
+            "tile": "letter-c",
+            "advance": 6
+          },
+          "F": {
+            "tile": "letter-f",
+            "advance": 6
+          },
+          "S": {
+            "tile": "letter-s",
+            "advance": 6
+          }
+        }
+      }
+    },
+    "lab-tiles": {
+      "kind": "tileset",
+      "data": {
+        "tiles": [
+          "deep",
+          "floor",
+          "edge",
+          "track",
+          "star",
+          "compass"
+        ],
+        "metatiles": [
+          "console"
+        ]
+      }
+    },
+    "letter-c": {
+      "kind": "tile",
+      "data": {
+        "bpp": 2,
+        "palette": "mono",
+        "pixels": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "letter-f": {
+      "kind": "tile",
+      "data": {
+        "bpp": 2,
+        "palette": "mono",
+        "pixels": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          3,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "letter-s": {
+      "kind": "tile",
+      "data": {
+        "bpp": 2,
+        "palette": "mono",
+        "pixels": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3,
+          0,
+          0,
+          0,
+          0,
+          3,
+          3,
+          3,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "mono": {
+      "kind": "palette",
+      "data": {
+        "colors": [
+          0,
+          20972,
+          29462,
+          32668
+        ],
+        "transparent": 0
+      }
+    },
+    "night": {
+      "kind": "palette",
+      "data": {
+        "colors": [
+          5218,
+          7331,
+          10468,
+          15687,
+          20938,
+          20812,
+          26065,
+          31350,
+          21132,
+          23375,
+          25493,
+          31578,
+          15997,
+          18238,
+          11494,
+          28638
+        ],
+        "transparent": null
+      }
+    },
+    "signal-light": {
+      "kind": "sprite",
+      "data": {
+        "width": 32,
+        "height": 24,
+        "size_mode": 0,
+        "frames": [
+          {
+            "id": "flare",
+            "duration_ms": 200,
+            "objects": [
+              {
+                "x": 12,
+                "y": 8,
+                "large": false,
+                "tiles": [
+                  "compass"
+                ],
+                "palette": "signals",
+                "palette_slot": 1,
+                "priority": 2,
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "x": 4,
+                "y": 12,
+                "large": false,
+                "tiles": [
+                  "star"
+                ],
+                "palette": "signals",
+                "palette_slot": 1,
+                "priority": 2,
+                "flip_x": false,
+                "flip_y": false
+              }
+            ]
+          },
+          {
+            "id": "dim",
+            "duration_ms": 260,
+            "objects": [
+              {
+                "x": 12,
+                "y": 8,
+                "large": false,
+                "tiles": [
+                  "star"
+                ],
+                "palette": "signals",
+                "palette_slot": 1,
+                "priority": 2,
+                "flip_x": false,
+                "flip_y": false
+              },
+              {
+                "x": 20,
+                "y": 4,
+                "large": false,
+                "tiles": [
+                  "star"
+                ],
+                "palette": "signals",
+                "palette_slot": 1,
+                "priority": 2,
+                "flip_x": false,
+                "flip_y": false
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "signal-ping": {
+      "kind": "sequence",
+      "data": {
+        "usage": "sfx",
+        "ticks_per_beat": 96,
+        "bpm": 160,
+        "tracks": [
+          {
+            "id": "ping",
+            "voice": {
+              "type": "sample",
+              "asset": "test-pulse",
+              "root_note": 57
+            },
+            "notes": [
+              {
+                "tick": 0,
+                "length": 7,
+                "pitch": 83,
+                "velocity": 56
+              }
+            ]
+          }
+        ]
+      }
+    },
+    "signals": {
+      "kind": "palette",
+      "data": {
+        "colors": [
+          0,
+          10468,
+          20812,
+          26065,
+          31350,
+          28336,
+          23276,
+          24433,
+          17213,
+          17054,
+          27519,
+          32668,
+          13606,
+          7300,
+          22986,
+          24056
+        ],
+        "transparent": 0
+      }
+    },
+    "star": {
+      "kind": "tile",
+      "data": {
+        "bpp": 4,
+        "palette": "signals",
+        "pixels": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          11,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          11,
+          11,
+          11,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          11,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ]
+      }
+    },
+    "test-pulse": {
+      "kind": "sample",
+      "data": {
+        "sample_rate": 32000,
+        "pcm": [
+          0,
+          1000,
+          3500,
+          6100,
+          7300,
+          6800,
+          3800,
+          1000,
+          0,
+          -2000,
+          -4100,
+          -5700,
+          -7300,
+          -6500,
+          -4000,
+          -1200,
+          0,
+          1000,
+          3500,
+          6100,
+          7300,
+          6800,
+          3800,
+          1000,
+          0,
+          -2000,
+          -4100,
+          -5700,
+          -7300,
+          -6500,
+          -4000,
+          -1200
+        ],
+        "loop_start": 0
+      }
+    },
+    "track": {
+      "kind": "tile",
+      "data": {
+        "bpp": 4,
+        "palette": "night",
+        "pixels": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          9,
+          9,
+          9,
+          9,
+          9,
+          9,
+          4,
+          4,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          4,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          3,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    "vram-plan": {
+      "kind": "vram",
+      "data": {
+        "regions": {
+          "art": {
+            "start": 0,
+            "bytes": 8192,
+            "purpose": "bg_tiles"
+          },
+          "obj": {
+            "start": 16384,
+            "bytes": 16384,
+            "purpose": "obj_tiles"
+          },
+          "tilemap": {
+            "start": 8192,
+            "bytes": 4096,
+            "purpose": "bg_map"
+          }
+        }
+      }
+    }
+  }
+}
