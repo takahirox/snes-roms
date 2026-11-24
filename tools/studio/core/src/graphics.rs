@@ -214,7 +214,7 @@ fn encode_png(
 }
 
 pub fn export_indexed(project: &Project, id: &str, bpp: Option<u8>) -> Result<Vec<u8>> {
-    require_valid(project)?;
+    require_valid_content(project)?;
     let Asset::Tile(tile) = asset(project, id)? else {
         return Err(invalid("Expected a tile"));
     };
@@ -383,7 +383,7 @@ pub fn render(
     frame: Option<&str>,
     text: Option<&str>,
 ) -> Result<Image> {
-    require_valid(project)?;
+    require_valid_content(project)?;
     let selected = asset(project, id)?;
     if (frame.is_some() && !matches!(selected, Asset::Sprite(_)))
         || (text.is_some() && !matches!(selected, Asset::Font(_)))

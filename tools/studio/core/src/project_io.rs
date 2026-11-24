@@ -120,7 +120,7 @@ pub(crate) fn require_manifest_fits(project: &Project) -> Result<()> {
 }
 
 pub fn save_project(project: &Project, archive: bool) -> Result<Vec<u8>> {
-    require_valid(project)?;
+    require_valid_content(project)?;
     let mut manifest = Vec::new();
     write_manifest(project, &mut manifest)?;
     if !archive {

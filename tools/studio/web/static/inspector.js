@@ -170,7 +170,8 @@ export function inspector(app, asset) {
     const palette = select([...optional, ...palettes()], state.palette, (value) => { state.palette = value; });
     root.append(details("Brush", field("Artwork", selectBrush), field("Subpalette override", palette), field("Flip horizontally", flipX), field("Flip vertically", flipY), field("Cell metadata", cellData),
       button("Pick from cursor", () => guarded(() => {
-        const cell = layer?.cells[state.cursor.y * data.width + state.cursor.x];
+        const { x, y } = state.cursor;
+        const cell = x < data.width && y < data.height ? layer?.cells[y * data.width + x] : null;
         if (!cell) throw new Error("The active layer has no artwork at the cursor");
         Object.assign(state, { brush: cell.asset, palette: cell.palette ?? "", flipX: cell.flip_x, flipY: cell.flip_y, metadata: cell.metadata ?? {} });
         refresh();

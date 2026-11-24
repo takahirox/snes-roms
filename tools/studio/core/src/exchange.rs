@@ -49,14 +49,14 @@ pub fn export(project: &Project, id: &str, options: &ExportOptions) -> Result<Ve
         Format::IndexedPng => export_indexed(project, id, options.bpp),
         Format::Wav => write_wav(&audio_preview(project, id)?),
         Format::Brr => {
-            require_valid(project)?;
+            require_valid_content(project)?;
             let Asset::Sample(sample) = asset(project, id)? else {
                 return Err(invalid("Expected a sample"));
             };
             write_brr(sample)
         }
         Format::Palette => {
-            require_valid(project)?;
+            require_valid_content(project)?;
             let Asset::Palette(palette) = asset(project, id)? else {
                 return Err(invalid("Expected a palette"));
             };
@@ -70,7 +70,7 @@ pub fn export(project: &Project, id: &str, options: &ExportOptions) -> Result<Ve
         Format::ObjChr => Ok(export_sprite(project, id, frame)?.chr),
         Format::ObjCgram => Ok(export_sprite(project, id, frame)?.cgram),
         Format::Chr => {
-            require_valid(project)?;
+            require_valid_content(project)?;
             match asset(project, id)? {
                 Asset::Tile(_) => export_chr_tile(project, id, options.bpp),
                 Asset::Tileset(tileset) if !tileset.tiles.is_empty() => {

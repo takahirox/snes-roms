@@ -317,7 +317,7 @@ fn encode_block(pcm: &[i16; 16], history: History, reset: bool) -> ([u8; 9], His
 }
 
 pub fn audio_preview(project: &Project, id: &str) -> Result<Sample> {
-    require_valid(project)?;
+    require_valid_content(project)?;
     match asset(project, id)? {
         Asset::Sample(sample) => Ok(sample.clone()),
         Asset::Sequence(sequence) => render_sequence(project, sequence),

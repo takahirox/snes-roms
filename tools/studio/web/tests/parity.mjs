@@ -223,6 +223,38 @@ try {
   });
   assert.deepEqual(readFileSync(projectFile), original);
 
+  // Two individually valid samples fit in compact JSON but exceed the canonical limit.
+  const sample = { kind: "sample", data: { sample_rate: 32000, pcm: Array(2_800_000).fill(0) } };
+  const compact = write("compact-oversized.json", JSON.stringify({
+    version: 1, name: "Oversized samples", assets: { first: sample, second: sample },
+  }));
+  const unsavable = new wasm.Studio(readFileSync(compact));
+  const diagnostics = JSON.parse(unsavable.diagnostics());
+  assert.deepEqual(diagnostics.filter(({ severity }) => severity === "error"), limitDiagnostic);
+  assert.throws(() => cli("validate", compact), (error) => {
+    assert.equal(error.status, 2);
+    const validation = JSON.parse(error.stdout);
+    assert.equal(validation.ok, false);
+    assert.deepEqual(validation.diagnostics, diagnostics);
+    return true;
+  });
+  assert.throws(() => unsavable.save(true), (error) => {
+    assert.deepEqual(JSON.parse(error), limitDiagnostic);
+    return true;
+  });
+  const repairedZip = join(temp, "repaired.zip");
+  assert.throws(() => cli("pack", compact, repairedZip), (error) => {
+    assert.equal(error.status, 2);
+    assert.deepEqual(JSON.parse(error.stderr), { ok: false, diagnostics: limitDiagnostic });
+    return true;
+  });
+  assert.equal(existsSync(repairedZip), false);
+  assert.equal(unsavable.apply('[{"op":"remove","id":"first"},{"op":"remove","id":"second"}]'), true);
+  assert.deepEqual(JSON.parse(unsavable.diagnostics()), []);
+  cli("pack", write("repaired.json", unsavable.save(false)), repairedZip);
+  assert.deepEqual(Buffer.from(unsavable.save(true)), readFileSync(repairedZip));
+  unsavable.free();
+
   const brr = join(temp, "loop.brr");
   cli("export", importedImage, "test-pulse", "brr", brr);
   const importedAudio = join(temp, "audio-import.zip");

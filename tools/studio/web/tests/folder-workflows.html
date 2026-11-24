@@ -88,6 +88,7 @@
         };
       <\/script>`);
     await loaded;
+    const browser = iframe.contentWindow;
     const doc = iframe.contentDocument;
     const byId = (id) => doc.getElementById(id);
     while (doc.querySelector("header").inert) {
@@ -314,7 +315,7 @@
     const wav = demo.export("test-pulse", '{"format":"wav"}');
     demo.free();
 
-    const startImport = async (action, filename, bytes, beforeRead) => {
+    const startFileTool = async (action, filename, bytes, beforeRead) => {
       byId("tools").click();
       dialog.querySelector("select").value = action;
       await submitDialog();
@@ -331,7 +332,7 @@
       const sourceName = `Project before ${filename}`;
       await open(folder("import-source", project(sourceName)));
       const canceledRead = gate();
-      const canceledImport = startImport(action, filename, bytes, canceledRead.pause);
+      const canceledImport = startFileTool(action, filename, bytes, canceledRead.pause);
       await canceledRead.entered;
       if (action === "image") cancelButton().click();
       else dialog.requestClose();
@@ -346,7 +347,7 @@
       const replacing = open(folder("import-replacement", project(replacementName), { beforeRead: replacementRead.pause }));
       await replacementRead.entered;
       const staleRead = gate();
-      const staleImport = startImport(action, filename, bytes, staleRead.pause);
+      const staleImport = startFileTool(action, filename, bytes, staleRead.pause);
       await staleRead.entered;
       replacementRead.resume();
       await replacing;
@@ -357,9 +358,47 @@
       equal(byId("project-title").textContent, replacementName, "The replacement project stayed clean");
       equal(byId("status").textContent, "Project ready", "A stale import left the replacement status intact");
 
-      await startImport(action, filename, bytes);
+      await startFileTool(action, filename, bytes);
       equal(hasAsset(id), true, `An active import added ${filename}`);
       byId("undo").click();
+    }
+
+    const fixtureRom = new Uint8Array(0x8000);
+    fixtureRom.set(new TextEncoder().encode("Studio test"), 0x7fc0);
+    const codecInput = Uint8Array.of(1, 1, 1, 2);
+    const downloads = [];
+    const anchor = browser.HTMLAnchorElement.prototype;
+    const clickLink = anchor.click;
+    anchor.click = function () { downloads.push(this.download); };
+    try {
+      for (const [action, filename, bytes] of [
+        ["rom", "header.sfc", fixtureRom],
+        ["rle", "codec.bin", codecInput],
+      ]) {
+        const read = gate();
+        const pending = startFileTool(action, filename, bytes, read.pause);
+        await read.entered;
+        if (action === "rom") cancelButton().click();
+        else dialog.requestClose();
+        equal(dialog.open, false, `Dismissed ${action} while reading`);
+        byId("save").click();
+        const statusBefore = byId("status").textContent;
+        read.resume();
+        await pending;
+        equal(byId("dialog-title").textContent, "Save project", `Canceled ${action} preserved the new dialog`);
+        equal(byId("status").textContent, statusBefore, `Canceled ${action} preserved status`);
+        equal(downloads.length, 0, `Canceled ${action} produced no download`);
+        cancelButton().click();
+      }
+
+      await startFileTool("rom", "header.sfc", fixtureRom);
+      equal(byId("dialog-title").textContent, "ROM header", "Active ROM inspection opened its results");
+      equal(JSON.parse(dialog.querySelector("pre").textContent).title, "Studio test", "Read the fixture ROM title");
+      cancelButton().click();
+      await startFileTool("rle", "codec.bin", codecInput);
+      equal(downloads.join(","), "codec.bin.srl", "Active RLE operation downloaded its result");
+    } finally {
+      anchor.click = clickLink;
     }
 
     const sampleRate = 32000;
@@ -371,7 +410,6 @@
       "one-shot": { kind: "sample", data: { sample_rate: lowRate, pcm: lowRatePcm, loop_start: null } },
       "with-loop": { kind: "sample", data: { sample_rate: sampleRate, pcm, loop_start: loopStart } },
     })));
-    const browser = iframe.contentWindow;
     const AudioContext = browser.AudioContext;
     let playback;
     let source;
@@ -432,7 +470,65 @@
     equal(source === firstSource, false, "Replay started a fresh one-shot source");
     Array.from(dialog.querySelectorAll("button")).find((node) => node.textContent === "Close").click();
 
-    report("passed", "Studio project and audio workflow regressions passed.");
+    const largeSample = { kind: "sample", data: { sample_rate: 32000, pcm: Array(2_800_000).fill(0) } };
+    await openFile("oversized.json", project("Oversized samples", { first: largeSample, second: largeSample }));
+    equal(byId("status").textContent, "Loaded with errors. See Validation for details.", "Opening an unsavable manifest flagged an error");
+    byId("validation").click();
+    if (!dialog.querySelector("pre").textContent.includes("Canonical project manifest exceeds 64 MiB")) {
+      throw new Error("Validation did not report the canonical manifest limit");
+    }
+    cancelButton().click();
+
+    const tile = { kind: "tile", data: { bpp: 2, palette: "colors", pixels: Array(64).fill(0) } };
+    const cells = Array(10).fill(null);
+    cells[3] = { asset: "edge" };
+    cells[5] = { asset: "next-row" };
+    await open(folder("map-bounds", project("Map bounds", {
+      colors: { kind: "palette", data: { colors: [0] } },
+      edge: tile,
+      "next-row": tile,
+      tiles: { kind: "tileset", data: { tiles: ["edge", "next-row"], metatiles: [] } },
+      map: { kind: "map", data: { width: 5, height: 2, cell_width: 1, cell_height: 1, tileset: "tiles",
+        layers: [{ id: "ground", visible: true, cells }] } },
+    })));
+    const clickButton = (id, label) => Array.from(byId(id).querySelectorAll("button"))
+      .find((node) => node.textContent === label).click();
+    const press = (key, shiftKey = false) => byId("preview").dispatchEvent(new browser.KeyboardEvent("keydown", { key, shiftKey }));
+    const tool = doc.querySelector('#toolbar select:has(option[value="select"])');
+    tool.value = "select";
+    tool.dispatchEvent(new browser.Event("change"));
+    for (let x = 0; x < 3; x++) press("ArrowRight");
+    press("ArrowRight", true);
+    const resizeColumns = (width) => {
+      const columns = Array.from(doc.querySelectorAll("#inspector label")).find((node) => node.textContent === "Columns").control;
+      columns.value = width;
+      clickButton("inspector", "Resize");
+    };
+    resizeColumns(4);
+    equal(byId("coordinates").textContent, "3, 0  ·  4×2 cells  ·  Selection 1×1", "Resize clamped the cursor and clipped the selection");
+    const brush = doc.querySelector('#inspector select:has(option[value="next-row"])');
+    brush.value = "next-row";
+    brush.dispatchEvent(new browser.Event("change"));
+    clickButton("inspector", "Pick from cursor");
+    equal(doc.querySelector('#inspector select:has(option[value="next-row"])').value, "edge", "Pick used the new edge cell");
+    clickButton("toolbar", "Copy");
+    equal(byId("status").textContent, "Copied 1×1 cells from ground", "The clipped selection could be copied");
+
+    byId("undo").click();
+    press("ArrowRight");
+    press("Enter");
+    equal(byId("coordinates").textContent, "4, 0  ·  5×2 cells  ·  Selection 1×1", "Selected the last column after undo");
+    byId("redo").click();
+    equal(byId("coordinates").textContent, "3, 0  ·  4×2 cells", "Redo cleared the selection that lay outside the map");
+    press("ArrowDown", true);
+    equal(byId("coordinates").textContent, "3, 1  ·  4×2 cells  ·  Selection 1×2", "Shift selection started from the clamped cursor");
+    resizeColumns(5);
+    press("ArrowRight", true);
+    equal(byId("coordinates").textContent, "4, 1  ·  5×2 cells  ·  Selection 2×2", "Extended the selection after expanding the map");
+    byId("undo").click();
+    equal(byId("coordinates").textContent, "3, 1  ·  4×2 cells  ·  Selection 1×2", "Undo of an expansion clamped the cursor and clipped the selection");
+
+    report("passed", "Studio project, file tool, audio, and map workflow regressions passed.");
   } catch (error) {
     report("failed", error.stack);
   } finally {
