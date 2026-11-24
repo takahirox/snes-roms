@@ -446,6 +446,61 @@ queued payload was 3,008 bytes for fixture traces and 3,072 bytes for production
 `bsnes.py` unloads after the last recorded pad frame to compare final SRAM and collects the VBlank
 counters from serialized WRAM in a separate replay.
 
+### Automated baseline comparison for issue #1
+
+`make yonaki-test` now runs `tests/yonaki/compare.py` after generating the pad traces and completing the
+stock-core fixture replay. To rerun just the comparison, use `python3 -I tests/yonaki/compare.py` after
+`python3 -I tests/yonaki/run.py --real`. The test exports commit
+`ff5fe48380161e4235ceb41856662f5afc47018e` from the local Git history and rebuilds its fixture and production
+ROMs with the bootstrapped tools. It builds separate probes from the pinned Snes9x 1.63 and bsnes 115
+sources. Each replay starts a fresh process with the same pad masks and initial battery image.
+The JSON report at `build/yonaki-comparison/RESULTS.json` contains the ROM, SRAM, capture and PCM hashes,
+scene frame numbers and transfer measurements for each core and revision.
+
+All 33 recorded captures per core matched across revisions, as did the photo margins at every
+sampled frame. Old Bath cut first responded and settled at
+3 and 15 frames after A, Genkan white at 2 and 66, and Lobby mosaic at 2 and 85. The Bus fade first
+appeared at frame 570 and reached full brightness at frame 598. The test asserts those milestones.
+
+The probes time general PPU DMA channels through completion and check that the whole transfer stays
+in VBlank or forced blank. They measure channel 7 BG1 scroll HDMA payload through completion and check
+that it stays in the same scanline's HBlank. These measurements use the cores' beam counters and
+exclude HDMA table fetches and CPU register writes. Both builds hit a 3,072-byte visible DMA frame
+in `real_E06` and a 450-byte ripple HDMA frame in `effects` and `real_E06`.
+
+| Trace and core | Visible DMA peak, bytes | Last completion at the peak, baseline → packed (scanline / clock) | Ripple payload window, master clocks |
+| --- | ---: | --- | --- |
+| `effects`, Snes9x | 3,008 | 246 / 54 → 246 / 54 | 1124–1168 |
+| `effects`, bsnes | 3,008 | 246 / 48 → 246 / 48 | 1120–1148 |
+| `real_E06`, Snes9x | 3,072 | 245 / 804 → 245 / 806 | 1124–1170 |
+| `real_E06`, bsnes | 3,072 | 245 / 804 → 245 / 804 | 1112–1148 |
+
+The latest visible DMA completion across these traces was on line 255, at clock 758 on Snes9x and
+748 on bsnes, on both revisions. Both cores recorded zero VBlank overruns, deferred DMA jobs and
+out-of-window transfers in the comparison.
+
+Native stereo PCM matched byte for byte within each core, including the fixture bell, rain and music
+in `effects` and the production routes E06 and E13. The table gives the equal sample-frame counts
+and SHA-256 prefixes for the baseline and packed recordings. Snes9x delivered 32,040 Hz and bsnes
+delivered 48,000 Hz.
+
+| Trace | Snes9x sample frames | Snes9x hash prefix | bsnes sample frames | bsnes hash prefix |
+| --- | ---: | --- | ---: | --- |
+| `effects` | 668,993 | `cb746060d982` | 1,000,800 | `3d004736b788` |
+| `ending_G02` | 766,554 | `9fab73b26b3c` | 1,147,200 | `2cd67c83e16c` |
+| `real_E06` | 7,258,380 | `2fbc34ae6bd8` | 10,872,800 | `9297ff828520` |
+| `real_E13` | 1,010,724 | `18dd9e36e5c6` | 1,512,800 | `1435080e7a12` |
+
+For save compatibility, the baseline starts with empty SRAM, records the production E01 ending and
+its unlock flag, and writes paragraph 58 and choice 1 in separate slots using the game's menu.
+The cold boots carry only that 8 KiB image. Both cores check the restored custom names, speed 2,
+ending and unlock bits, scene state and local flags. Paragraph 58 comes back marked read. Choice 1
+has two options and redraws paragraph 78. The resume captures match and the battery stays byte-identical
+through both loads.
+
+These runs cover the selected replay paths on emulators. Physical cartridge timing and power-off
+persistence were outside the measurements.
+
 ## Build checks
 
 Errors: syntax, unknown command, undefined label / duplicate label, `@end` not in endings.txt, a choice option
