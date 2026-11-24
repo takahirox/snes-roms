@@ -8,7 +8,8 @@ export async function readFileBytes(file) {
   return new Uint8Array(await file.arrayBuffer());
 }
 
-async function writeManifest(folder, content, expected) {
+async function writeManifest(folder, content, expected, { signal, beginCommit }) {
+  signal?.throwIfAborted();
   const isNew = expected === null;
   const original = expected ?? fingerprint(new Uint8Array());
   let handle;
@@ -19,6 +20,7 @@ async function writeManifest(folder, content, expected) {
     } catch (error) {
       if (error.name !== "NotFoundError") throw error;
     }
+    signal?.throwIfAborted();
     handle = await folder.getFileHandle("studio.json", { create: true });
   } else handle = await folder.getFileHandle("studio.json");
 
@@ -29,10 +31,17 @@ async function writeManifest(folder, content, expected) {
   };
   let writable;
   try {
+    signal?.throwIfAborted();
     await ensureUnchanged();
+    signal?.throwIfAborted();
     writable = await handle.createWritable({ mode: "exclusive" });
+    signal?.throwIfAborted();
     await writable.write(content);
+    signal?.throwIfAborted();
     await ensureUnchanged();
+    signal?.throwIfAborted();
+    // Closing publishes the staged file. Disable cancellation before calling it.
+    beginCommit?.();
     await writable.close();
   } catch (error) {
     await writable?.abort().catch(() => {});
@@ -53,7 +62,8 @@ async function writeManifest(folder, content, expected) {
   }
 }
 
-export async function saveFolderManifest(folder, content, expected) {
+export async function saveFolderManifest(folder, content, expected, { signal, beginCommit } = {}) {
+  signal?.throwIfAborted();
   // Publish a unique marker before checking for competitors. The CLI follows
   // the same protocol, so a writer arriving after this check sees our marker.
   const marker = markerPrefix + crypto.randomUUID() + markerSuffix;
@@ -62,11 +72,12 @@ export async function saveFolderManifest(folder, content, expected) {
   let cleanupWarning;
   try {
     for await (const name of folder.keys()) {
+      signal?.throwIfAborted();
       if (name !== marker && name.startsWith(markerPrefix) && name.endsWith(markerSuffix)) {
         throw new Error("Another Studio save holds a marker in this folder. Export a copy or review the project before retrying.");
       }
     }
-    await writeManifest(folder, content, expected);
+    await writeManifest(folder, content, expected, { signal, beginCommit });
     committed = true;
   } finally {
     try {
