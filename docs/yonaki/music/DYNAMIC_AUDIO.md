@@ -48,7 +48,7 @@ SNES GSS documents shared driver, samples and effects plus one exported sequence
 
 ## Regression and recording comparison
 
-The rebuilt 4 MiB ROM was byte-identical to `dist/yonaki.sfc` (`b0b90ecf9d853f8c975f9c0045712966f114b1463e973a7b91434a97a141c3c7`). Snes9x 1.63 passed all 11 tests, including every one of the 20 story endings. bsnes 115 passed all 41 traces across 282,610 frames, covering the 20 fixture traces, all 20 story endings and the endings list. All final battery images matched byte for byte. The largest RGB channel difference across 73 screenshots was 2.
+The measurements on this page use PR #7 revision `393e52f06f0eb6fee58c666ae961102f06088ae6`. At that revision the rebuilt 4 MiB ROM was byte-identical to `dist/yonaki.sfc` (`b0b90ecf9d853f8c975f9c0045712966f114b1463e973a7b91434a97a141c3c7`). Snes9x 1.63 passed all 11 tests, including every one of the 20 story endings. bsnes 115 passed all 41 traces across 282,610 frames, covering the 20 fixture traces, all 20 story endings and the endings list. All final battery images matched byte for byte. The largest RGB channel difference across 73 screenshots was 2.
 
 For the end-to-end PCM comparison, the 1,940-frame `real_E13` trace covers cold boot, title music, scene music, a rumble and the return to title. Each emulator replayed the same controller masks and initial battery image separately against the release and rebuild. Each within-core WAV pair is byte-identical, with first audio at 2.893 s on both. The core output rates differ.
 
@@ -59,7 +59,7 @@ For the end-to-end PCM comparison, the 1,940-frame `real_E13` trace covers cold 
 
 The Snes9x sound review reproduced every recorded metric in the checked-in review for 18 songs, 32 effects, rain, storm and rain under `night`. All nine protocol checks reproduced their reference results. The strongest isolated effect peaked at 23,554, and the layered playback check peaked at 18,730 with zero clipping. [Reference audio review](review/RESULT.json)
 
-Run the same checks from the repository root with the pinned dependencies from `tools/bootstrap.py --with-emulator`.
+Run these checks from the repository root with the pinned dependencies from `tools/bootstrap.py --with-emulator`. Run all commands in the same checkout. `make yonaki-test` generates the `real_E13` trace and its ROM, and the profiler builds a separate baseline ROM from that checkout. Both ROMs must match the hash recorded in the trace before either replay starts. The release comparison above describes the published revision, and the results from the commands below describe your checkout.
 
 ```sh
 make yonaki-test
