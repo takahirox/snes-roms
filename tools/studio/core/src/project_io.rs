@@ -14,7 +14,11 @@ pub fn load_project(bytes: &[u8]) -> Result<Project> {
     let decoded;
     let bytes = if bytes.starts_with(b"PK") {
         let mut archive = zip::ZipArchive::new(Cursor::new(bytes)).map_err(zip_error)?;
-        if archive.len() != 1 {
+        if archive.len() != 1
+            || !bytes
+                .get(archive.central_directory_start() as usize..)
+                .is_some_and(has_single_zip_entry)
+        {
             return Err(invalid(
                 "ZIP must contain exactly one studio.json at its root",
             ));
@@ -51,6 +55,22 @@ pub fn load_project(bytes: &[u8]) -> Result<Project> {
     }
     serde_json::from_slice(bytes)
         .map_err(|error| Error::new("json", PROJECT_FILE, error.to_string()))
+}
+
+fn has_single_zip_entry(directory: &[u8]) -> bool {
+    const CENTRAL_HEADER_BYTES: usize = 46;
+    // ZipArchive indexes by name, so len() can hide duplicates. Skip the
+    // first central-directory record using its three variable field lengths.
+    let Some(lengths) = directory.get(28..34) else {
+        return false;
+    };
+    let variable_length: usize = lengths
+        .chunks_exact(2)
+        .map(|length| usize::from(u16::from_le_bytes([length[0], length[1]])))
+        .sum();
+    directory
+        .get(CENTRAL_HEADER_BYTES + variable_length..)
+        .is_some_and(|rest| !rest.starts_with(b"PK\x01\x02"))
 }
 
 pub fn save_project(project: &Project, archive: bool) -> Result<Vec<u8>> {
