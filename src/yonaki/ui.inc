@@ -187,8 +187,9 @@ TitleScreen:
     jsr ResetScreenState
     pla
     jsr LoadGame
+    beq :+
     jsr RunVM
-    jmp TitleScreen
+:   jmp TitleScreen
 @list:
     jsr EndingsList
 @back:
@@ -1046,6 +1047,7 @@ OpenMenu:
     cmp #$FFFF
     beq @draw
     jsr SaveGame
+    beq @close
     jsr ClearPage
     lda #5
     jsr LineY
@@ -1238,7 +1240,7 @@ SlotScreen:
     pla
     sta slot_valid,x
     beq @empty
-    lda save_buf+20             ; chapter
+    lda save_buf+BOOKMARK_CHAPTER
     cmp #CHAPTER_COUNT
     bcs @nochap
     asl a

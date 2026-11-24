@@ -1,85 +1,359 @@
 ; ---------------------------------------------------------------- battery SRAM ($70:0000, 8 KiB)
-; $0000 global (256 bytes): +0 "YNKG" +4 version +6 text speed +8 endings seen (32 bits) +12 global flags
-;        (32 bits) +16 the names (20 bytes, see names) +36..+251 zero +252 sum of words 0-125 +254 sum xor $FFFF
-; $0100, $0200, $0300 bookmarks 1-3 (256 bytes): +0 "YNKS" +4 version +6 build id (32 bits) +10 kind (1 at a
-;        paragraph, 2 at a choice) +12 text / choice id +14 paragraph to redraw before a choice ($FFFF none)
-;        +16 picture +18 song ($FFFF none) +20 chapter ($FFFF) +22 dark +24 ripple +26 ambience ($FFFF)
-;        +28 sequence +32 four silhouette slots (key, silhouette, x, colour: bytes) +48..+63 zero
-;        +64..+127 local flags +128 the names (20 bytes) +148..+251 zero +252 sum +254 sum xor $FFFF
-; $0400 read marks: +0 "YNKR" +4 build id (32 bits) +8.. one bit per paragraph (text id), $1FFC sum of the words
-;        $0400-$1FFB, $1FFE sum xor $FFFF.  The sum is kept up to date bit by bit (MarkRead).
-; Power-on SRAM is undefined: everything is checked; a broken global block or read-mark block is reset,
-; a broken bookmark is shown as empty.
+; Journal: global + three bookmarks ($0000-$03FF, mirrored at $0400-$07FF).
+; Read marks: a build header at $0800 and two bitmaps at $0808 and $1400.
+; See docs/yonaki/ENGINE.md for the record layout and recovery rules.
 .a16
 .i16
 
 SRAM = $700000
-SAVE_VERSION = 1
-READ_BASE = $700400
-READ_MARKS = $700408
-READ_SUM = $701FFC
-READ_MAX = ($1FFC - $0408) * 8
+SAVE_MIRROR = $0400
+SAVE_VERSION = 2
+SAVE_MAGIC = $4E59                 ; "YN", low byte is the commit marker
+SAVE_GENERATION = 48
+SAVE_CRC = 148
+SAVE_SIZE = SAVE_CRC + 2
+GLOBAL_SPEED = 10
+GLOBAL_ENDINGS = 12
+GLOBAL_FLAGS = 16
+GLOBAL_NAMES = 20
 
-; t0 = sum of A words from SRAM long address p1 -> A
-SumSram:
+READ_HEADER = $700800
+READ_MAGIC = $5259                 ; "YR", low byte is the commit marker
+READ_PRIMARY = READ_HEADER + 8
+READ_MIRROR = $701400
+READ_BYTES = $0BF0
+.assert TEXT_COUNT <= READ_BYTES * 8, error, "Read bitmaps are too small"
+.assert READ_MIRROR + READ_BYTES <= $701FF0, error, "Read marks overlap the debug mailbox"
+
+; p1 = record base in SRAM or WRAM -> A = CRC-16/CCITT-FALSE of bytes 2..147.
+SaveCRC:
+    lda #$FFFF
+    sta t0
+    ldy #2
+@byte:
+    lda [p1],y
+    xba
+    eor t0
+    and #$FF00
+    xba
+    asl a
     tax
-    stz t0
-    ldy #0
-:   lda [p1],y
-    clc
-    adc t0
+    lda t0
+    xba
+    and #$FF00
+    eor CRC16Table,x
     sta t0
     iny
-    iny
-    dex
-    bne :-
-    lda t0
+    cpy #SAVE_CRC
+    bne @byte
     rts
 
-SramBoot:
-    ; global block
-    lda #.loword(SRAM)
+CRC16Table:
+.repeat 256, Byte
+    CrcEntry .set Byte << 8
+    .repeat 8
+        .if CrcEntry & $8000
+            CrcEntry .set ((CrcEntry << 1) ^ $1021) & $FFFF
+        .else
+            CrcEntry .set (CrcEntry << 1) & $FFFF
+        .endif
+    .endrepeat
+    .word CrcEntry
+.endrepeat
+
+; A = record number (0 global, 1..3 bookmarks).
+; p1 = newest valid copy, A = 1. If both are invalid, p1 = primary, A = 0.
+FindRecord:
+    sta record_id
+    xba
     sta p1
     lda #^SRAM
     sta p1+2
-    lda #126
-    jsr SumSram
-    cmp f:SRAM+252
-    bne @gbad
-    eor #$FFFF
-    cmp f:SRAM+254
-    bne @gbad
-    lda f:SRAM
-    cmp #$4E59                  ; "YN"
-    bne @gbad
-    lda f:SRAM+2
-    cmp #$474B                  ; "KG"
-    bne @gbad
-    lda f:SRAM+4
+    stz record_generation
+    jsr CheckRecord
+    sta primary_valid
+    beq @mirror
+    ldy #SAVE_GENERATION
+    lda [p1],y
+    sta record_generation
+@mirror:
+    lda p1
+    eor #SAVE_MIRROR
+    sta p1
+    jsr CheckRecord
+    beq @primary
+    ldy #SAVE_GENERATION
+    lda [p1],y
+    ldx primary_valid
+    beq @use_mirror
+    sec
+    sbc record_generation
+    beq @primary                 ; tie: prefer the primary
+    bmi @primary                 ; compare modulo 65536, including rollover
+    lda [p1],y
+@use_mirror:
+    sta record_generation
+    lda #1
+    rts
+@primary:
+    lda p1
+    eor #SAVE_MIRROR
+    sta p1
+    lda primary_valid
+    rts
+
+CheckRecord:
+    lda [p1]
+    cmp #SAVE_MAGIC
+    bne @bad
+    ldy #2
+    lda [p1],y
+    cmp record_id
+    bne @bad
+    ldy #4
+    lda [p1],y
     cmp #SAVE_VERSION
-    bne @gbad
-    lda f:SRAM+6
+    bne @bad
+    ldy #6
+    lda [p1],y
+    cmp #BUILD_ID_LO
+    bne @bad
+    ldy #8
+    lda [p1],y
+    cmp #BUILD_ID_HI
+    bne @bad
+    jsr SaveCRC                 ; Y = SAVE_CRC
+    cmp [p1],y
+    bne @bad
+    lda record_id
+    bne CheckBookmark
+    ldy #GLOBAL_SPEED
+    lda [p1],y
     cmp #4
-    bcs @gbad
+    bcs @bad
+    lda #1
+    rts
+@bad:
+    lda #0
+    rts
+
+CheckBookmark:
+    ldy #10
+    lda [p1],y
+    cmp #1
+    bne @choice
+    ldy #12
+    lda [p1],y
+    cmp #TEXT_COUNT
+    bcs @bad
+    ldy #14
+    lda [p1],y
+    cmp #$FFFF
+    bne @bad
+    bra @scene
+@choice:
+    cmp #2
+    bne @bad
+    ldy #12
+    lda [p1],y
+    cmp #CHOICE_COUNT
+    bcs @bad
+    ldy #14
+    lda [p1],y
+    cmp #$FFFF
+    beq @scene
+    cmp #TEXT_COUNT
+    bcs @bad
+@scene:
+    ldy #16
+    lda [p1],y
+    cmp #PIC_COUNT
+    bcs @bad
+    ldy #18
+    lda [p1],y
+    cmp #$FFFF
+    beq :+
+    cmp #SONG_COUNT
+    bcs @bad
+:   ldy #BOOKMARK_CHAPTER
+    lda [p1],y
+    cmp #$FFFF
+    beq :+
+    cmp #CHAPTER_COUNT
+    bcs @bad
+:   ldy #22
+    lda [p1],y
+    cmp #2
+    bcs @bad
+    ldy #24
+    lda [p1],y
+    cmp #2
+    bcs @bad
+    ldy #26
+    lda [p1],y
+    cmp #$FFFF
+    beq @sil
+    cmp #AMB_COUNT
+    bcc @sil
+@bad:
+    lda #0
+    rts
+@sil:
+    ldy #32
+@slot:
+    lda [p1],y
+    and #$00FF
+    cmp #$FF
+    beq @next
+    cmp #3
+    bcc @key_ok
+    cmp #$80                    ; explicit x position
+    bcc @bad
+    cmp #$A0
+    bcs @bad
+@key_ok:
+    lda [p1],y
+    xba
+    and #$00FF
+    cmp #SIL_COUNT
+    bcs @bad
+    iny
+    iny
+    lda [p1],y
+    and #$00FF
+    cmp #32
+    bcs @bad
+    lda [p1],y
+    xba
+    and #$00FF
+    cmp #3
+    bcs @bad
+    dey
+    dey
+@next:
+    iny
+    iny
+    iny
+    iny
+    cpy #48
+    bne @slot
+    lda #1
+    rts
+
+; A = record number. Select the write target and prepare the header in save_buf.
+BeginRecord:
+    jsr FindRecord
+    beq @init
+    lda p1
+    eor #SAVE_MIRROR
+    sta p1
+@init:
+    ldx #SAVE_SIZE-2
+    lda #0
+:   sta save_buf,x
+    dex
+    dex
+    bpl :-
+    lda #SAVE_MAGIC
+    sta save_buf
+    lda record_id
+    sta save_buf+2
+    lda #SAVE_VERSION
+    sta save_buf+4
+    lda #BUILD_ID_LO
+    sta save_buf+6
+    lda #BUILD_ID_HI
+    sta save_buf+8
+    lda record_generation
+    inc a
+    sta save_buf+SAVE_GENERATION
+    rts
+
+; Commit only after the payload and its CRC reach SRAM. Each marker store is a single byte.
+CommitRecord:
+    lda p1
+    pha
+    lda #.loword(save_buf)
+    sta p1
+    stz p1+2
+    jsr SaveCRC
+    sta save_buf+SAVE_CRC
+    pla
+    sta p1
+    lda #^SRAM
+    sta p1+2
+    sep #$20
+    .a8
+    lda #0
+    sta [p1]
+    ldy #1
+    lda save_buf+1
+    sta [p1],y
+    rep #$20
+    .a16
+    ldy #2
+:   tyx
+    lda save_buf,x
+    sta [p1],y
+    iny
+    iny
+    cpy #SAVE_SIZE
+    bne :-
+    sep #$20
+    .a8
+    lda save_buf
+    sta [p1]
+    rep #$20
+    .a16
+    jsr CheckRecord
+    bne @done
+    sep #$20
+    .a8
+    sta [p1]                    ; validation failed, leave the previous copy selectable
+    rep #$20
+    .a16
+    lda #0
+@done:
+    rts
+
+; Populate the same buffer from the selected, already validated copy.
+ReadRecord:
+    ldy #0
+:   lda [p1],y
+    tyx
+    sta save_buf,x
+    iny
+    iny
+    cpy #SAVE_SIZE
+    bne :-
+    lda #1
+    rts
+
+SramBoot:
+    lda #0
+    jsr FindRecord
+    beq @defaults
+    jsr ReadRecord
+    lda save_buf+GLOBAL_SPEED
     sta speed
-    lda f:SRAM+8
+    lda save_buf+GLOBAL_ENDINGS
     sta gendings
-    lda f:SRAM+10
+    lda save_buf+GLOBAL_ENDINGS+2
     sta gendings+2
-    lda f:SRAM+12
+    lda save_buf+GLOBAL_FLAGS
     sta gflags
-    lda f:SRAM+14
+    lda save_buf+GLOBAL_FLAGS+2
     sta gflags+2
     ldx #0
-:   lda f:SRAM+16,x
+:   lda save_buf+GLOBAL_NAMES,x
     sta names,x
     inx
     inx
     cpx #20
     bne :-
     jsr CheckNames
-    bra @read
-@gbad:
+    bra ReadBoot
+@defaults:
     lda #1
     sta sram_resets
     stz gendings
@@ -90,103 +364,76 @@ SramBoot:
     sta speed
     jsr DefaultNames
     jsr SaveGlobal
-@read:
-    lda #.loword(READ_BASE)
-    sta p1
-    lda #^READ_BASE
-    sta p1+2
-    lda #($1FFC - $0400) / 2
-    jsr SumSram
-    cmp f:READ_SUM
-    bne @rbad
-    eor #$FFFF
-    cmp f:READ_SUM+2
-    bne @rbad
-    lda f:READ_BASE
-    cmp #$4E59
-    bne @rbad
-    lda f:READ_BASE+2
-    cmp #$524B                  ; "KR"
-    bne @rbad
-    lda f:READ_BASE+4
+
+ReadBoot:
+    lda f:READ_HEADER
+    cmp #READ_MAGIC
+    bne @reset
+    lda f:READ_HEADER+2
+    cmp #SAVE_VERSION
+    bne @reset
+    lda f:READ_HEADER+4
     cmp #BUILD_ID_LO
-    bne @rbad
-    lda f:READ_BASE+6
+    bne @reset
+    lda f:READ_HEADER+6
     cmp #BUILD_ID_HI
-    bne @rbad
+    bne @reset
     rts
-@rbad:
+@reset:
     lda sram_resets
     ora #2
     sta sram_resets
+    sep #$20
+    .a8
+    lda #0
+    sta f:READ_HEADER
+    lda #>READ_MAGIC
+    sta f:READ_HEADER+1
+    rep #$20
+    .a16
     ldx #0
     lda #0
-:   sta f:READ_BASE,x
+:   sta f:READ_PRIMARY,x
+    sta f:READ_MIRROR,x
     inx
     inx
-    cpx #$1C00
+    cpx #READ_BYTES
     bne :-
-    lda #$4E59
-    sta f:READ_BASE
-    lda #$524B
-    sta f:READ_BASE+2
+    lda #SAVE_VERSION
+    sta f:READ_HEADER+2
     lda #BUILD_ID_LO
-    sta f:READ_BASE+4
+    sta f:READ_HEADER+4
     lda #BUILD_ID_HI
-    sta f:READ_BASE+6
-    lda #$4E59
-    clc
-    adc #$524B
-    clc
-    adc #BUILD_ID_LO
-    clc
-    adc #BUILD_ID_HI
-    sta f:READ_SUM
-    eor #$FFFF
-    sta f:READ_SUM+2
+    sta f:READ_HEADER+6
+    sep #$20
+    .a8
+    lda #<READ_MAGIC
+    sta f:READ_HEADER
+    rep #$20
+    .a16
     rts
 
 SaveGlobal:
-    lda #$4E59
-    sta f:SRAM
-    lda #$474B
-    sta f:SRAM+2
-    lda #SAVE_VERSION
-    sta f:SRAM+4
+    lda #0
+    jsr BeginRecord
     lda speed
-    sta f:SRAM+6
+    sta save_buf+GLOBAL_SPEED
     lda gendings
-    sta f:SRAM+8
+    sta save_buf+GLOBAL_ENDINGS
     lda gendings+2
-    sta f:SRAM+10
+    sta save_buf+GLOBAL_ENDINGS+2
     lda gflags
-    sta f:SRAM+12
+    sta save_buf+GLOBAL_FLAGS
     lda gflags+2
-    sta f:SRAM+14
+    sta save_buf+GLOBAL_FLAGS+2
     ldx #0
 :   lda names,x
-    sta f:SRAM+16,x
+    sta save_buf+GLOBAL_NAMES,x
     inx
     inx
     cpx #20
     bne :-
-    ldx #36
-    lda #0
-:   sta f:SRAM,x
-    inx
-    inx
-    cpx #252
-    bne :-
-    lda #.loword(SRAM)
-    sta p1
-    lda #^SRAM
-    sta p1+2
-    lda #126
-    jsr SumSram
-    sta f:SRAM+252
-    eor #$FFFF
-    sta f:SRAM+254
-    rts
+    jmp CommitRecord
 
 ; names: each name 1..NAME_MAX glyphs that exist, else its default
 CheckNames:
@@ -250,28 +497,27 @@ RecordEnding:
     jmp SaveGlobal
 
 ; ---------------------------------------------------------------- read marks
-; A = text id -> X = byte offset from READ_BASE, Y = bit index
+; A = text id -> X = byte offset in both bitmaps, Y = bit index
 ReadPos:
     pha
     lsr a
     lsr a
     lsr a
-    clc
-    adc #8
     tax
     pla
     and #7
     tay
     rts
 
-; A = text id -> A = 1 when read
+; A = text id -> A = 1 when read in both copies
 IsRead:
-    cmp #READ_MAX
+    cmp #TEXT_COUNT
     bcs @no
     jsr ReadPos
     sep #$20
     .a8
-    lda f:READ_BASE,x
+    lda f:READ_PRIMARY,x
+    and f:READ_MIRROR,x
     and BitMask8,y
     rep #$20
     .a16
@@ -282,177 +528,43 @@ IsRead:
     lda #0
     rts
 
-; A = text id: mark read (the sum follows the one bit)
+; A = text id. Preserve the common bits and publish the new bit in both copies.
+; An interrupted update can lose this mark, but leaves the common bits intact.
 MarkRead:
-    cmp #READ_MAX
-    bcs @r
+    cmp #TEXT_COUNT
+    bcs @done
     jsr ReadPos
     sep #$20
     .a8
-    lda f:READ_BASE,x
+    lda f:READ_PRIMARY,x
+    and f:READ_MIRROR,x
+    sta t0
     and BitMask8,y
-    bne @r8
-    lda f:READ_BASE,x
-    ora BitMask8,y
-    sta f:READ_BASE,x
-    rep #$20
-    .a16
-    lda BitMask8,y
-    and #$00FF
-    sta t0
-    txa
-    lsr a
-    bcc :+
+    bne @marked
     lda t0
-    xba
-    sta t0
-:   lda f:READ_SUM
-    clc
-    adc t0
-    sta f:READ_SUM
-    eor #$FFFF
-    sta f:READ_SUM+2
-@r:
-    rts
-@r8:
+    ora BitMask8,y
+    sta f:READ_PRIMARY,x
+    sta f:READ_MIRROR,x
+@marked:
     rep #$20
     .a16
+@done:
     rts
 
 ; ---------------------------------------------------------------- bookmarks
-; A = slot -> p1 = its SRAM address
-SlotAddr:
-    inc a
-    xba
-    sta p1
-    lda #^SRAM
-    sta p1+2
-    rts
-
-; A = slot -> save_buf = the slot; A = 1 valid, 0 not (Z)
+; A = zero-based slot. Return 1 and its payload in save_buf, or 0 when empty.
 ValidateSlot:
-    jsr SlotAddr
-    ldy #0
-:   lda [p1],y
-    tyx
-    sta save_buf,x
-    iny
-    iny
-    cpy #256
-    bne :-
-    stz t0
-    ldx #0
-:   lda save_buf,x
-    clc
-    adc t0
-    sta t0
-    inx
-    inx
-    cpx #252
-    bne :-
-    lda t0
-    cmp save_buf+252
-    beq :+
-    jmp @bad
-:   eor #$FFFF
-    cmp save_buf+254
-    beq :+
-    jmp @bad
-:   lda save_buf
-    cmp #$4E59
-    beq :+
-    jmp @bad
-:   lda save_buf+2
-    cmp #$534B                  ; "KS"
-    beq :+
-    jmp @bad
-:   lda save_buf+4
-    cmp #SAVE_VERSION
-    jne @bad
-    lda save_buf+6
-    cmp #BUILD_ID_LO
-    jne @bad
-    lda save_buf+8
-    cmp #BUILD_ID_HI
-    bne @bad
-    lda save_buf+10
-    cmp #1
-    bne @choice
-    lda save_buf+12
-    cmp #TEXT_COUNT
-    bcs @bad
-    bra @kind_ok
-@choice:
-    cmp #2
-    bne @bad
-    lda save_buf+12
-    cmp #CHOICE_COUNT
-    bcs @bad
-@kind_ok:
-    lda save_buf+14
-    cmp #$FFFF
-    beq :+
-    cmp #TEXT_COUNT
-    bcs @bad
-:   lda save_buf+16
-    cmp #PIC_COUNT
-    bcs @bad
-    lda save_buf+20
-    cmp #$FFFF
-    beq :+
-    cmp #CHAPTER_COUNT
-    bcs @bad
-:   ldx #0
-@sl:
-    lda save_buf+32,x
-    and #$00FF
-    cmp #$FF
-    beq @sn
-    lda save_buf+33,x
-    and #$00FF
-    cmp #SIL_COUNT
-    bcs @bad
-    lda save_buf+34,x
-    and #$00FF
-    cmp #32
-    bcs @bad
-    lda save_buf+35,x
-    and #$00FF
-    cmp #3
-    bcs @bad
-@sn:
-    inx
-    inx
-    inx
-    inx
-    cpx #16
-    bne @sl
-    lda #1
-    rts
-@bad:
-    lda #0
+    inc a
+    jsr FindRecord
+    beq @empty
+    jmp ReadRecord
+@empty:
     rts
 
-; A = slot: write the state at the current wait (save_kind / save_id) and verify it
+; A = zero-based slot. Capture the VM's current paragraph or choice checkpoint.
 SaveGame:
-    sta t7
-    ldx #0
-    lda #0
-:   sta save_buf,x
-    inx
-    inx
-    cpx #256
-    bne :-
-    lda #$4E59
-    sta save_buf
-    lda #$534B
-    sta save_buf+2
-    lda #SAVE_VERSION
-    sta save_buf+4
-    lda #BUILD_ID_LO
-    sta save_buf+6
-    lda #BUILD_ID_HI
-    sta save_buf+8
+    inc a
+    jsr BeginRecord
     lda save_kind
     sta save_buf+10
     lda save_id
@@ -468,16 +580,13 @@ SaveGame:
     lda music_cur
     sta save_buf+18
     lda chapter_cur
-    sta save_buf+20
+    sta save_buf+BOOKMARK_CHAPTER
     lda dark_on
     sta save_buf+22
     lda ripple_on
     sta save_buf+24
     lda amb_cur
     sta save_buf+26
-    inc save_seq
-    lda save_seq
-    sta save_buf+28
     ldx #0
     ldy #0
 :   sep #$20
@@ -514,33 +623,8 @@ SaveGame:
     inx
     cpx #20
     bne :-
-    stz t0
-    ldx #0
-:   lda save_buf,x
-    clc
-    adc t0
-    sta t0
-    inx
-    inx
-    cpx #252
-    bne :-
-    lda t0
-    sta save_buf+252
-    eor #$FFFF
-    sta save_buf+254
-    lda t7
-    jsr SlotAddr
-    ldy #0
-:   tyx
-    lda save_buf,x
-    sta [p1],y
-    iny
-    iny
-    cpy #256
-    bne :-
     inc saves_done
-    lda t7
-    jsr ValidateSlot
+    jsr CommitRecord
     sta save_ok
     rts
 
@@ -566,7 +650,7 @@ LoadGame:
     cpx #20
     bne :-
     jsr CheckNames
-    lda save_buf+20
+    lda save_buf+BOOKMARK_CHAPTER
     sta chapter_cur
     lda save_buf+22
     sta dark_on
@@ -606,9 +690,15 @@ LoadGame:
     sta dim_cur
 :   lda save_buf+18
     cmp #$FFFF
-    beq :+
+    bne @song
+    sta music_cur
+    lda #SND_STOP
+    jsr SndQueue
+    bra @amb
+@song:
     jsr PlayMusic
-:   lda save_buf+26
+@amb:
+    lda save_buf+26
     cmp #$FFFF
     beq :+
     sta amb_cur
@@ -640,9 +730,14 @@ LoadGame:
     lda f:CHOICE_TABLE+2,x
     and #$00FF
     sta vp+2
+    lda #1
     rts
 @text:
     lda save_buf+12
+    jsr TextAddr
+    lda #1
+    rts
+
 TextAddr:
     sta t0
     asl a
