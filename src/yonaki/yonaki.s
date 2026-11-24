@@ -344,7 +344,10 @@ saved_hl:  .res 2
 saved_hlc: .res 2
 saved_text_on: .res 2
 num_buf:   .res 8
-save_seq:  .res 2
+BOOKMARK_CHAPTER = 20          ; chapter offset in the SRAM bookmark payload
+record_id: .res 2
+record_generation: .res 2
+primary_valid: .res 2
 save_ok:   .res 2
 loads_done: .res 2
 saves_done: .res 2
@@ -471,6 +474,8 @@ Reset:
     lda f:$701FF4
     and #$00FF
     sta debug_vp+2
+    lda #0
+    sta f:$701FF0
 :
 .endif
     jsr SramBoot

@@ -497,7 +497,12 @@ class Builder:
         for b in banks:
             rom.add_bank(b, 'script')
         self.script_bytes = sum(len(b) for b in banks)
-        self.build_id = int(sha(b''.join(banks) + fb)[:8], 16)
+        # Include the meanings of saved indices, even if a rename leaves the bytecode unchanged.
+        save_ids = dict(endings=[(e['id'], e['kind'], e['scenario']) for e in self.endings],
+                        chapters=prog.chapters, local_flags=prog.local_flags, global_flags=prog.gnames,
+                        pictures=self.pic_names, silhouettes=self.sil_names, songs=songs, ambience=amb)
+        identity = json.dumps(save_ids, sort_keys=True).encode()
+        self.build_id = int(sha(b''.join(banks) + fb + identity)[:8], 16)
         # resume tables: text id -> op address, choice id -> op address (one bank)
         tx = [0] * prog.text_count
         ch = [0] * prog.choice_count
@@ -509,7 +514,7 @@ class Builder:
         tbl = b''.join(struct.pack('<I', a)[:3] for a in tx)
         ctbl = b''.join(struct.pack('<I', a)[:3] for a in ch)
         if len(tbl) + len(ctbl) > BANK:
-            raise BuildError(f'{prog.text_count} paragraphs: the resume table is over one bank')
+            raise BuildError(f'{prog.text_count} paragraphs and {prog.choice_count} choices: the resume table is over one bank')
         # The SPC loader advances to $8000 in the next bank at wraparound.
         img = self.audio['image']
         self.spc_addr = ((0x81 + len(rom.banks)) << 16) | 0x8000
@@ -615,6 +620,7 @@ class Builder:
               f'BUILD_ID_LO = ${self.build_id & 0xFFFF:04X}', f'BUILD_ID_HI = ${self.build_id >> 16:04X}',
               f'SPC_ADDR = ${self.spc_addr:06X}', f'SPC_LEN = {self.spc_len}', f'SPC_LOAD = ${self.audio["load"]:04X}',
               f'SPC_ENTRY = ${self.audio["entry"]:04X}', f'TITLE_SONG = ${title_song:02X}',
+              f'SONG_COUNT = {len(songs)}', f'AMB_COUNT = {len(self.audio["amb"])}',
               *[f'SE_{k.upper()} = ${v:02X}' for k, v in ui_se.items()],
               f'GLYPH_PARA = {enc.index[GLYPH_PARA]}', f'GLYPH_PAGE = {enc.index[GLYPH_PAGE]}',
               f'GLYPH_CURSOR = {enc.index[GLYPH_CURSOR]}', f'GLYPH_LEFT = {enc.index[GLYPH_LEFT]}',
