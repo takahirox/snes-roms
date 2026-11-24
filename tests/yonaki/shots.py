@@ -13,8 +13,8 @@ LABEL mode builds a review ROM (build.py --debug-start) into build/yonaki-shots/
 label (local flags all clear, no global flags; the picture / silhouettes / music are whatever the script sets
 from there -- a label in the middle of a scene starts on black until its next @bg).
 --ending follows the route of tests/yonaki/routes.py to that ending from the title (exact flags).
-Every page is captured when it is complete (the wait mark is the page mark, a choice, or the ending), plus
-chapter cards.  Output: build/yonaki-shots/<label or ending>/NNN_<text id>.png and index.png (a contact sheet).
+Every page is captured when it is complete (the wait mark is the page mark, a choice, or the ending).
+Output: build/yonaki-shots/<label or ending>/NNN_<text id>.png and index.png (a contact sheet).
 """
 import sys, json, pathlib, argparse, struct
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
@@ -39,14 +39,8 @@ def capture(g, folder, pages, follow, scale):
     n = 0
     files = []
     page_glyph = None
-    last_chapter = None
     for _ in range(200000):
         st = g.state()
-        if st == 'CHAPTER' and g.w('bright') == 15 and g.w('reg_tm') == 2 and g.w('chapter_cur') != last_chapter:
-            last_chapter = g.w('chapter_cur')
-            g.run(20)
-            files.append(g.shot(folder / f'{n:03d}_chapter.png', scale))
-            n += 1
         if st == 'WAIT':
             if page_glyph is None:
                 page_glyph = g.layout['glyphs'].index('')

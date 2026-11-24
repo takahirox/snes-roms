@@ -635,6 +635,8 @@ LoadGame:
     bne :+
     rts
 :   inc loads_done
+    lda #1
+    sta story_active
     ldx #0
 :   lda save_buf+64,x
     sta lflags,x

@@ -5,27 +5,34 @@
 ; Once per frame (WaitFrame): the dim, colour addition, shake, ripple, mosaic and brightness -> shadows.
 Tick:
     inc blink
-    ; the dim target
-    lda #0
-    ldx text_on
-    beq :+
+    lda #3
+    sta reg_tm
+    lda menu_dim
+    bne @menu_dim
+    ldx story_active
+    beq @plain
+    lda pad
+    bit #PAD_L
+    beq @dim_r
+    ldx #1
+    stx reg_tm
+@dim_r:
+    bit #PAD_R
+    beq @plain
     lda #DIM_TEXT
-:   ldx menu_dim
-    beq :+
+    bra @dark
+@menu_dim:
     lda #DIM_MENU
-:   ldx dark_on
-    beq :+
-    lda #31
-:   ldx hide_bg1
+    bra @dark
+@plain:
+    lda #0
+@dark:
+    ldx dark_on
     beq :+
     lda #31
 :   sta t0
     ldx #1
-    lda hide_bg1
-    beq :+
-    ldx #6
-    bra @step
-:   lda dim_cur
+    lda dim_cur
     cmp t0
     bcc @step
     ldx #3
@@ -433,6 +440,8 @@ LoadPic:
     bpl :-
     jsr RestoreRows
     jsr CompositeAll
+    jsr CalcRegion
+    jsr TakeRegion
     lda #1
     sta pal_dirty
     jsr QueueTint
@@ -497,53 +506,592 @@ MergeSpan:
     lda t1
     rts
 
-; Only the previously composited spans need restoring. Upload their union with the new spans
-; after compositing in slot order, while BG1 is fully dimmed.
+; new_c0 / new_c1 / new_top: the columns and top row covered by the silhouettes in the slots (a silhouette covers
+; its rows top .. top + height - 1; the region runs from the top row down to the last photo row)
+CalcRegion:
+    lda #32
+    sta new_c0
+    stz new_c1
+    lda #24
+    sta new_top
+    ldx #0
+@l:
+    lda sil_key,x
+    cmp #$FFFF
+    beq @n
+    lda sil_id,x
+    asl a
+    asl a
+    asl a
+    tay
+    lda SilTable+5,y            ; width
+    and #$00FF
+    clc
+    adc sil_x,x
+    cmp #33
+    bcc :+
+    lda #32
+:   cmp new_c1
+    bcc :+
+    sta new_c1
+:   lda sil_x,x
+    cmp new_c0
+    bcs :+
+    sta new_c0
+:   lda SilTable+1,y            ; top row
+    and #$00FF
+    cmp new_top
+    bcs @n
+    sta new_top
+@n:
+    inx
+    inx
+    cpx #8
+    bne @l
+    lda new_c1
+    bne :+
+    stz new_c0
+:   rts
+
+TakeRegion:
+    lda new_c0
+    sta reg_c0
+    lda new_c1
+    sta reg_c1
+    lda new_top
+    sta reg_top
+    rts
+
+; Show the slots: the union of the old and the new regions is restored from ROM, everything composited
+; again in WRAM while VRAM keeps the old picture visible. Only differing tiles
+; dissolve over eight ordered-pixel stages, with a minimum of four frames each.
 ApplySils:
     stz sil_dirty
-    stz t0
-    ldx #PHOTO_SPAN_BYTES-2
-:   lda sil_spans,x
-    sta photo_spans,x
-    ora t0
-    sta t0
-    dex
-    dex
-    bpl :-
-    lda t0
+    jsr CalcRegion
+    lda reg_c0
+    sta rs_c0
+    lda reg_c1
+    sta rs_c1
+    lda reg_top
+    sta rs_top
+    lda new_c1
+    beq @merged                 ; no new silhouettes
+    lda rs_c1
     bne :+
-    lda sil_key
-    and sil_key+2
-    and sil_key+4
-    and sil_key+6
-    cmp #$FFFF
+    lda new_c0                  ; no old ones
+    sta rs_c0
+    lda new_c1
+    sta rs_c1
+    lda new_top
+    sta rs_top
+    bra @merged
+:   lda new_c0
+    cmp rs_c0
+    bcs :+
+    sta rs_c0
+:   lda new_c1
+    cmp rs_c1
+    bcc :+
+    sta rs_c1
+:   lda new_top
+    cmp rs_top
+    bcs @merged
+    sta rs_top
+@merged:
+    lda rs_c1
     bne :+
     rts                         ; nothing before, nothing now
 :   lda ui_state
     pha
     lda #ST_BUSY
     sta ui_state
-    lda #1
-    sta hide_bg1
-    ldx #WAIT_DIM
-    jsr WaitEvent
-    jsr RestoreRows
-    jsr CompositeAll
-    jsr QueueTint
+    ; No pending DMA may read PHOTO while it is being restored/composited.
+    ; No animated tile is queued until the entire target composition is ready.
+    jsr WaitUploads
+    lda tint_up
+    sta sil_pal_old
+    lda tint_up+2
+    sta sil_pal_old+2
+    ; Snapshot the settled WRAM tiles before restoring the packed photo spans.
+    jsr SilBackup
     ldx #PHOTO_SPAN_BYTES-2
-:   lda photo_spans,x
-    sta t1
-    lda sil_spans,x
-    jsr MergeSpan
+:   lda sil_spans,x
     sta photo_spans,x
     dex
     dex
     bpl :-
-    jsr UploadPhotoSpans
-    stz hide_bg1
+    jsr RestoreRows
+    jsr CompositeAll
+    jsr QueueTint
+    lda tint_up
+    sta sil_pal_new
+    lda tint_up+2
+    sta sil_pal_new+2
+    stz tint_dirty              ; the tint changes gradually with the geometry
+    lda new_c1
+    bne @have_new
+    ; With no incoming figure, keep the outgoing tint until it is gone.
+    lda sil_pal_old
+    sta sil_pal_new
+    lda sil_pal_old+2
+    sta sil_pal_new+2
+@have_new:
+    lda reg_c1
+    bne @have_old
+    ; An empty old picture uses no tint aliases: prepare the incoming colour
+    ; now, rather than making a new blue figure pass through an old white tint.
+    lda sil_pal_new
+    sta sil_pal_old
+    lda sil_pal_new+2
+    sta sil_pal_old+2
+    lda #1
+    sta tint_dirty
+@have_old:
+    jsr TakeRegion
+    jsr SilFindChanges
+    lda sil_count
+    bne @animate
+    lda sil_pal_old
+    cmp sil_pal_new
+    bne @animate
+    lda sil_pal_old+2
+    cmp sil_pal_new+2
+    beq @settled
+@animate:
+    lda #1
+    sta sil_phase
+@step:
+    lda nmi_count
+    sta sil_frame
+    lda sil_count
+    beq :+
+    jsr SilBlend
+:   jsr SilPalette
+    lda sil_count
+    beq @wait
+    stz sil_upload
+    lda #1
+    sta sil_pending
+@wait:
+    jsr WaitUploads
+@hold:
+    lda nmi_count
+    sec
+    sbc sil_frame
+    cmp #SIL_STEP_FRAMES
+    bcs :+
+    jsr WaitFrame
+    bra @hold
+:   inc sil_phase
+    lda sil_phase
+    cmp #SIL_STEPS+1
+    bcc @step
+@settled:
+    stz sil_phase
+    lda sil_pal_new
+    sta tint_up
+    lda sil_pal_new+2
+    sta tint_up+2
+    jsr QueueTint
+    jsr WaitUploads
     pla
     sta ui_state
     rts
+
+; A = PHOTO byte offset -> p1, the matching tile in the split old-picture buffer.
+SilOldPointer:
+    cmp #$7B00
+    bcs @b
+    clc
+    adc #.loword(SIL_OLD_A)
+    sta p1
+    lda #$7E
+    sta p1+2
+    rts
+@b:
+    cmp #$BB00
+    bcs @tail
+    clc
+    adc #$C000-$7B00
+    sta p1
+    lda #$7F
+    sta p1+2
+    rts
+@tail:
+    sec
+    sbc #$BB00
+    clc
+    adc #.loword(sil_tail)
+    sta p1
+    lda #$7E
+    sta p1+2
+    rts
+
+; Iterate photo rows a tile at a time. PHOTO and the cached settled picture use identical tile offsets.
+SilScanStart:
+    lda rs_c0
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    sta sil_scan
+    lda rs_top
+    xba
+    asl a
+    asl a
+    asl a
+    clc
+    adc sil_scan
+    sta sil_scan
+    lda rs_c1
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    sta sil_end
+    stz sil_work
+    rts
+SilScanNext:
+    lda sil_scan
+    clc
+    adc #64
+    sta sil_scan
+    and #$07FF
+    sta t0
+    lda sil_end
+    and #$07FF
+    cmp t0
+    bne @done
+    lda sil_scan
+    clc
+    adc #2048
+    sec
+    sbc sil_end
+    sta sil_scan
+    lda rs_c0
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    clc
+    adc sil_scan
+    sta sil_scan
+@done:
+    lda sil_scan
+    cmp #$C000
+    rts
+
+SilBackup:
+    jsr PacedWait
+    jsr SilScanStart
+@tile:
+    lda sil_work
+    cmp #64
+    bcc :+
+    jsr PacedWait
+    stz sil_work
+:   inc sil_work
+    lda sil_scan
+    jsr SilOldPointer
+    ldx sil_scan
+    ldy p1
+    phb
+    lda p1+2
+    cmp #$7F
+    beq @bankf
+    lda #63
+    mvn #$7F, #$7E
+    bra @copied
+@bankf:
+    lda #63
+    mvn #$7F, #$7F
+@copied:
+    plb
+    jsr SilScanNext
+    bcc @tile
+    rts
+
+; Keep only tiles that actually change, with the changed pairs of bitplanes.
+; Background and unchanged figures do not enter the animation DMA list.
+SilFindChanges:
+    jsr PacedWait
+    stz sil_count
+    jsr SilScanStart
+@tile:
+    lda sil_work
+    cmp #24
+    bcc :+
+    jsr PacedWait
+    stz sil_work
+:   inc sil_work
+    lda sil_scan
+    jsr SilOldPointer
+    ldx sil_scan
+    ldy #0
+    stz sil_planes
+    lda #1
+    sta sil_group
+@group:
+    stz t0
+    lda #8
+    sta t1
+@word:
+    lda [p1],y
+    eor f:PHOTO,x
+    ora t0
+    sta t0
+    inx
+    inx
+    iny
+    iny
+    dec t1
+    bne @word
+    lda t0
+    beq :+
+    lda sil_planes
+    ora sil_group
+    sta sil_planes
+:   asl sil_group
+    cpy #64
+    bcc @group
+    lda sil_planes
+    beq @next
+    ldx sil_count
+    sta sil_tiles+2,x
+    lda sil_scan
+    sta sil_tiles,x
+    txa
+    clc
+    adc #4
+    sta sil_count
+@next:
+    jsr SilScanNext
+    bcc @tile
+    rts
+
+; Progressively choose old/new pixels with a fixed ordered mask. Only differing
+; plane pairs are touched, so the usual translucent blue figure needs one pair.
+SilBlend:
+    jsr PacedWait              ; each blend starts with a full main-thread budget
+    stz sil_index
+    stz sil_work
+    lda sil_phase
+    dec a
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    clc
+    adc #.loword(SilDissolveMasks)
+    sta p2
+    lda #^SilDissolveMasks
+    sta p2+2
+@tile:
+    ldx sil_index
+    lda sil_tiles+2,x
+    sta sil_planes
+    lda sil_tiles,x
+    sta sil_scan
+    jsr SilOldPointer
+    ldy #0
+@group:
+    lsr sil_planes
+    bcc @skip
+    lda sil_work
+    cmp #48
+    bcc :+
+    phy
+    jsr PacedWait
+    ply
+    stz sil_work
+:   inc sil_work
+    tya
+    clc
+    adc sil_scan
+    tax
+    lda #8
+    sta t0
+@word:
+    lda [p1],y
+    eor f:PHOTO,x
+    and [p2],y
+    eor [p1],y
+    sta [p1],y
+    inx
+    inx
+    iny
+    iny
+    dec t0
+    bne @word
+    bra @next
+@skip:
+    tya
+    clc
+    adc #16
+    tay
+@next:
+    cpy #64
+    bcc @group
+    lda sil_index
+    clc
+    adc #4
+    sta sil_index
+    cmp sil_count
+    bcc @tile
+    rts
+
+; A palette bank may change from blue to white/red along with the masks.
+; Interpolate only the 112 tint aliases; the base photo and BG2 text stay fixed.
+SilPalette:
+    lda tint_ok
+    jeq @done
+    lda sil_pal_old
+    cmp sil_pal_new
+    bne :+
+    lda sil_pal_old+2
+    cmp sil_pal_new+2
+    jeq @done
+:   jsr PacedWait              ; palette arithmetic gets its own frame budget
+    lda sil_pal_old
+    sta p0
+    lda sil_pal_old+2
+    sta p0+2
+    lda sil_pal_new
+    sta p1
+    lda sil_pal_new+2
+    sta p1+2
+    ldy #0
+@colour:
+    lda [p0],y
+    sta t0
+    lda [p1],y
+    sta t1
+    stz t2
+    lda #3
+    sta t3
+@component:
+    lda t0
+    and #31
+    sta t4
+    lda t1
+    and #31
+    sec
+    sbc t4
+    sta t5
+    ldx sil_phase
+    lda #0
+@mul:
+    clc
+    adc t5
+    dex
+    bne @mul
+    ; Signed division by eight (component differences can be negative).
+    cmp #$8000
+    ror a
+    cmp #$8000
+    ror a
+    cmp #$8000
+    ror a
+    clc
+    adc t4
+    sta t4
+    lda t3
+    cmp #3
+    beq @red
+    cmp #2
+    beq @green
+    lda t4
+    xba
+    asl a
+    asl a
+    bra @merge
+@green:
+    lda t4
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a
+    bra @merge
+@red:
+    lda t4
+@merge:
+    ora t2
+    sta t2
+    ldx #5
+@shift:
+    lsr t0
+    lsr t1
+    dex
+    bne @shift
+    dec t3
+    bne @component
+    lda t2
+    sta sil_pal,y
+    iny
+    iny
+    cpy #224
+    bcs @queue
+    tya
+    and #63
+    bne @colour
+    phy
+    jsr PacedWait              ; at most 32 RGB interpolations in a frame
+    ply
+    jmp @colour
+@queue:
+    lda #.loword(sil_pal)
+    sta tint_up
+    lda #$7E
+    sta tint_up+2
+    lda #1
+    sta tint_dirty
+@done:
+    rts
+
+; Four-by-four Bayer ranks grouped into eight levels; every word repeats the
+; pixel mask in both bytes so all planes of a pixel change together.
+SilDissolveMasks:
+    .word $8888, $0000, $2222, $0000, $8888, $0000, $2222, $0000
+    .word $8888, $0000, $2222, $0000, $8888, $0000, $2222, $0000
+    .word $8888, $0000, $2222, $0000, $8888, $0000, $2222, $0000
+    .word $8888, $0000, $2222, $0000, $8888, $0000, $2222, $0000
+    .word $AAAA, $0000, $AAAA, $0000, $AAAA, $0000, $AAAA, $0000
+    .word $AAAA, $0000, $AAAA, $0000, $AAAA, $0000, $AAAA, $0000
+    .word $AAAA, $0000, $AAAA, $0000, $AAAA, $0000, $AAAA, $0000
+    .word $AAAA, $0000, $AAAA, $0000, $AAAA, $0000, $AAAA, $0000
+    .word $AAAA, $4444, $AAAA, $1111, $AAAA, $4444, $AAAA, $1111
+    .word $AAAA, $4444, $AAAA, $1111, $AAAA, $4444, $AAAA, $1111
+    .word $AAAA, $4444, $AAAA, $1111, $AAAA, $4444, $AAAA, $1111
+    .word $AAAA, $4444, $AAAA, $1111, $AAAA, $4444, $AAAA, $1111
+    .word $AAAA, $5555, $AAAA, $5555, $AAAA, $5555, $AAAA, $5555
+    .word $AAAA, $5555, $AAAA, $5555, $AAAA, $5555, $AAAA, $5555
+    .word $AAAA, $5555, $AAAA, $5555, $AAAA, $5555, $AAAA, $5555
+    .word $AAAA, $5555, $AAAA, $5555, $AAAA, $5555, $AAAA, $5555
+    .word $EEEE, $5555, $BBBB, $5555, $EEEE, $5555, $BBBB, $5555
+    .word $EEEE, $5555, $BBBB, $5555, $EEEE, $5555, $BBBB, $5555
+    .word $EEEE, $5555, $BBBB, $5555, $EEEE, $5555, $BBBB, $5555
+    .word $EEEE, $5555, $BBBB, $5555, $EEEE, $5555, $BBBB, $5555
+    .word $FFFF, $5555, $FFFF, $5555, $FFFF, $5555, $FFFF, $5555
+    .word $FFFF, $5555, $FFFF, $5555, $FFFF, $5555, $FFFF, $5555
+    .word $FFFF, $5555, $FFFF, $5555, $FFFF, $5555, $FFFF, $5555
+    .word $FFFF, $5555, $FFFF, $5555, $FFFF, $5555, $FFFF, $5555
+    .word $FFFF, $DDDD, $FFFF, $7777, $FFFF, $DDDD, $FFFF, $7777
+    .word $FFFF, $DDDD, $FFFF, $7777, $FFFF, $DDDD, $FFFF, $7777
+    .word $FFFF, $DDDD, $FFFF, $7777, $FFFF, $DDDD, $FFFF, $7777
+    .word $FFFF, $DDDD, $FFFF, $7777, $FFFF, $DDDD, $FFFF, $7777
+    .word $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF
+    .word $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF
+    .word $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF
+    .word $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF, $FFFF
 
 CompositeAll:
     jsr ClearSilSpans

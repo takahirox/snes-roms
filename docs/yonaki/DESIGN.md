@@ -214,8 +214,11 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 - Characters: translucent blue silhouettes without an outline (composited onto the background by the CPU). Ghosts are white; horror scenes can also
   use red.
 - Text: 12-dot characters across the whole screen, 18 characters a line, at most 12 lines. The background stays at
-  full brightness under text; the glyphs' dark shadow keeps them readable. Waits for A after each paragraph. When the page is full, goes to the next page.
+  full brightness under text; the white glyphs have a one-pixel dark outline. Waits for A after each paragraph. When the page is full,
+  goes to the next page.
 - Choices: listed under the text. Select with up/down, confirm with A.
+- Hold R to dim the photo and L to hide the text. Holding both combines the two effects.
+- Chapter markers label bookmarks and let the story continue.
 - A: advance / confirm. B (held): fast-forward through text already read (stops at unread text). START: menu
   (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
 - Title: はじめから (new game) / しおりから (continue from a bookmark) / 結末の一覧 (list of endings) / (after unlocking) おまけ (bonus).

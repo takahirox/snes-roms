@@ -825,6 +825,7 @@ StartGame:
     rts
 
 ResetScreenState:
+    stz story_active
     stz text_on
     stz dark_on
     stz ripple_on
@@ -832,7 +833,7 @@ ResetScreenState:
     stz mosaic
     stz add_level
     stz shake
-    stz hide_bg1
+    stz reg_c1
     stz dim_cur
     stz redraw
     lda #3
@@ -1369,107 +1370,10 @@ CopyBitmap:
     bne @l
     rts
 
-; ---------------------------------------------------------------- chapter card
-; A = chapter: the screen goes black, the two parts of the title (split at the first full-width space)
-; appear centred, then black again; the picture comes back unless a new one follows.
-ChapterCard:
-    sta chapter_cur
-    lda #ST_CHAPTER
-    sta ui_state
-    jsr ClearPage
-    stz text_on
-    lda #2
-    jsr FadeOut
-    lda #2                      ; BG2 only
-    sta reg_tm
-    lda #1
-    sta g_col
-    lda #6
-    sta g_space
-    lda #72
-    sta g_y
-    lda chapter_cur
-    asl a
-    asl a
-    tax
-    lda ChapterTable,x
-    pha
-    lda ChapterTable+2,x
-    pha
-    pla
-    sta t7
-    pla
-    jsr PrintCentered
-    lda #2
-    sta g_space
-    lda #100
-    sta g_y
-    lda t7
-    jsr PrintCentered
-    stz g_space
-    jsr WaitUploads
-    lda #2
-    jsr FadeIn
-    lda #150
-    ldx #WAIT_CHAPTER
-    jsr WaitTimedEvent
-    lda #2
-    jsr FadeOut
-    jsr ClearPage
-    jsr WaitUploads
-    lda #3
-    sta reg_tm
-    jsr BgFollows
-    bne :+
-    lda #2
-    jmp FadeIn
-:   rts
-
-; Z clear when an OP_BG comes next (after sound / flag ops)
-BgFollows:
-    lda vp
-    sta p2
-    lda vp+2
-    sta p2+2
-@l:
-    lda [p2]
-    and #$00FF
-    cmp #OP_BG
-    beq @yes
-    ldy #2
-    cmp #OP_BGM
-    beq @skip
-    cmp #OP_SE
-    beq @skip
-    cmp #OP_AMB
-    beq @skip
-    cmp #OP_SETG
-    beq @skip
-    cmp #OP_CLRG
-    beq @skip
-    ldy #3
-    cmp #OP_SET
-    beq @skip
-    cmp #OP_CLR
-    beq @skip
-    ldy #4
-    cmp #OP_FX
-    beq @skip
-    lda #0
-    rts
-@skip:
-    tya
-    clc
-    adc p2
-    sta p2
-    bra @l
-@yes:
-    lda #1
-    rts
-
 ; ---------------------------------------------------------------- ending
 ; A = ending index: record it, 終 and the ending's name over the darkened picture, A -> title
 EndingScreen:
+    stz story_active
     sta end_index
     inc a
     sta endings_reached

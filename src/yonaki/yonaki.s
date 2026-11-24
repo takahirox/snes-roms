@@ -107,6 +107,13 @@ BMP_SIZE  = 11520
 MAPBUF    = $7E5000             ; BG2 map shadow (32 x 32 words)
 BMPSAVE   = $7E5800             ; the bitmap under the START menu
 PHOTO     = $7F0000             ; photo tiles (49152 bytes)
+; The old picture during a figure dissolve. Split around PHOTO and the menu bitmap.
+; 492 + 256 + 20 tiles, without reducing either photo colours or the text bitmap.
+SIL_OLD_A = $7E8500
+SIL_OLD_B = $7FC000
+SIL_STEPS = 8
+SIL_STEP_FRAMES = 4             ; at least 32 frames (~0.53 s) of visible transition
+
 PHOTO_ROWS = 24
 PHOTO_COLS = 32
 PHOTO_SPAN_BYTES = PHOTO_ROWS*2
@@ -123,7 +130,7 @@ TY0       = 2                   ; line n at TY0 + 16 n (screen 18 + 16 n)
 PAGE_LINES = 12
 CHOICE_X  = 26                  ; option letter (cursor at TX0)
 OPT_TEXT_X = CHOICE_X + 16      ; option text (tools/yonaki/script.py CHOICE_PX)
-DIM_TEXT  = 0                   ; BG1 minus this much under text (of 31; tools/yonaki/build.py reads it)
+DIM_TEXT  = 2                   ; BG1 dim while R is held (of 31; tools/yonaki/build.py reads it)
 DIM_MENU  = 15
 
 ; ui_state (for the tests)
@@ -136,7 +143,6 @@ ST_MENU = 5
 ST_SLOTS = 6
 ST_ENDLIST = 7
 ST_ENDING = 8
-ST_CHAPTER = 9
 ST_BUSY = 10
 ST_CONFIRM = 11
 ST_NAME = 12
@@ -158,7 +164,7 @@ t7:       .res 2
 g_glyph:  .res 2
 g_x:      .res 2
 g_y:      .res 2
-g_col:    .res 2               ; 1 white, 3 grey, 0 erase
+g_col:    .res 2               ; 0 erase, 1 white, 2 outlined white, 3 grey
 g_w:      .res 2
 g_addr:   .res 2
 g_shift:  .res 2
@@ -235,9 +241,9 @@ bright:    .res 2              ; master brightness 0-15
 blanked:   .res 2              ; 1: forced blank
 dim_cur:   .res 2
 dim_step:  .res 2
-text_on:   .res 2              ; text on the page: the photo is dimmed
+text_on:   .res 2              ; a story text page has been drawn
+story_active: .res 2           ; reading controls apply in the story, including bookmark resume
 dark_on:   .res 2              ; @fx dark
-hide_bg1:  .res 2              ; dimmed out fully (silhouette updates)
 menu_dim:  .res 2
 add_level: .res 2              ; colour addition (flash / white)
 add_red:   .res 2
@@ -294,9 +300,34 @@ sil_id:    .res 8
 sil_x:     .res 8
 sil_col:   .res 8
 sil_dirty: .res 2
+sil_phase: .res 2              ; 0 idle, 1..8 ordered dissolve (also observed by tests)
+sil_frame: .res 2
+sil_scan:  .res 2              ; photo byte offset while backing up / finding changed tiles
+sil_end:   .res 2
+sil_count: .res 2              ; bytes used in sil_tiles (offset, changed plane-pair bits)
+sil_index: .res 2
+sil_pending: .res 2            ; dissolve tiles awaiting V-blank DMA
+sil_upload: .res 2
+sil_planes: .res 2
+sil_group: .res 2
+sil_work:  .res 2
+sil_tiles: .res 768*4
+sil_tail:  .res $500           ; last 20 tiles of the old picture
+sil_pal_old: .res 4            ; ROM palette before the change
+sil_pal_new: .res 4
+sil_pal:   .res 224            ; intermediate translucent-figure colours
 tint_ok:   .res 2              ; 1: the picture has translucent-figure colours
 tint_col:  .res 2              ; the colour drawn translucent (0 blue, 1 white, 2 red)
 sil_spans: .res PHOTO_SPAN_BYTES ; spans composited onto the current WRAM photo
+reg_c0:    .res 2              ; columns / top row composited last time
+reg_c1:    .res 2
+reg_top:   .res 2
+new_c0:    .res 2
+new_c1:    .res 2
+new_top:   .res 2
+rs_top:    .res 2              ; RestoreRows arguments and state
+rs_c0:     .res 2
+rs_c1:     .res 2
 rs_row:    .res 2              ; byte offset of the row being restored
 rs_bytes:  .res 2
 c_x:       .res 2              ; Composite state
@@ -968,7 +999,7 @@ Enqueue:
     inc dma_deferred
     rts
 
-; End of frame: palette, map, photo rows and text rows within the budget (t5).
+; End of frame: palette, map, changed figure tiles, photo rows and text rows within the budget (t5).
 PumpUploads:
     lda job_head
     cmp job_tail
@@ -1033,6 +1064,70 @@ PumpUploads:
     sta t3
     jsr Enqueue
 @photo:
+    lda sil_pending
+    jeq @photo_rows
+@sil:
+    lda job_tail
+    cmp #JOB_MAX*8
+    jcs @sil_done
+    lda t5
+    cmp #64
+    bcc @sil_done
+    ldx sil_upload
+    lda sil_tiles,x
+    sta t2
+    lsr a
+    sta t0
+    lda t2
+    jsr SilOldPointer           ; p1 points at the progressively dissolved tile
+    lda p1
+    sta t2
+    lda p1+2
+    xba
+    and #$FF00
+    sta t1
+    lda #64
+    sta t3
+    lda sil_tiles,x
+    sta t4
+@sil_group:
+    lda sil_upload
+    clc
+    adc #4
+    sta sil_upload
+    cmp sil_count
+    beq @sil_enqueue
+    lda t2
+    clc
+    adc t3                     ; a source bank boundary ends the group
+    bcs @sil_enqueue
+    lda t3
+    clc
+    adc #64
+    cmp t5
+    beq :+
+    bcs @sil_enqueue
+:   ldx sil_upload
+    lda t4
+    clc
+    adc #64
+    cmp sil_tiles,x
+    bne @sil_enqueue
+    sta t4
+    lda t3
+    clc
+    adc #64
+    sta t3
+    bra @sil_group
+@sil_enqueue:
+    jsr Enqueue
+    lda sil_upload
+    cmp sil_count
+    jcc @sil
+    stz sil_pending
+@sil_done:
+    rts
+@photo_rows:
     lda photo_dirty
     beq @text
     ldx photo_next
@@ -1063,7 +1158,7 @@ PumpUploads:
     lda #$7F00
     sta t1
     jsr Enqueue
-    bra @photo
+    bra @photo_rows
 @photo_done:
     stz photo_dirty
 @text:

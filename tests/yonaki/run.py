@@ -726,6 +726,201 @@ def test_scheduler():
     return rec
 
 
+def test_reading_controls():
+    """Scene fades keep the default brightness, and held shoulder buttons only change the view."""
+    import numpy as np
+    from vramview import text_indices
+
+    g = new('reading_controls', sram=bytes(8192))
+    bus = g.layout['pictures'].index('bus')
+    fade_levels = []
+
+    def observe(game):
+        assert game.w('reg_tm') != 2, 'a chapter card interrupted the opening'
+        if game.w('pic_cur') == bus and not game.w('blanked'):
+            fade_levels.append(game.w('bright'))
+            assert game.w('dim_cur') == 0, 'the scene dimmed without R'
+
+    g.observers.append(observe)
+    g.new_game()
+    g.until(lambda: g.state() == 'WAIT', 3000, 'first paragraph')
+    g.run(4)
+    g.observers.remove(observe)
+    assert min(fade_levels) < 15 and max(fade_levels) == 15, fade_levels
+    assert g.w('chapter_cur') == 0, 'the prologue must still label bookmarks'
+    g.until(lambda: g.w('blink') & 32 and not g.w('mark_on'), 80, 'blank wait mark')
+    g.run(4)
+    text = text_indices(g.e.vram)
+    ink = text == 1
+    surrounded = np.zeros_like(ink)
+    border = np.pad(ink, 1)
+    for y in range(3):
+        for x in range(3):
+            surrounded |= border[y:y+192, x:x+240]
+    assert np.any(ink) and np.array_equal(text == 2, surrounded & ~ink), 'text outline is missing'
+
+    # Continue to the settled scene with the first figure.
+    for _ in range(2000):
+        if g.state() == 'WAIT' and g.w('sil_key') != 0xFFFF:
+            break
+        if g.state() in ('TYPE', 'WAIT'):
+            g.tap('A', 1, 1)
+        else:
+            g.run(1)
+    else:
+        raise Stuck('first figure did not appear')
+    g.run(4)
+    text_id = g.w('cur_text')
+    # First line, away from the blinking page marker. Its left edge contains
+    # only the photo, since the text bitmap starts at x=8.
+    sample = lambda: g.screen()[16:32].copy()
+    normal = sample()
+    shot(g, 'normal', settle=False)
+    g.run(6, ('R',))
+    reading = sample()
+    assert g.w('dim_cur') == 2
+    assert reading[:, :8].mean() < normal[:, :8].mean(), 'R did not dim the photo'
+    shot(g, 'hold_r', settle=False)
+    g.run(6)
+    assert g.w('dim_cur') == 0 and np.array_equal(sample(), normal)
+
+    g.run(6, ('L',))
+    scenic = g.screen().copy()
+    assert g.w('reg_tm') == 1 and g.w('dim_cur') == 0
+    assert not np.array_equal(scenic[16:32], normal), 'L did not remove the text'
+    assert np.array_equal(scenic[16:32, :8], normal[:, :8]), 'L changed the photo'
+    shot(g, 'hold_l', settle=False)
+    g.run(6, ('L', 'R'))
+    assert g.w('reg_tm') == 1 and g.w('dim_cur') == 2, 'both shoulder effects should apply'
+    assert np.array_equal(sample()[:, :8], reading[:, :8]), 'R dim differs when L is also held'
+    assert not np.array_equal(sample(), reading), 'holding R brought the text back'
+    shot(g, 'hold_both', settle=False)
+    g.run(6, ('L',))
+    assert np.array_equal(g.screen(), scenic), 'releasing R should restore the bright scenery'
+    g.run(6)
+    assert np.array_equal(sample(), normal) and g.w('cur_text') == text_id and g.state() == 'WAIT'
+    shot(g, 'released', settle=False)
+
+    assert g.advance() == 'CHOICE'
+    g.run(6, ('L',))
+    assert g.w('reg_tm') == 1
+    g.run(1, ('L', 'START'))
+    for _ in range(300):
+        if g.state() == 'MENU':
+            break
+        g.run(1, ('L',))
+    else:
+        raise Stuck('START did not open the menu during L')
+    g.run(20, ('L', 'R'))
+    assert g.w('reg_tm') == 3 and g.w('dim_cur') == 15, 'shoulder buttons affected the menu'
+    shot(g, 'menu_with_shoulders_held', settle=False)
+    rec = dict(default_dim=0, held_r_dim=2, held_l_layers=1)
+    finish(g, rec)
+    return rec
+
+
+def test_silhouette_updates():
+    """Figure changes dissolve monotonically; photo and unchanged pixels stay fixed."""
+    import numpy as np
+    from vramview import photo_indices
+
+    g = new('sil_live', sram=bytes(8192))
+    g.new_game()
+    g.until(lambda: g.state() == 'WAIT', 3000, 'first paragraph')
+    g.run(12)
+    picture = g.w('pic_cur')
+    text_dim = g.w('dim_cur')
+    initial_tiles = bytes(g.e.vram[:49152])
+    previous_tiles = initial_tiles
+    # The fixture's figures start at photo row 4 or lower. This strip is above
+    # them and left of the BG2 text bitmap, so only a photo/display change can alter it.
+    rom = (B / 'yonaki.sfc').read_bytes()
+    table = g.L['SilTable'] & 0x7FFF
+    assert all(rom[table + i * 8 + 1] >= 4 for i in range(len(g.layout['silhouettes'])))
+    probe = lambda: g.screen()[16:48, :8].copy()
+    previous = probe()
+    busy_frames = 0
+    updates = 0
+    was_busy = False
+    streamed = False
+    animation = []
+    phase_frames = {}
+    transitions = []
+
+    def observe(game):
+        nonlocal previous, busy_frames, updates, was_busy, streamed
+        assert game.w('pic_cur') == picture, 'fixture changed its background too early'
+        current = probe()
+        busy = game.state() == 'BUSY'
+        if busy:
+            if not was_busy:
+                updates += 1
+                streamed = False
+                animation.clear()
+                phase_frames.clear()
+                game.shot(game.shots / f'update_{updates}_prepare.png')
+            busy_frames += 1
+            assert np.array_equal(current, previous), 'background changed during a silhouette update'
+            assert game.w('bright') == 15 and game.w('dim_cur') == text_dim, 'silhouette update dimmed the photo'
+            phase = game.w('sil_phase')
+            if 1 <= phase <= 8:
+                phase_frames[phase] = phase_frames.get(phase, 0) + 1
+                tiles = bytes(game.e.vram[:49152])
+                if not animation or animation[-1] != tiles:
+                    animation.append(tiles)
+                if phase in (4, 8) and phase_frames[phase] == 4:
+                    game.shot(game.shots / f'update_{updates}_phase_{phase}.png')
+            if not streamed and game.w('sil_pending'):
+                streamed = True
+                game.shot(game.shots / f'update_{updates}_transfer.png')
+        else:
+            previous = current
+        was_busy = busy
+
+    g.observers.append(observe)
+    slots = lambda: tuple(g.w('sil_key', i * 2) for i in range(4))
+    last = slots()
+    counts = []
+    for _ in range(10000):
+        state = g.state()
+        if state == 'WAIT':
+            current = slots()
+            if current != last:
+                counts.append(sum(k != 0xFFFF for k in current))
+                last = current
+                shot(g, f'settled_{len(counts)}')
+                tiles = bytes(g.e.vram[:49152])
+                assert tiles != previous_tiles, 'figure geometry did not reach VRAM'
+                assert tiles == g.wram(0x10000, 49152), 'VRAM differs from the prepared composition'
+                before, after = photo_indices(previous_tiles), photo_indices(tiles)
+                changed = before != after
+                progress = []
+                for frame in animation + [tiles]:
+                    pixels = photo_indices(frame)
+                    assert np.all((pixels == before) | (pixels == after)), 'dissolve corrupted a pixel or changed a fixed pixel'
+                    progress.append(int(np.count_nonzero((pixels == after) & changed)))
+                assert all(a <= b for a, b in zip(progress, progress[1:])), 'figure flickered back to the old state'
+                levels = len(set(p for p in progress if 0 < p < int(changed.sum())))
+                assert levels >= 7, ('figure still popped', levels, progress)
+                assert set(phase_frames) == set(range(1, 9)) and min(phase_frames.values()) >= 4, phase_frames
+                transitions.append(dict(changed_pixels=int(changed.sum()), intermediate_levels=levels,
+                                        animation_frames=sum(phase_frames.values())))
+                previous_tiles = tiles
+                if len(counts) == 4:
+                    break
+            g.tap('A', 1, 1)
+        elif state == 'TYPE':
+            g.tap('A', 1, 1)
+        else:
+            g.run(1)
+    assert counts == [1, 3, 2, 0], counts
+    assert updates == 4 and busy_frames > 4, (updates, busy_frames)
+    assert previous_tiles == initial_tiles, 'clearing figures did not restore the original photo'
+    rec = dict(updates=updates, busy_frames=busy_frames, visible_figures=counts, transitions=transitions)
+    finish(g, rec)
+    return rec
+
+
 def test_real():
     """The real scenario: build, boot, and play every ending of tests/yonaki/routes.py's plan."""
     buildrom.build(ROOT / 'build/yonaki', None, ['--quiet'])
@@ -786,7 +981,8 @@ def test_coverage():
 
 
 TESTS = [test_coverage, test_boot, test_corrupt, test_endings, test_endings_list, test_save_load, test_recovery,
-         test_names, test_fastforward, test_speed, test_effects, test_scheduler]
+         test_names, test_fastforward, test_speed, test_effects, test_scheduler,
+         test_reading_controls, test_silhouette_updates]
 
 
 def main():

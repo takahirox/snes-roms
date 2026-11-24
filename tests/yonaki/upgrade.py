@@ -102,7 +102,7 @@ def write_bookmarks(build, seed):
 
 def prepare_bookmarks(build, traces, out):
     out.mkdir(parents=True, exist_ok=True)
-    seed = ending_seed(build, traces)
+    seed = ending_seed(build, traces) if traces is not None else bytes(8192)
     sram, bookmarks = write_bookmarks(build, seed)
     paths = []
     for slot, (point, expected) in enumerate(zip(('paragraph', 'choice'), bookmarks), 1):
@@ -124,7 +124,7 @@ def prepare_bookmarks(build, traces, out):
             game.press('A', state, limit=1200)
             game.run(10)  # let queued graphics finish on both cores
             resumed = resume_state(game, point)
-            expected = dict(expected, loads_done=1)
+            expected = dict(expected, loads_done=1, sram_resets=0)
             if point == 'paragraph':
                 expected['read'] = 1
             assert resumed == expected, (point, resumed, expected)

@@ -1,8 +1,8 @@
 ; ---------------------------------------------------------------- text bitmap (BG2, 2bpp)
 ; Bitmap coordinates x 0-239 (screen 8-247), y 0-191 (screen 16-207).  Byte of (x, y):
 ; (y >> 3) * 480 + (x >> 3) * 16 + (y & 7) * 2 (+1 for plane 1).  Colours: 1 white (plane 0), 2 shadow
-; (plane 1), 3 grey (both).  A glyph is drawn white with a shadow one pixel right, down and diagonal; the
-; shadow never covers white that is already there, and white always covers shadow.
+; (plane 1), 3 grey (both).  Story text uses a one-pixel outline; other glyphs use a shadow one pixel
+; right, down and diagonal.  The shadow never covers existing ink, and ink always covers shadow.
 ; Encoded strings (tools/yonaki/build.py Encoder): $00 end, $01 new line, $02 page chunk (+ line count), $03 / $04
 ; the names (主人公, ヒロイン),
 ; $10-$EF glyph 0-223, $F0-$FF + byte: glyph 224 + 12-bit value.
@@ -109,7 +109,10 @@ SetLinePal:
     rts
 
 ; ---------------------------------------------------------------- glyphs
-; Draw glyph g_glyph at g_x, g_y with g_col (1 white, 3 grey, 0 erase).  Sets g_w (advance).
+TEXT_OUTLINE = 2                ; white ink with a dark outline, using the story text margins
+
+; Draw g_glyph at g_x, g_y.  g_col: 0 erase, 1 white, TEXT_OUTLINE outlined white, 3 grey.
+; Outlined text starts at least one pixel inside the top/left of the bitmap.  Sets g_w (advance).
 DrawGlyph:
     lda glyph_count
     cmp #GLYPHS_PER_FRAME
@@ -153,7 +156,22 @@ DrawGlyph:
     cmp #GLYPH_COUNT
     bcc :+
     rts
-:   ; dirty rows
+:   ; the outlined footprint starts one pixel above and to the left of the ink
+    lda g_x
+    sta t1
+    lda g_y
+    ldx g_col
+    cpx #TEXT_OUTLINE
+    bne :+
+    dec t1
+    dec a
+:   sta g_row
+    lda t1
+    and #7
+    xba
+    asl a                       ; shift * 512: ShiftTable offset
+    sta g_shift
+    ; dirty rows (both styles reach through g_y + 12)
     lda g_y
     clc
     adc #12
@@ -161,13 +179,13 @@ DrawGlyph:
     lsr a
     lsr a
     tax
-    lda g_y
+    lda g_row
     lsr a
     lsr a
     lsr a
     jsr MarkTextRows
     ; address of the first byte
-    lda g_y
+    lda g_row
     lsr a
     lsr a
     lsr a
@@ -184,7 +202,7 @@ DrawGlyph:
     asl a
     asl a                       ; (y >> 3) * 480
     sta g_addr
-    lda g_x
+    lda t1
     lsr a
     lsr a
     lsr a
@@ -196,23 +214,19 @@ DrawGlyph:
     clc
     adc g_addr
     sta g_addr
-    lda g_y
+    lda g_row
     and #7
     sta g_row
     asl a
     clc
     adc g_addr
     sta g_addr
-    lda g_x
-    and #7
-    xba
-    asl a                       ; shift * 512: ShiftTable offset
-    sta g_shift
     lda #BMP_COLS
     sec
     sbc t1
     sta t2                      ; byte columns available (1..30)
     stz g_prev
+    stz g_cur
     ldy #0                      ; glyph row * 2
 @row:
     cpy #24
@@ -220,24 +234,49 @@ DrawGlyph:
     lda #0
     bra :++
 :   lda [p1],y
-:   sta g_cur
+:   ldx g_col
+    cpx #TEXT_OUTLINE
+    beq @outline
+    sta t1                      ; ink in the current row
     lsr a
     ora g_prev
     sta t0
     lda g_prev
     lsr a
     ora t0
-    sta t0                      ; shadow before removing the white
+    sta t0
+    lda t1
+    sta g_prev
+    bra @mask
+@outline:
+    ; Combine three rows of ink, then expand left and right.  The footprint starts at x - 1,
+    ; so the original column positions are restored by shifting the middle row right once.
+    sta t1                      ; next row
+    ora g_prev
+    ora g_cur
+    sta t0
+    lsr a
+    ora t0
+    sta t0
+    lsr a
+    ora t0
+    sta t0
     lda g_cur
     sta g_prev
+    lda t1
+    sta g_cur
+    lda g_prev
+    lsr a
+    sta t1
+@mask:
     eor #$FFFF
     and t0
     sta t0                      ; shadow S
-    ora g_cur
+    ora t1
     bne :+
     jmp @next
 :   ; spread W and S over three bytes, shifted right (ShiftTable[s][v] = v << 8 >> s)
-    lda g_cur
+    lda t1
     xba
     and #$00FF
     asl a
@@ -245,7 +284,7 @@ DrawGlyph:
     tax
     lda ShiftTable,x
     sta t6
-    lda g_cur
+    lda t1
     and #$00FF
     asl a
     ora g_shift
@@ -341,9 +380,15 @@ DrawGlyph:
     iny
     iny
     cpy #26
-    bcs :+
+    bcc @more
+    bne @done
+    lda g_col
+    cmp #TEXT_OUTLINE
+    bne @done
+@more:
     jmp @row
-:   rts
+@done:
+    rts
 
 ; one byte column: t4 = white bits, t4+1 = shadow bits, X = bitmap offset (8-bit A)
 .a8

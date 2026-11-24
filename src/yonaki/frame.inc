@@ -11,8 +11,7 @@ WAIT_FLASH     = 10
 WAIT_TYPING    = 12
 WAIT_ADVANCE   = 14
 WAIT_CHOICE    = 16
-WAIT_CHAPTER   = 18
-WAIT_ENDING    = 20
+WAIT_ENDING    = 18
 
 ; X = event. The caller's stack is its continuation. A check returns zero to run another frame,
 ; or a nonzero completion result (a PAD_* bit for interactive waits). Checks may pace work with
@@ -31,7 +30,7 @@ WaitEvent:
 
 WaitChecks:
     .word 0, CheckTimer, CheckSkip, CheckUploads, CheckDim, CheckFlash
-    .word CheckTyping, CheckAdvance, CheckChoice, CheckChapter, CheckEnding
+    .word CheckTyping, CheckAdvance, CheckChoice, CheckEnding
 
 ; A = frames. Zero-length timers and already-drained uploads need no frame.
 WaitFrames:
@@ -82,6 +81,7 @@ UploadsPending:
     ora tint_dirty
     ora map_dirty
     ora ui_dirty
+    ora sil_pending
     bne @done
     lda job_head
     eor job_tail
@@ -152,13 +152,6 @@ CheckChoice:
     and #PAD_START
 @done:
     rts
-
-CheckChapter:
-    lda pad_new
-    and #PAD_A
-    bne :+
-    jmp CheckTimer
-:   rts
 
 CheckEnding:
     lda pad_new

@@ -204,24 +204,42 @@ def compare_core(name, core, source, bookmarks):
     return results
 
 
-def main():
+def check_bookmark_upgrade(name, core, bookmarks):
+    rom = ROOT / 'build/yonaki/yonaki.sfc'
+    results = {}
+    for trace in bookmarks:
+        path = OUT / name / trace.stem / 'current'
+        subprocess.run([sys.executable, '-I', __file__, '--replay', name, str(core), str(rom),
+                        str(trace), str(path)], check=True)
+        results[trace.stem] = json.loads((path / 'result.json').read_text())
+        print(f'PASS {name} {trace.stem}', flush=True)
+    return results
+
+
+def main(upgrade_only=False):
     OUT.mkdir(parents=True, exist_ok=True)
-    report = OUT / 'RESULTS.json'
+    report = OUT / ('UPGRADE.json' if upgrade_only else 'RESULTS.json')
     report.unlink(missing_ok=True)
     with tempfile.TemporaryDirectory(dir=OUT, prefix='baseline-') as directory, ThreadPoolExecutor() as pool:
         source = Path(directory)
         build = pool.submit(baseline_build, source)
         probes = {name: pool.submit(build_probe, name, OUT / 'cores') for name in CORES}
         build.result()
-        bookmarks = prepare_bookmarks(source / 'build/yonaki', TRACES, OUT / 'upgrade')
-        runs = {name: pool.submit(compare_core, name, probes[name].result(), source, bookmarks) for name in CORES}
+        traces = None if upgrade_only else TRACES
+        bookmarks = prepare_bookmarks(source / 'build/yonaki', traces, OUT / 'upgrade')
+        if upgrade_only:
+            runs = {name: pool.submit(check_bookmark_upgrade, name, probes[name].result(), bookmarks) for name in CORES}
+        else:
+            runs = {name: pool.submit(compare_core, name, probes[name].result(), source, bookmarks) for name in CORES}
         results = {name: run.result() for name, run in runs.items()}
     report.write_text(json.dumps(dict(baseline_revision=BASELINE, cores=results), indent=2) + '\n')
-    print(f'Baseline comparison passed. {report.relative_to(ROOT)}')
+    print(f'Yonaki verification passed. {report.relative_to(ROOT)}')
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--upgrade-only', action='store_true',
+                        help='verify bookmark upgrades independently of intentional presentation changes')
     parser.add_argument('--replay', nargs=5, metavar=('CORE_NAME', 'CORE', 'ROM', 'TRACE', 'OUT'))
     options = parser.parse_args()
     if options.replay:
@@ -229,4 +247,4 @@ if __name__ == '__main__':
         result = replay(name, Path(core), Path(rom), Path(trace), Path(out))
         (Path(out) / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
     else:
-        main()
+        main(options.upgrade_only)

@@ -46,7 +46,7 @@ Review tools:
 | `src/yonaki/text.inc` | 2bpp text bitmap: glyphs with shadow, strings, highlight |
 | `src/yonaki/pic.inc` | colour math / effects (Tick), fades, picture loads, silhouette compositing |
 | `src/yonaki/vm.inc` | the script VM (all ops), typewriter, waits, choices |
-| `src/yonaki/ui.inc` | title, START menu, bookmarks screen, 結末の一覧 (list of endings), chapter card, ending |
+| `src/yonaki/ui.inc` | title, START menu, bookmarks screen, 結末の一覧 (list of endings), ending |
 | `src/yonaki/save.inc` | battery SRAM |
 | `src/yonaki/audio.inc` | SPC700 upload and commands |
 
@@ -65,11 +65,12 @@ screen.
 
 Text: 18 full-width characters (216 px) per line from screen x 20, 12 lines, line n at screen y 18 + 16n
 (each line is exactly two tile rows, so a choice is highlighted by switching those map rows to palette 1).
-Glyphs are white with a 1-pixel dark shadow right, down and diagonal.
+Story text and choices use a one-pixel dark outline around the glyphs; menus use the existing drop shadow.
 
-Colour math: the photo can be dimmed under text by subtracting a fixed colour from BG1 (`DIM_TEXT`, ramped 1 a frame;
-0 now, so text sits on the full-brightness photo and relies on the glyph shadow);
-`@fx dark` and silhouette updates take it to 31 (black).  The silhouette colours 8–13 are raised by about half
+Colour math: story scenes open at full brightness. Holding R dims BG1 by `DIM_TEXT` (2 of 31 levels);
+holding L masks BG2 in the main-screen register shadow. The buttons act independently, including during
+scene fades and bookmark resume. Scripted darkness and menu dimming use their own levels.
+The silhouette colours 8–13 are raised by about half
 the dim (table `SilComp`) so solid figures keep their brightness under text and still go black in
 the dark; a translucent figure is part of the photo and dims with it.
 Flashes and the white transition add a fixed colour to every layer.  Shake moves BG1; the ripple is HDMA
@@ -83,6 +84,8 @@ and the BG3 offset row); `$6020-$769F` bitmap tiles 4–723; `$7800` BG1 map; `$
 WRAM: `$0000-$00FF` direct page, `$0100-$1DFF` variables, `$1E00-$1FFF` stack; `$7E:2000` text bitmap
 (11 520 bytes, tile (c, r) at (r·30 + c)·16); `$7E:5000` BG2 map shadow; `$7E:5800` the bitmap under the
 START menu; `$7F:0000-$BFFF` the photo tiles (silhouettes are composited here).
+The previous picture tiles used during a dissolve are split between `$7E:8500-$FFFF`,
+`$7F:C000-$FFFF`, and a 20-tile tail in the variable area.
 
 LoROM uses FastROM ($30) for data banks starting at `$81:8000`. Code and tables are in bank 0 (`$00:8000`).
 The font, script and SPC image each start at a bank boundary. A full font bank holds 1,024 glyphs of
@@ -183,9 +186,9 @@ continue to follow the sampled pad.
 | `TEXT` typewriter | Waits one frame per typing step. An A edge reveals the rest of the text. Held B sets fast-forward for read text. |
 | Paragraph and page-chunk advance | Checks A, held B over read text, then START. The mark blinks while waiting. If fast-forward is active and B is held on entry, the page gets two full frames before advance. |
 | `CHOICE` | Draws the options and flushes drawing input. Checks Up then Down with repeat when there are multiple options, followed by an A edge and a START edge. Menu return resumes the wait. |
-| `PAGE`, `BG`, and silhouette batches | Page clears, forced-blank DMA, and picture compositing use paced frame boundaries. Fades and mosaic use fixed frame steps. Silhouette batches wait for full dim. Streaming waits for dirty flags and the DMA list to drain, with the existing 600-frame watchdog. A white transition waits for colour addition to decay after uploading. |
+| `PAGE`, `BG`, and silhouette batches | Page clears, forced-blank DMA, and picture compositing use paced frame boundaries. Fades and mosaic use fixed frame steps. Silhouette batches prepare the target in WRAM and dissolve changed tiles. Streaming waits for dirty flags and the DMA list to drain, with the existing 600-frame watchdog. A white transition waits for colour addition to decay after uploading. |
 | `FX` | Shake waits 24 frames, flash waits for colour addition to reach zero, dark waits for full dim, light waits 40 frames, and ripple changes state immediately. `@fx wait N` completes after N frames or on the first sampled frame with fast-forward active and B held. |
-| `CHAPTER`, `END`, `HALT` | Chapter cards drain uploads and fade in before waiting up to 150 frames for A. Endings keep their 40-frame dim and 90-frame display delay, then wait for A or START before fading out. HALT fades out and returns to the title. |
+| `CHAPTER`, `END`, `HALT` | Chapter markers update the bookmark label and continue immediately. Endings keep their 40-frame dim and 90-frame display delay, then wait for A or START before fading out. HALT fades out and returns to the title. |
 
 The bytecode and compiler are shared with the previous runtime. The sound FIFO advances during every wait,
 including two-frame text fast-forward and timed waits. Fast-forward stops on unread text and at choices.
@@ -195,12 +198,12 @@ Picture changes: `fade` = brightness down (2 frames a step), forced blank, ROM �
 WRAM → VRAM 16 KiB a frame, brightness up; `cut` = the same without the fades; `white` = colour addition to
 white, upload in V-blank slices, back; `mosaic` = mosaic up, fade, load, fade in while the mosaic goes down.
 A `@bg` clears the page and the silhouettes; `@sil` lines right after it go into the new picture before it
-appears. Consecutive `@sil` and `@silclear` ops are batched. A batch dims BG1 to black, restores the previous
-figures' tile spans from ROM, composites the new slots in order, and uploads the union of the old and new
-spans before restoring brightness. The engine keeps two 24-entry span tables in WRAM. Each entry is a
-first column and exclusive end column, or zero for an empty row. Full picture loads use full-width spans.
-The upload wait checks the one-word photo flag and the DMA queue. The span cursor can stay at the end of
-the table after the final transfer.
+appears. Consecutive `@sil` and `@silclear` ops are batched. The existing photo remains visible while the engine
+backs up the union of the covered bounds, restores the old packed spans, and composites the target slots
+in WRAM. The engine uploads only changed tiles across eight ordered dissolve stages, with at least
+four frames per stage, and interpolates the tint aliases when their palette changes. Scene uploads
+continue to use one span per row (first column and exclusive end; zero for an empty row).
+
 
 Silhouettes are staged per scene: for each background / character / position the scenario uses, the background
 photo was edited by image generation to hold the person in a fitting pose (sitting in a bus seat behind the seat
@@ -333,8 +336,7 @@ back to the title), L / R change the page, START decides.  The names are checked
 Endings: `@end ID` records the ending (and `cleared_<scenario>`: main only by a `true` ending, the other
 scenarios by any of theirs), shows 終 ("The End"; Noto Serif rendering), the title and its kind over the darkened picture,
 waits for A and returns to the title.  The title shows おまけ (bonus; jumps to `*omake`) once `--omake-endings`
-endings (10) have been seen.  Chapter cards: `@chapter 序章　霧見沢` — black screen, the part before the first
-full-width space letter-spaced, the rest below; the old picture comes back unless a `@bg` follows.
+endings (10) have been seen.  The `@chapter 序章　霧見沢` marker sets the chapter name shown in bookmarks.
 
 ## ROM asset measurements
 
@@ -448,12 +450,13 @@ counters from serialized WRAM in a separate replay.
 
 ### Automated baseline comparison for issue #1
 
-`make yonaki-test` now runs `tests/yonaki/compare.py` after generating the pad traces and completing the
-stock-core fixture replay. To rerun just the comparison, use `python3 -I tests/yonaki/compare.py` after
-`python3 -I tests/yonaki/run.py --real`. The test exports commit
-`ff5fe48380161e4235ceb41856662f5afc47018e` from the local Git history and rebuilds its fixture and production
-ROMs with the bootstrapped tools. It builds separate probes from the pinned Snes9x 1.63 and bsnes 115
-sources. Each replay starts a fresh process with the same pad masks and initial battery image.
+The asset-packing comparison at commit `d7b1d2e` used identical scenes and pad timings on both formats.
+To reproduce that historical comparison, run `make yonaki-test` from that revision. Current releases
+change the presentation and frame timing, so `make yonaki-test` runs `tests/yonaki/compare.py --upgrade-only`
+after the stock-core replay. It builds pre-packing commit `ff5fe48380161e4235ceb41856662f5afc47018e`
+to write real paragraph and choice bookmarks, then cold-boots the current ROM on both pinned cores to
+verify the recovered state, save data, and transfer limits. Results are in `build/yonaki-comparison/UPGRADE.json`.
+
 The JSON report at `build/yonaki-comparison/RESULTS.json` contains the ROM, SRAM, capture and PCM hashes,
 scene frame numbers and transfer measurements for each core and revision.
 

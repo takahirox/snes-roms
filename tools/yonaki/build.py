@@ -640,11 +640,11 @@ class Builder:
             ent += struct.pack('<I', self.pic_tint[i])[:3]
             ent += bytes(80 - len(ent))
             d.append('    .byte ' + ', '.join(f'${x:02X}' for x in ent) + f'   ; {self.pic_names[i]}')
-        d.append('SilTable:   ; height, top row, packed mask address, bank, padding, dictionary (0 = raw spans)')
+        d.append('SilTable:   ; height, top row, packed mask address, bank, width, dictionary (0 = raw spans)')
         for i, s in enumerate(self.sils):
             a = self.sil_addr[i]
             top = s.get('top', 24 - s['h'])
-            d.append(f'    .byte {s["h"]}, {top}\n    .word ${a & 0xFFFF:04X}\n    .byte ${a >> 16:02X}, 0'
+            d.append(f'    .byte {s["h"]}, {top}\n    .word ${a & 0xFFFF:04X}\n    .byte ${a >> 16:02X}, {s["w"]}'
                      f'\n    .word ${self.sil_dict[i]:04X}'
                      f'   ; {self.sil_names[i]}')
         d.append('    .byte 0')

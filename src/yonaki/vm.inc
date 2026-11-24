@@ -38,6 +38,8 @@ JumpT0:
 RunVM:
     tsx
     stx vm_sp
+    lda #1
+    sta story_active
 @loop:
     lda [vp]
     and #$00FF
@@ -61,6 +63,7 @@ RunVM:
     bra @loop
 
 VmExit:
+    stz story_active
     ldx vm_sp
     txs
     rts
@@ -74,10 +77,8 @@ OpHalt:
     jsr FadeOut
     jmp VmExit
 
-; the screen must be on before text appears (after a chapter card without a picture)
+; turn on the display before drawing text on a blanked screen
 EnsureVisible:
-    lda #3
-    sta reg_tm
     lda blanked
     beq :+
     lda #1
@@ -131,7 +132,7 @@ OpText:
     jsr LineY
     lda #TX0
     sta g_x
-    lda #1
+    lda #TEXT_OUTLINE
     sta g_col
     stz g_space
     lda vp
@@ -199,6 +200,8 @@ OpText:
     jsr LineY
     lda #TX0
     sta g_x
+    lda #TEXT_OUTLINE
+    sta g_col
     jmp @glyph
 @end:
     lda p0
@@ -484,7 +487,7 @@ OpChoice:
     jsr LineY
     lda #CHOICE_X               ; the letter: A, B, ... in the order shown
     sta g_x
-    lda #1
+    lda #TEXT_OUTLINE
     sta g_col
     txa
     lsr a
@@ -500,8 +503,6 @@ OpChoice:
     sta p0
     lda opt_tbank,x
     sta p0+2
-    lda #1
-    sta g_col
     stz g_space
     jsr PrintStr
     plx
@@ -763,7 +764,6 @@ BgFade:
     jsr FadeOut
     pla
     jsr LoadPic
-    stz dim_cur
     lda #2
     jmp FadeIn
 
@@ -774,7 +774,6 @@ BgCut:
     jsr WaitFrame
     pla
     jsr LoadPic
-    stz dim_cur
     lda #15
     sta bright
     stz blanked
@@ -802,7 +801,6 @@ BgWhite:
     bcc @up
     pla
     jsr LoadPic
-    stz dim_cur
     lda #2
     sta add_decay
     ldx #WAIT_FLASH
@@ -826,7 +824,6 @@ BgMosaic:
     jsr FadeOut
     pla
     jsr LoadPic
-    stz dim_cur
     stz bright
     stz blanked
 :   lda #2
@@ -991,4 +988,5 @@ OpEnd:
 
 OpChapter:
     jsr ReadB
-    jmp ChapterCard
+    sta chapter_cur             ; retain the chapter label for bookmarks
+    rts
