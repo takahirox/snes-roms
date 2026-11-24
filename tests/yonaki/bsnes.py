@@ -3,12 +3,12 @@
 For each trace: the recorded pad masks only, the session's initial battery image as <dir>/yonaki.srm (bsnes loads
 it at load_game and writes it back at unload), captures at the same frames.  Compared with the Snes9x run: the
 final battery image (byte-equal) and every capture (max RGB difference per pixel; at most 2 = the cores' 5-bit to
-8-bit expansion). Also checks the ROM's V-blank counters from a final read-only save state.
+8-bit expansion). Checks the ROM's V-blank counters in a separate replay.
 Results: build/yonaki-test/bsnes/RESULTS.json.
 
 usage: python3 -I tests/yonaki/bsnes.py [--real] [test ...]   (--real: also the real scenario's traces, slow)
 """
-import sys, json, hashlib, pathlib, shutil, ctypes, struct
+import sys, json, hashlib, pathlib, shutil, ctypes, struct, tempfile
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 sys.path.insert(0, str(ROOT / 'tools'))
@@ -43,6 +43,23 @@ def timing(core, label_file):
     return counters
 
 
+def replay_timing(rom_src, initial_sram, masks):
+    # Even retro_serialize_size advances bsnes to synchronize its threads. Give this
+    # replay its own battery file so that unload cannot change the comparison image.
+    with tempfile.TemporaryDirectory(dir=OUT) as work:
+        out = pathlib.Path(work)
+        rom = out / 'yonaki.sfc'
+        shutil.copy2(rom_src, rom)
+        shutil.copy2(initial_sram, out / 'yonaki.srm')
+        e = Frontend(CORE, rom, out)
+        try:
+            for mask in masks:
+                e.step(mask)
+            return timing(e.lib, rom_src.with_name('labels.txt'))
+        finally:
+            e.close()
+
+
 def replay(name):
     t = json.loads((TR / f'{name}.json').read_text())
     rom_src = ROOT / t['rom']
@@ -53,7 +70,8 @@ def replay(name):
     out.mkdir(parents=True)
     rom = out / 'yonaki.sfc'
     shutil.copy2(rom_src, rom)
-    shutil.copy2(TR / f'{name}.in.srm', out / 'yonaki.srm')
+    initial_sram = TR / f'{name}.in.srm'
+    shutil.copy2(initial_sram, out / 'yonaki.srm')
     e = Frontend(CORE, rom, out)
     caps = {}
     for c in t['captures']:
@@ -64,7 +82,6 @@ def replay(name):
             e.step(mask)
             for c in caps.get(e.frames, []):
                 got.append((c, e.capture(pathlib.Path(c['path']).stem)))
-        counters = timing(e.lib, rom_src.with_name('labels.txt'))
     finally:
         e.close()
     final = (out / 'yonaki.srm').read_bytes()[:8192]
@@ -79,6 +96,7 @@ def replay(name):
             b = b.resize(a.size, Image.NEAREST)
         d = np.abs(np.asarray(a, int) - np.asarray(b, int)).max()
         worst = max(worst, int(d))
+    counters = replay_timing(rom_src, initial_sram, t['masks'])
     res = dict(frames=len(t['masks']), captures=len(got), battery_equal=final == want, max_rgb_difference=worst,
                **counters)
     res['ok'] = (res['battery_equal'] and worst <= 2 and res['vblank_overrun_count'] == 0

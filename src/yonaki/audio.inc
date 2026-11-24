@@ -106,6 +106,7 @@ SndPump:
     sep #$20
     .a8
     lda snd_queue
+    sta snd_last
     sta APUIO0
     inc spc_toggle
     lda spc_toggle

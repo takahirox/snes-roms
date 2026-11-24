@@ -525,10 +525,8 @@ ApplySils:
     sta ui_state
     lda #1
     sta hide_bg1
-:   jsr WaitFrame
-    lda dim_cur
-    cmp #31
-    bne :-
+    ldx #WAIT_DIM
+    jsr WaitEvent
     jsr RestoreRows
     jsr CompositeAll
     jsr QueueTint
