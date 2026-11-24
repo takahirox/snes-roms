@@ -20,7 +20,9 @@ Nakamura also recalls removing objects from backgrounds to fit capacity and colo
 Record the cartridge revision, headerless SHA-256, debugger version, NTSC settings and input sequence. Start with a cold boot and record the title, ordinary text, a choice, a full background transition, a silhouette change, progress saved automatically and resumed after a power cycle, and the first changes of music and ambience. Use the same classes of events on Yonaki and record frame and scanline boundaries for each. Mesen's SNES debugger, event viewer and trace facilities can drive the inspection. [Mesen project and documentation](https://github.com/SourMesen/Mesen2) · [Mesen scripting API](https://github.com/SourMesen/Mesen2/blob/master/UI/Debugger/Documentation/LuaDocumentation.json)
 
 1. Break on writes to `$2100`, `$2105` and `$212C–$212D` for blanking, mode and layer enables. At stable frames record the BG/OBJ tiles and maps, palette allocations and active OAM entries. Check color math and direct color settings at `$2130–$2131`. Watch `$2116–$2119`, `$2121–$2122` and `$2102–$2104` for VRAM, CGRAM and OAM addressing and data.
-2. At each `$420B` or `$420C` trigger, capture the enabled channels and `$43x0–$43xA` state. Sum payload bytes by target and frame, treating an MDMA length of zero as 65,536 bytes, and record the first and last bus events relative to forced blank or V-blank. Count HDMA data bytes and table overhead individually. Include CPU writes when reporting total graphics traffic.
+2. At each `$420B` write, capture the enabled MDMA channels and `$43x0–$43xA` state. Sum payload bytes by target and frame, treating an MDMA length of zero as 65,536 bytes, and record the first and last bus events relative to forced blank or V-blank.
+
+   Log `$420C` writes as changes to the HDMA enable mask. Trace HDMA channel initialization at the start of each frame, table reads for line counters and any indirect pointers, and the actual payload transfers on each scanline. In an instrumented Mesen build, use `InitHdmaChannels`, `ProcessHdmaChannels` and `RunHdmaTransfer` to distinguish these events. Count table reads and payload bytes separately, and record the first and last payload bus events by frame, scanline and dot against that scanline's H-blank boundaries. Include CPU writes when reporting total graphics traffic. [Mesen SNES DMA controller](https://github.com/SourMesen/Mesen2/blob/master/Core/SNES/SnesDmaController.cpp)
 3. Trace the documented script reader on a normal line and through a taken choice. Time the range from consuming a script symbol or command to the resulting render or branch. Record aggregate cycles, glyph counts and branch behavior.
 4. Snapshot SRAM before confirming an ordinary choice, then trace SRAM writes through the first paragraph on the chosen branch. Record the timing of the autosave writes, the changed SRAM address ranges and the number of bytes changed. Carry over only the resulting battery SRAM into a cold boot and resume. Expect the saved progress on the chosen branch to survive, and record the exact resume point to establish the game's checkpoint granularity.
 5. At the reset-route cue, trigger a console soft reset and record whether the hidden route advances and what state is retained. Repeat from the same point with a cold boot and compare the resulting route and retained state.
@@ -29,6 +31,17 @@ Record the cartridge revision, headerless SHA-256, debugger version, NTSC settin
 ## Yonaki build and resource use
 
 The build used arm64 macOS 27.2.1, Python 3.13.13 and the repository-pinned cc65 2.19, Pillow 13.0.0, NumPy 2.5.4, Snes9x 1.63 and bsnes 115 sources. The built ROM is a 4,194,304-byte headerless FastROM LoROM image with 8 KiB of battery SRAM. It matches `dist/yonaki.sfc` byte for byte, with SHA-256 `b0b90ecf9d853f8c975f9c0045712966f114b1463e973a7b91434a97a141c3c7`. [Source commit `6da6766`](https://github.com/takahirox/snes-roms/commit/6da6766b66cc3d7f3d699f8391ceea5fb4e71f92)
+
+From the repository root, create a detached worktree at the measured commit. Run all Yonaki reproduction steps below from that worktree and use its generated files for the ROM, DMA, audio and regression measurements.
+
+```sh
+git worktree add --detach ../yonaki-baseline 6da6766b66cc3d7f3d699f8391ceea5fb4e71f92
+cd ../yonaki-baseline
+python3 tools/bootstrap.py --with-emulator
+make yonaki
+shasum -a 256 build/yonaki/yonaki.sfc
+cmp build/yonaki/yonaki.sfc dist/yonaki.sfc
+```
 
 | ROM component | Bytes | Basis |
 | --- | ---: | --- |
@@ -67,7 +80,9 @@ A separate instrumented Snes9x 1.63 build replayed three existing pad traces. Th
 
 The largest measured single-frame totals by destination were 16,384 BG1 tile bytes after boot clear, 2,880 BG2 tile bytes, 2,048 map bytes, 704 CGRAM bytes and 450 HDMA payload bytes. These peaks come from different frames. The effects and E06 traces each hit the 3,072-byte NMI queue budget. All sampled general PPU DMA started during V-blank or forced blank. The regression counter also recorded zero NMI overruns. These measurements include requested DMA and HDMA data bytes, with CPU I/O writes and HDMA table fetches outside the totals. The sample covers starts and scanline-level NMI completion, with end dots and startup/direct DMA end times still to measure.
 
-To reproduce the traffic sample, replay `boot.json`, `effects.json` and `real_E06.json` with their `.in.srm` images from `build/yonaki-test/traces/` in a separate profile build of the pinned core. At `S9xDoDMA` record channel, direction, transfer size, B-bus target, `PPU.VMA.Address` in words, forced blank and vertical counter. Sum CPU-to-B-bus payload for `$2118` (VRAM), `$2122` (CGRAM), `$2104` (OAM) and `$2180` (WRAM). Classify VRAM by its starting word address as BG1 below `$6000`, BG2 tiles below `$7800`, and maps from `$7800`. Count the channel 0 zero-length startup transfer separately as the 65,536-byte clear. At `S9xDoHDMA` count data only when `DoTransfer` is set, using the core's mode byte count. Reset the per-frame totals before each `retro_run()` and compare final SRAM with the trace's `.out.srm`. [Pinned Snes9x DMA implementation](https://github.com/snes9xgit/snes9x/blob/1.63/dma.cpp)
+After building the ROM at `6da6766`, run `python3 -I tests/yonaki/run.py --real` in that worktree to generate the fixture ROM and Snes9x traces. Use a separate profile build of the pinned Snes9x core to replay `boot.json`, `effects.json` and `real_E06.json` with their `.in.srm` images from that worktree's `build/yonaki-test/traces/`.
+
+At `S9xDoDMA` record channel, direction, transfer size, B-bus target, `PPU.VMA.Address` in words, forced blank and vertical counter. Sum CPU-to-B-bus payload for `$2118` (VRAM), `$2122` (CGRAM), `$2104` (OAM) and `$2180` (WRAM), treating a zero transfer size as 65,536 bytes. Classify VRAM by its starting word address as BG1 below `$6000`, BG2 tiles below `$7800`, and maps from `$7800`. Count the channel 0 zero-length transfer to `$2118` separately as the VRAM clear. At `S9xDoHDMA` count data only when `DoTransfer` is set, using the core's mode byte count. Reset the per-frame totals before each `retro_run()` and compare final SRAM with the trace's `.out.srm`. [Pinned Snes9x DMA implementation](https://github.com/snes9xgit/snes9x/blob/1.63/dma.cpp)
 
 ### Audio
 
@@ -77,10 +92,9 @@ The generated 48,523-byte SPC image loads at `$0200` and ends at `$BF8B` (exclus
 
 ## Regression results
 
-Run from the repository root with the stock pinned cores.
+Run from the root of the `6da6766` worktree prepared above, using the stock pinned cores.
 
 ```sh
-python3 tools/bootstrap.py --with-emulator
 make yonaki-test
 python3 -I tests/yonaki/bsnes.py --real
 ```
