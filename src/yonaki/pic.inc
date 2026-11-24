@@ -672,13 +672,19 @@ Composite:
     asl a
     sta c_row
     lda SilTable+2,y
-    sta p0
+    sta p1                      ; row headers and tile stream
+    ldx SilTable+6,y
+    bne :+
+    tax                         ; raw tiles use the stream as their base
+:   stx p0                      ; raw tiles or indexed tile dictionary
     lda SilTable+4,y
     and #$00FF
     sta p0+2
+    sta p1+2
+    stz c_idx
     ldy #0                      ; mask offset
 @trow:
-    lda [p0],y                  ; first column | tile count << 8
+    lda [p1],y                  ; first column | tile count << 8
     iny
     iny
     cmp #0
@@ -692,10 +698,17 @@ Composite:
     xba
     and #$00FF
     sta t3
+    ldx p0
+    cpx p1
+    bne @indexed_row
     asl a
     asl a
     asl a
     asl a
+    bra @row_size
+@indexed_row:
+    sty c_idx
+@row_size:
     sta t0
     tya
     clc
@@ -733,6 +746,18 @@ Composite:
     jsr PacedWait
     ply
 :   inc work_count
+    ldx c_idx
+    beq @raw_tile
+    txy
+    lda [p1],y                  ; index byte, followed by row data or the dictionary
+    and #$00FF
+    asl a
+    asl a
+    asl a
+    asl a
+    tay
+    inc c_idx
+@raw_tile:
     ldx c_dest
     lda #8
     sta c_n

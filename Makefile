@@ -67,6 +67,7 @@ build/yonaki/yonaki.sfc: build/yonaki/yonaki.o FORCE
 # build/yonaki-test/), the real scenario played to every ending (--real), then the same pad traces and battery
 # images replayed on the pinned bsnes 115 core (build/yonaki-test/bsnes/RESULTS.json)
 yonaki-test: yonaki
+	$(PYTHON) -I tests/yonaki/assets.py
 	$(PYTHON) -I tests/yonaki/run.py --real
 	$(PYTHON) -I tests/yonaki/bsnes.py
 
