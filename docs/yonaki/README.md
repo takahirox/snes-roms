@@ -3,6 +3,7 @@
 An original sound novel for the Super Famicom. On the last night of 水明館 (Suimeikan), a lone inn deep in the mountains that still carries the air of the Shōwa era, a typhoon cuts the inn off, and people die as if re-enacting the legend of おゆらさま (Oyura-sama). "I" (僕), a rookie reporter for a travel magazine, chases the truth with the photographer 早瀬千尋 (Hayase Chihiro).
 
 - ROM: [`dist/yonaki.sfc`](../../dist/yonaki.sfc) (LoROM 4 MiB, 8 KiB battery-backed SRAM, no copier header)
+- The version 2 save format starts fresh with version 1 battery files. See [save format and recovery](ENGINE.md#save-format-and-recovery).
 - Design (spoilers): [DESIGN.md](DESIGN.md). Engine: [ENGINE.md](ENGINE.md). Music: [music/README.md](music/README.md)
 - [Performance baseline and Kamaitachi no Yoru research](PERFORMANCE_BASELINE.md)
 
