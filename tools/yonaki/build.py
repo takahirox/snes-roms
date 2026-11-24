@@ -97,6 +97,23 @@ def sha(b):
     return hashlib.sha256(b).hexdigest()
 
 
+def pack_silhouette(sil):
+    """Pack each mask row as (first column, tile count), then the tiles in that span."""
+    width = sil['w']
+    mask = sil['mask']
+    packed = bytearray()
+    for row in range(sil['h']):
+        offset = row * width * 16
+        occupied = [col for col in range(width) if any(mask[offset + col * 16:offset + (col + 1) * 16:2])]
+        if occupied:
+            start, end = occupied[0], occupied[-1] + 1
+            packed += bytes((start, end - start))
+            packed += mask[offset + start * 16:offset + end * 16]
+        else:
+            packed += b'\0\0'
+    return bytes(packed)
+
+
 # ------------------------------------------------------------------ audio
 def load_audio(diag):
     """tools/yonaki/audio.py (the music agent's module) if it exists, else the 潮鳴りの密室 driver with no names."""
@@ -536,7 +553,7 @@ class Builder:
         self.pic_pal = [rom.put(struct.pack('<240H', *p['palette']), 'palettes') for p in self.pics]
         self.pic_tint = [rom.put(struct.pack('<224H', *p['tints']), 'palettes') if 'tints' in p else 0
                          for p in self.pics]
-        self.sil_addr = [rom.put(s['mask'], 'silhouettes') for s in self.sils]
+        self.sil_addr = [rom.put(pack_silhouette(s), 'silhouettes') for s in self.sils]
         img = self.audio['image']
         self.spc_addr = None
         for i in range(0, len(img), BANK):
@@ -621,11 +638,11 @@ class Builder:
             ent += struct.pack('<I', self.pic_tint[i])[:3]
             ent += bytes(80 - len(ent))
             d.append('    .byte ' + ', '.join(f'${x:02X}' for x in ent) + f'   ; {self.pic_names[i]}')
-        d.append('SilTable:   ; width, height (tiles), mask address, bank, top row, 0, 0')
+        d.append('SilTable:   ; height, top row, packed mask address, bank, padding')
         for i, s in enumerate(self.sils):
             a = self.sil_addr[i]
             top = s.get('top', 24 - s['h'])
-            d.append(f'    .byte {s["w"]}, {s["h"]}\n    .word ${a & 0xFFFF:04X}\n    .byte ${a >> 16:02X}, {top}, 0, 0'
+            d.append(f'    .byte {s["h"]}, {top}\n    .word ${a & 0xFFFF:04X}\n    .byte ${a >> 16:02X}, 0, 0, 0'
                      f'   ; {self.sil_names[i]}')
         d.append('    .byte 0')
         strings = {}
