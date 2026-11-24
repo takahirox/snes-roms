@@ -83,8 +83,10 @@ START menu; `$7F:0000-$BFFF` the photo tiles (silhouettes are composited here).
 ROM: LoROM, FastROM ($30), up to 4 MiB; code and tables in bank 0 (`$00:8000`), data banks read at `$81:8000…`.
 Bank order: font (32 bytes a glyph: 12 rows as words, bit 15 leftmost, byte 24 = width; 1024 glyphs a bank),
 script (ops never cross a bank; a bank ends with GOTO to the next), resume tables (text id / choice id → op
-address), pictures (48 KiB each, 2 KiB rows that never cross a bank), palettes, silhouette masks (16 bytes a
-tile: 8 × (cover, rim)), the SPC image.  The ROM size is rounded up to 512 KiB / 1 / 2 / 4 MiB.
+address), pictures (48 KiB each, 2 KiB rows that never cross a bank), palettes, packed silhouette masks and
+the SPC image. Each mask row stores the first covered column and the number of tiles through its last covered
+column, then 16 bytes per tile (8 pairs of cover and rim bytes). An empty row stores two zero bytes. Each
+packed mask fits in one bank. The ROM size is rounded up to 512 KiB / 1 / 2 / 4 MiB.
 
 ## Save format and recovery
 
@@ -139,7 +141,7 @@ scene state. The previous journal copy exists for recovery and has no user-facin
 ## Frame protocol and timing
 
 The game is one thread that calls `WaitFrame` once a frame.  `WaitFrame` runs `Tick` (effects → register
-shadows), `PumpUploads` (palette, BG2 map, dirty photo rows, dirty text rows → DMA jobs within 3072 bytes),
+shadows), `PumpUploads` (palette, BG2 map, dirty photo spans, dirty text rows → DMA jobs within 3072 bytes),
 one sound command, then waits for the NMI.  The NMI runs the jobs only when the thread is parked in `WaitFrame`,
 writes the shadows, and records its end line (`nmi_end_line_max`, `vblank_overrun_count`).
 
@@ -154,8 +156,10 @@ Picture changes: `fade` = brightness down (2 frames a step), forced blank, ROM �
 WRAM → VRAM 16 KiB a frame, brightness up; `cut` = the same without the fades; `white` = colour addition to
 white, upload in V-blank slices, back; `mosaic` = mosaic up, fade, load, fade in while the mosaic goes down.
 A `@bg` clears the page and the silhouettes; `@sil` lines right after it go into the new picture before it
-appears.  Silhouette changes (`@sil`, `@silclear`; consecutive ones are batched) dim BG1 out in about 5 frames,
-restore the covered tile columns from ROM, composite every slot and upload only those columns, then dim back.
+appears. Consecutive `@sil` and `@silclear` ops are batched. A batch dims BG1 to black, restores the previous
+figures' tile spans from ROM, composites the new slots in order, and uploads the union of the old and new
+spans before restoring brightness. The engine keeps two 24-entry span tables in WRAM. Each entry is a
+first column and exclusive end column, or zero for an empty row. Full picture loads use full-width spans.
 
 Silhouettes are staged per scene: for each background / character / position the scenario uses, the background
 photo was edited by image generation to hold the person in a fitting pose (sitting in a bus seat behind the seat
@@ -169,6 +173,81 @@ Figures are translucent: compositing keeps the photo's pixel under the figure an
 the tinted version), rim included, so it has no outline.  Only one tint is in CGRAM at a time: white
 before red before blue among the slots (`PickTint`); a figure of another colour, or any figure on a picture without
 tinted colours (black, white, the title), is drawn solid in colours 8–13 as before.
+
+### Silhouette performance
+
+The Snes9x 1.63 fixture `effects` trace was recorded on the baseline (`6da6766`) and on the packed-span
+renderer. The frame counts below follow `hide_bg1` from assertion to release. They include the ramp into
+black. Restoration and upload bytes come from the ROM-derived tile counts and the live WRAM span tables,
+at 64 bytes per tile. Compositor visits count tiles passed to the paced pixel loop, including empty tiles
+inside a span. The separate tint palette job is 224 bytes per batch on these fixture photos.
+
+| Batch | ROM → WRAM bytes | Compositor tile visits | WRAM → VRAM photo bytes | Frames in `ApplySils` |
+|---|---:|---:|---:|---:|
+| First figure | 5,760 → 0 | 60 → 29 | 5,760 → 1,856 | 13 → 9 |
+| Add two figures with a tint change | 34,560 → 1,856 | 420 → 306 | 34,560 → 28,288 | 63 → 42 |
+| Remove the centre figure | 34,560 → 28,288 | 360 → 277 | 34,560 → 28,288 | 58 → 43 |
+| Clear remaining figures | 29,440 → 26,944 | 0 → 0 | 29,440 → 26,944 | 18 → 17 |
+| Total | 104,320 → 57,088 | 840 → 612 | 104,320 → 85,376 | 152 → 111 |
+
+At the 12-tile quota, the four batches take 67 → 50 compositor waits. The photo DMA payload drops from
+208,640 to 142,464 bytes across both directions, about 529,000 master clocks saved at eight per byte,
+before per-job setup. The fixture's cut and fade use the same forced-blank durations. The white transition
+holds full white for 38 frames, down from 42, with the same ramp durations. The mosaic sequence takes
+83 frames in both builds. [Snes9x 1.63 DMA timing implementation](https://github.com/snes9xgit/snes9x/blob/1.63/dma.cpp)
+
+Across the 106 production masks, the cached cover and rim bytes pack from 154,512 to 102,732 ROM bytes,
+including row headers. All 106 packed masks decoded byte-for-byte to the original cover and rim data
+in a ROM audit. The builder derives spans from the existing mask cache. This adds 74 bytes of runtime
+variables overall and reduces occupied ROM from 78 to 76 banks within the same 4 MiB image.
+
+- **Exact tile runs.** In the three-figure fixture batch the upload spans cover 442 tiles in 20 jobs.
+  Exact coverage would use 288 tiles in 49 jobs. That saves 9,856 bytes but requires tracking multiple
+  runs per row and scheduling their setup within the 24-job and 3,072-byte VBlank limits.
+- **Incremental redraw.** Removing the centre figure changes only 29 of the 442 uploaded tiles in that
+  batch. Tracking changed slots could narrow the update. Each dirty tile would still need the surviving
+  overlaps replayed in slot order, and a tint selection change can change the drawing mode of a slot whose
+  position and silhouette are unchanged. Retaining one span per row keeps restoration and upload bounded
+  by 24 jobs per direction and avoids retaining additional photo or mask copies in WRAM.
+
+`make yonaki-test` passed on both builds. Snes9x passed all 11 checks, including all 20 production
+endings. All 73 existing Snes9x captures and all 41 final battery images were identical across the
+builds. The fixture's full `effects` trace went from 1,301 to 1,256 frames. A separate fixture run with
+overlapping, right-clipped figures and a white-to-red tint change matched all 31 screenshots.
+
+Both bsnes 115 runs passed all 20 standard replays. Every battery image matched Snes9x, with no more
+than 2 RGB levels of difference per channel across 51 captures. The Snes9x suite recorded zero VBlank
+overruns or deferred DMA jobs. Peak NMI end lines were 251 → 248 on the fixture and 255 → 257 on
+production routes, within the NTSC VBlank range of 225–261. Peak DMA was 3,072 bytes on the production
+routes and 3,072 → 3,008 on the `effects` trace. A read-only check of the bsnes `effects` trace's
+serialized WRAM found the same DMA peaks and NMI end lines, with zero overruns or deferrals. The
+production C02 replay reached line 257 and 3,040 DMA bytes on both cores, with zero overruns or deferrals.
+
+### PPU layout alternatives
+
+The current Mode 4 layout uses 49,152 photo bytes, 11,520 text bytes, 64 shared blank tile bytes and
+4,096 map bytes. That leaves 704 of the 65,536 VRAM bytes. The active-width BG budget is 32 visible
+8-pixel columns per layer, with an edge fetch when scrolled. The shipped layout uses zero OBJ slots
+or OBJ fetches. These estimates use Yonaki's assets and the documented SNES hardware.
+[Nintendo SNES Development Manual, Book I](https://archive.org/details/SNESDevManual)
+
+| Layout | VRAM and scanline budget | Presentation considerations |
+|---|---|---|
+| Mode 4 with OBJ masks | The free bytes fit at most 22 4bpp tiles by size, before OBJ base alignment. At one 8×8 OBJ per nonempty tile, the three-figure fixture would need 295 OAM entries and 23 slivers on its busiest scanline. One production figure reaches 17 slivers. The hardware allows 32 OBJ and 34 slivers per scanline, with 128 OAM entries across the screen. | Larger OBJ can reduce OAM entries but consume fetches for blank slivers. Photo shake, mosaic and ripple would have to keep the overlay aligned. |
+| Mode 1 with BG1 photo, BG2 masks and BG3 text | Full-size 4bpp photo and overlay cost 24,576 bytes each. 2bpp text costs 11,520 and three maps cost 6,144. The 66,816-byte total exceeds VRAM by 1,280 bytes before blank tiles. Sparse overlay tiles can reduce storage and use up to 32 visible columns on that BG. | A 4bpp photo requires per-tile palette quantization. Text priority and palette assignments also need rework. |
+| Mode 3 with an 8bpp photo and a 4bpp second BG | Photo, text and two maps alone total 76,288 bytes before blank tiles or overlay art. A separate mask BG would need a different mode. | Preserving the current photo and text shapes would require factoring or sharing tile data. |
+| Main/subscreen colour math with an OBJ or BG mask | Mask storage and fetches follow the selected layout. A mask on the subscreen alone still requires that layer's tile and map or OAM storage. | Half-add gives a 50% mix. The authored tints use 45% or 60%, and the hardware math path also drives the existing dim and flashes. Matching the palette rounding and the effects would require additional work. |
+
+The limits and blend behaviour can also be checked in the pinned core's sources.
+[bsnes OBJ evaluator](https://github.com/libretro/bsnes/blob/63ee22f7af8f5d1ada295c2c98fd7bf261fa62a7/bsnes/sfc/ppu/object.cpp)
+[bsnes screen compositor](https://github.com/libretro/bsnes/blob/63ee22f7af8f5d1ada295c2c98fd7bf261fa62a7/bsnes/sfc/ppu/screen.cpp)
+
+Small tile-local pose or prop updates could reuse the packed spans with incremental redraw. Two changed
+8bpp tiles cost 128 VRAM bytes, against a theoretical 48 tile transfers per VBlank at the current payload
+limit before text, palette and job costs. The compositor quota is 12 tile visits per frame. Palette-only
+animation could transfer as little as a few CGRAM words, provided it reserves palette indices whose
+other uses should animate together. Large moving figures would need measured overlap and DMA budgets
+before choosing a frame rate.
 
 ## Script VM
 
@@ -243,14 +322,15 @@ Results: `build/yonaki-test/tests.json`, `build/yonaki-test/bsnes/RESULTS.json`,
 
 ### Issue #5 validation
 
-Snes9x 1.63 passed all 11 fixture checks and the real-scenario run, which reached all 20 endings and opened
-the second page of the ending list. There were zero V-blank overruns, deferred DMA jobs or clipped glyphs
-in the checked sessions.
+Snes9x 1.63 passed all 12 checks on the integrated revision. The 11 fixture checks covered save and recovery,
+and the real-scenario run reached all 20 endings and opened the second page of the ending list. There were
+zero V-blank overruns, deferred DMA jobs or clipped glyphs in the checked sessions.
 
 | bsnes 115 replay | Sessions passed | Frames | Screenshots | Battery images matched | Maximum RGB difference |
 |---|---:|---:|---:|---:|---:|
-| Fixture, including save recovery | 30 / 30 | 22,330 | 60 | 30 / 30 | 2 |
-| Real scenario | 21 / 21 | 264,492 | 22 | 21 / 21 | 2 |
+| Fixture, including save recovery | 30 / 30 | 21,897 | 60 | 30 / 30 | 2 |
+| Real scenario | 21 / 21 | 253,765 | 22 | 21 / 21 | 2 |
 
-The rebuilt 4 MiB ROM differs from the previous release only in LoROM bank 0. The data banks containing
-the scenario bytecode, font, photos, silhouettes and SPC image are byte-identical.
+The 4 MiB release combines the save changes with `main` at `4dbf917`, including its packed silhouette masks
+and span-based DMA. Its SHA-256 is `b58662fb52e0d8dc518a0af811322e4801845278ec8b114ffabb364708e20268`.
+Compared with the ROM previously packaged for PR #12, LoROM banks 0 and 70–77 differ.

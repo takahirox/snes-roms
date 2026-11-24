@@ -110,6 +110,9 @@ BMP_SIZE  = 11520
 MAPBUF    = $7E5000             ; BG2 map shadow (32 x 32 words)
 BMPSAVE   = $7E5800             ; the bitmap under the START menu
 PHOTO     = $7F0000             ; photo tiles (49152 bytes)
+PHOTO_ROWS = 24
+PHOTO_COLS = 32
+PHOTO_SPAN_BYTES = PHOTO_ROWS*2
 
 BOOT_FRAMES = 150
 GLYPHS_PER_FRAME = 5
@@ -217,9 +220,9 @@ job_tail: .res 2
 jobs:     .res JOB_MAX*8
 ; pending uploads
 text_dirty: .res 4             ; text bitmap tile rows 0-23 (bit n = row n)
-photo_dirty: .res 4            ; photo tile rows 0-23
-photo_c0:  .res 2              ; tile columns [photo_c0, photo_c1) of the dirty photo rows
-photo_c1:  .res 2
+photo_dirty: .res 2            ; 1: photo upload in progress
+photo_next: .res 2             ; byte offset of the next span to upload
+photo_spans: .res PHOTO_SPAN_BYTES ; one span per row: start | end << 8, end exclusive, 0 if empty
 pal_dirty: .res 2
 pal_src:   .res 4              ; long address of the 240 photo colours
 tint_dirty: .res 2
@@ -293,24 +296,16 @@ sil_col:   .res 8
 sil_dirty: .res 2
 tint_ok:   .res 2              ; 1: the picture has translucent-figure colours
 tint_col:  .res 2              ; the colour drawn translucent (0 blue, 1 white, 2 red)
-reg_c0:    .res 2              ; columns / top row composited last time
-reg_c1:    .res 2
-reg_top:   .res 2
-new_c0:    .res 2
-new_c1:    .res 2
-new_top:   .res 2
-rs_top:    .res 2              ; RestoreRows arguments and state
-rs_c0:     .res 2
-rs_c1:     .res 2
-rs_row:    .res 2
-rs_len:    .res 2
+sil_spans: .res PHOTO_SPAN_BYTES ; spans composited onto the current WRAM photo
+rs_row:    .res 2              ; byte offset of the row being restored
 rs_bytes:  .res 2
 c_x:       .res 2              ; Composite state
-c_w:       .res 2
-c_h:       .res 2
-c_row:     .res 2
-c_tx:      .res 2
+c_row:     .res 2              ; byte offset into sil_spans
 c_ty:      .res 2
+c_start:   .res 2
+c_next:    .res 2              ; offset of the next packed mask row
+c_dest:    .res 2              ; WRAM photo byte offset of the current tile
+c_left:    .res 2
 c_n:       .res 2
 ; sound
 snd_queue: .res 16
@@ -902,10 +897,6 @@ InitState:
     dex
     dex
     bpl :-
-    stz reg_c0
-    stz reg_c1
-    lda #24
-    sta reg_top
     lda #1
     sta speed
     lda #$E0
@@ -998,7 +989,6 @@ WaitUploads:
 :   lda text_dirty
     ora text_dirty+2
     ora photo_dirty
-    ora photo_dirty+2
     ora pal_dirty
     ora tint_dirty
     ora map_dirty
@@ -1178,44 +1168,42 @@ PumpUploads:
     jsr Enqueue
 @photo:
     lda photo_dirty
-    ora photo_dirty+2
     beq @text
-    lda photo_c1
-    sec
-    sbc photo_c0
-    xba
-    lsr a
-    lsr a                       ; columns * 64
-    sta t4
+    ldx photo_next
+@span:
+    cpx #PHOTO_SPAN_BYTES
+    beq @photo_done
+    lda photo_spans,x
+    bne @job
+    inx
+    inx
+    bra @span
+@job:
+    stx photo_next
+    ldy job_tail
+    cpy #JOB_MAX*8
+    bcs @done
+    jsr PhotoSpanDMA
+    lda t3
     cmp t5
     beq :+
     bcs @text
-:   ldx #photo_dirty
-    jsr LowestRow               ; A = row, cleared
-    xba
-    lsr a
-    lsr a
-    lsr a                       ; row * 32 tiles
-    clc
-    adc photo_c0
-    asl a
-    asl a
-    asl a
-    asl a
-    asl a                       ; tile * 32 words
+:   inx
+    inx
+    stx photo_next
+    lda t2
+    lsr a                       ; VRAM word address
     sta t0
-    asl a                       ; tile * 64 bytes
-    sta t2
     lda #$7F00
     sta t1
-    lda t4
-    sta t3
     jsr Enqueue
+    bra @photo
+@photo_done:
+    stz photo_dirty
+@text:
     lda job_tail
     cmp #JOB_MAX*8
-    bcc @photo
-    rts
-@text:
+    bcs @done
     lda text_dirty
     ora text_dirty+2
     beq @done
@@ -1250,9 +1238,7 @@ PumpUploads:
     lda #BMP_ROW
     sta t3
     jsr Enqueue
-    lda job_tail
-    cmp #JOB_MAX*8
-    bcc @text
+    bra @text
 @done:
     rts
 
