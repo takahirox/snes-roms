@@ -49,7 +49,7 @@ export function mapBrushes(project, map) {
 }
 
 export function inspector(app, asset) {
-  const { state, project, id, commands, guarded, refresh, paletteRgb, quantizeColor, objSize, modal } = app;
+  const { state, project, id, commands, guarded, refresh, paletteRgb, quantizeColor, objSize, modal, setMapLayer } = app;
   const root = $("inspector");
   root.replaceChildren();
   if (!asset) {
@@ -186,7 +186,7 @@ export function inspector(app, asset) {
     });
     root.append(details("Layers", layer ? form(() => {
       update((d) => Object.assign(d.layers[layerIndex], { id: layerId.value, visible: visible.checked, metadata: JSON.parse(layerMeta.value) }));
-      state.layer = layerId.value;
+      setMapLayer(layerId.value);
       refresh();
     }, field("Layer ID", layerId), field("Visible", visible), field("Layer metadata", layerMeta), apply()) : null,
     row(
@@ -194,7 +194,7 @@ export function inspector(app, asset) {
         ["Layer ID", input("", { required: true })],
       ], "Add layer", ([newId]) => {
         update((d) => d.layers.push({ id: newId.value, visible: true, cells: Array(d.width * d.height).fill(null) }));
-        state.layer = newId.value; refresh();
+        setMapLayer(newId.value); refresh();
       })),
       button("Earlier", () => guarded(() => moveLayer(-1)), { disabled: layerIndex <= 0 }),
       button("Later", () => guarded(() => moveLayer(1)), { disabled: layerIndex < 0 || layerIndex >= data.layers.length - 1 }),

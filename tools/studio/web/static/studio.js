@@ -83,7 +83,7 @@ function modal(title, fields, label, submit, extra, onCancel) {
     if (apply.disabled) return;
     $("dialog-error").textContent = "";
     apply.disabled = true;
-    const submitted = await guarded(() => submit(fields.map((item) => item[1])), isActive);
+    const submitted = await guarded(() => submit(fields.map((item) => item[1]), isActive), isActive);
     if (!isActive()) return;
     if (submitted) dialog.close();
     else apply.disabled = false;
@@ -115,8 +115,9 @@ function commands(edits) {
 
 function selectAsset(id) {
   stopAnimation();
+  endGesture();
   selected = id;
-  selection = null;
+  clearSelection();
   const item = id && project.assets[id];
   const data = item?.data;
   state = {
@@ -185,7 +186,7 @@ function refresh() {
   toolbar(item);
   try {
     inspector({
-      state, project, id: selected, commands, guarded, refresh, modal, selectAsset,
+      state, project, id: selected, commands, guarded, refresh, modal, selectAsset, setMapLayer,
       paletteRgb: palette_rgb, quantizeColor: quantize_color, objSize: obj_size,
     }, item);
   } catch (error) {
@@ -213,13 +214,12 @@ function toolbar(item) {
       }));
   }
   if (kind === "map") {
-    if (!data.layers.some((layer) => layer.id === state.layer)) state.layer = data.layers[0]?.id;
+    if (!data.layers.some((layer) => layer.id === state.layer)) setMapLayer(data.layers[0]?.id);
     controls.push(options("Layer", data.layers.map((layer) => [layer.id, layer.id + (layer.visible ? "" : " (hidden)")]), state.layer, (layer) => {
-      state.layer = layer;
-      selection = null;
+      setMapLayer(layer);
       refresh();
     }), options("Tool", [["paint", "Paint"], ["fill", "Fill"], ["select", "Select"]],
-      state.tool, (tool) => { state.tool = tool; drawOverlay(); }),
+      state.tool, (tool) => { endGesture(); state.tool = tool; drawOverlay(); }),
     button("Copy", () => guarded(copy)), button("Paste", () => guarded(paste), { disabled: !clipboard }));
   }
   if (kind === "sprite") {
@@ -251,9 +251,15 @@ function geometry() {
   return undefined;
 }
 
+function setMapLayer(layer) {
+  if (layer === state.layer) return;
+  endGesture();
+  clearSelection();
+  state.layer = layer;
+}
+
 function reconcileGrid({ width, height }) {
-  capture = undefined;
-  gesture = undefined;
+  endGesture();
   const clamp = ({ x, y }) => ({
     x: Math.max(0, Math.min(x, width - 1)),
     y: Math.max(0, Math.min(y, height - 1)),
@@ -262,8 +268,7 @@ function reconcileGrid({ width, height }) {
   if (state.anchor) state.anchor = clamp(state.anchor);
   if (selection) {
     if (selection.x >= width || selection.y >= height) {
-      selection = null;
-      state.anchor = undefined;
+      clearSelection();
     } else {
       selection.width = Math.min(selection.width, width - selection.x);
       selection.height = Math.min(selection.height, height - selection.y);
@@ -315,6 +320,11 @@ function sizeCanvas() {
 
 function rectangle(a, b) {
   return { x: Math.min(a.x, b.x), y: Math.min(a.y, b.y), width: Math.abs(a.x - b.x) + 1, height: Math.abs(a.y - b.y) + 1 };
+}
+
+function clearSelection() {
+  selection = null;
+  state.anchor = undefined;
 }
 
 function drawOverlay() {
@@ -384,6 +394,13 @@ function addStroke(from, to) {
     gesture.set(`${x},${y}`, brushEdit({ x, y }));
   }
 }
+
+function endGesture() {
+  if (capture !== undefined && canvas.hasPointerCapture(capture)) canvas.releasePointerCapture(capture);
+  capture = undefined;
+  gesture = undefined;
+}
+
 canvas.addEventListener("pointerdown", (event) => {
   if (!geometry() || renderError || event.button !== 0 || capture !== undefined) return;
   canvas.focus({ preventScroll: true });
@@ -391,14 +408,13 @@ canvas.addEventListener("pointerdown", (event) => {
   capture = event.pointerId;
   const point = cursorFrom(event);
   state.cursor = point;
+  clearSelection();
   if (state.tool === "select") {
     gesture = point;
     selection = rectangle(point, point);
   } else if (state.tool === "fill") {
-    selection = null;
     gesture = null;
   } else {
-    selection = null;
     gesture = new Map();
     addStroke(point, point);
   }
@@ -415,12 +431,13 @@ canvas.addEventListener("pointermove", (event) => {
 });
 canvas.addEventListener("pointerup", (event) => {
   if (event.pointerId !== capture) return;
-  capture = undefined;
   const edits = state.tool === "select" ? [] : gesture ? Array.from(gesture.values()) : [brushEdit(state.cursor)];
-  gesture = undefined;
+  endGesture();
   if (edits.length) guarded(() => commands(edits));
 });
-canvas.addEventListener("lostpointercapture", () => { capture = undefined; gesture = undefined; });
+canvas.addEventListener("lostpointercapture", (event) => {
+  if (event.pointerId === capture) endGesture();
+});
 canvas.addEventListener("keydown", (event) => {
   const grid = geometry();
   if (!grid) return;
@@ -435,7 +452,7 @@ canvas.addEventListener("keydown", (event) => {
     if (state.tool === "select" && event.shiftKey) {
       state.anchor ??= previous;
       selection = rectangle(state.anchor, state.cursor);
-    } else { selection = null; state.anchor = undefined; }
+    } else clearSelection();
     drawOverlay();
   } else if (event.key === "Enter" || event.key === " ") {
     if (state.tool === "select") {
@@ -689,17 +706,18 @@ function addAsset() {
 
 function fileInput(accept) { return input("", { type: "file", required: true, accept }); }
 
-async function withActiveFile(file, apply) {
+async function withActiveFile(picker, apply) {
   const sourceStudio = studio;
-  const isActive = () => studio === sourceStudio && dialog.open && form.contains(file);
+  const [file] = picker.files;
+  const isActive = () => studio === sourceStudio && dialog.open && form.contains(picker);
   let bytes;
   try {
-    bytes = await readFileBytes(file.files[0]);
+    bytes = await readFileBytes(file);
   } catch (error) {
     if (isActive()) throw error;
     return;
   }
-  if (isActive()) apply(bytes);
+  if (isActive()) apply(bytes, file);
 }
 
 function toolsMenu() {
@@ -707,10 +725,10 @@ function toolsMenu() {
     ["new", "New project"], ["demo", "Open demo"], ["image", "Import PNG tiles"],
     ["sample", "Import WAV / BRR"], ["edits", "Apply JSON edits"], ["rom", "Inspect ROM header"], ["rle", "RLE compression"],
   ], "image");
-  modal("Tools", [["Action", tool]], "Continue", () => {
+  modal("Tools", [["Action", tool]], "Continue", (_, isActive) => {
     switch (tool.value) {
       case "new": if (checkReplace()) load(); break;
-      case "demo": return openDemo();
+      case "demo": return openDemo(isActive);
       case "image": imageDialog(); break;
       case "sample": sampleDialog(); break;
       case "edits": {
@@ -732,12 +750,15 @@ function imageDialog() {
   modal("Import PNG tiles", [
     ["PNG file", file], ["New tileset ID", set], ["Subpalette ID", palette], ["Bit depth", depth],
     ["Preserve PNG indices and create a new subpalette", preserve],
-  ], "Import PNG", () => withActiveFile(file, (bytes) => {
-    studio.importImage(bytes, JSON.stringify({
+  ], "Import PNG", () => {
+    const options = {
       tileset: set.value, palette: palette.value, bpp: Number(depth.value), preserve_indices: preserve.checked,
-    }));
-    dataChanged(); selectAsset(set.value); status("PNG imported");
-  }));
+    };
+    return withActiveFile(file, (bytes) => {
+      studio.importImage(bytes, JSON.stringify(options));
+      dataChanged(); selectAsset(options.tileset); status("PNG imported");
+    });
+  });
 }
 function sampleDialog() {
   const file = fileInput(".wav,.brr");
@@ -746,40 +767,48 @@ function sampleDialog() {
   const rate = number("", 1, 192000);
   const offset = number("", 0, 2160000);
   rate.required = offset.required = false;
-  modal("Import audio sample", [["Audio file", file], ["Asset ID", id], ["Format", format], ["BRR source rate (optional)", rate], ["BRR loop byte offset (optional)", offset]], "Import sample", () => withActiveFile(file, (bytes) => {
-    studio.importSample(bytes, id.value, JSON.stringify(format.value),
-      rate.value ? rate.valueAsNumber : undefined, offset.value ? offset.valueAsNumber : undefined);
-    dataChanged(); selectAsset(id.value); status("Sample imported");
-  }));
+  modal("Import audio sample", [["Audio file", file], ["Asset ID", id], ["Format", format], ["BRR source rate (optional)", rate], ["BRR loop byte offset (optional)", offset]], "Import sample", () => {
+    const assetId = id.value;
+    const sampleFormat = JSON.stringify(format.value);
+    const sampleRate = rate.value ? rate.valueAsNumber : undefined;
+    const loopOffset = offset.value ? offset.valueAsNumber : undefined;
+    return withActiveFile(file, (bytes) => {
+      studio.importSample(bytes, assetId, sampleFormat, sampleRate, loopOffset);
+      dataChanged(); selectAsset(assetId); status("Sample imported");
+    });
+  });
 }
 function romDialog() {
   const file = fileInput(".smc,.sfc,.bin,.rom");
   const mapping = select([["lo_rom", "LoROM"], ["hi_rom", "HiROM"], ["ex_hi_rom", "ExHiROM"]], "lo_rom");
-  modal("Inspect ROM header", [["ROM file", file], ["Mapping", mapping]], "Read header", () => withActiveFile(file, (bytes) => {
-    const header = inspect_rom(bytes, JSON.stringify(mapping.value));
-    modal("ROM header", [], null, null, el("pre", pretty(JSON.parse(header))));
-  }));
+  modal("Inspect ROM header", [["ROM file", file], ["Mapping", mapping]], "Read header", () => {
+    const romMapping = JSON.stringify(mapping.value);
+    return withActiveFile(file, (bytes) => {
+      const header = inspect_rom(bytes, romMapping);
+      modal("ROM header", [], null, null, el("pre", pretty(JSON.parse(header))));
+    });
+  });
 }
 function codecDialog() {
   const file = fileInput("");
   const mode = select([["compress", "Compress"], ["decompress", "Decompress"]], "compress");
   modal("Studio RLE v1", [["File", file], ["Mode", mode]], "Download result", () => {
-    const name = file.files[0].name;
     const decompress = mode.value === "decompress";
-    return withActiveFile(file, (bytes) => {
+    return withActiveFile(file, (bytes, { name }) => {
       download(rle(bytes, decompress), decompress ? name.replace(/\.srl$/i, "") + ".decoded" : name + ".srl");
       status("Downloaded RLE result");
     });
   });
 }
 
-async function openDemo() {
+async function openDemo(isActive = () => true) {
   const canReplace = prepareProjectOpen();
   if (!canReplace) return;
   const response = await fetch("./demo/studio.json");
+  if (!isActive()) return;
   if (!response.ok) throw new Error("The demo project could not be loaded");
   const content = new Uint8Array(await response.arrayBuffer());
-  if (canReplace()) load(content, { initial: true });
+  if (isActive() && canReplace()) load(content, { initial: true });
 }
 
 $("open").onclick = chooseProjectFile;

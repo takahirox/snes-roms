@@ -133,6 +133,7 @@
       return submitDialog();
     };
     const dialog = byId("dialog");
+    const cancelButton = () => dialog.querySelector("button[type=button]");
 
     const write = gate();
     const a = folder("folder-a", undefined, { beforeWrite: write.pause });
@@ -195,12 +196,22 @@
     demoRead = gate();
     const openingDemo = openDemo();
     await demoRead.entered;
-    byId("dialog").close();
     rename("Edited during demo open");
     demoRead.resume();
     await openingDemo;
     equal(confirmations, 3, "Asked whether to discard the edit made during the demo fetch");
     expectEditAndHistory("ZIP project", "Edited during demo open");
+    for (const cancel of [() => cancelButton().click(), () => dialog.requestClose()]) {
+      demoRead = gate();
+      const canceledDemo = openDemo();
+      await demoRead.entered;
+      cancel();
+      equal(dialog.open, false, "Dismissed Open demo during the fetch");
+      demoRead.resume();
+      await canceledDemo;
+      equal(byId("project-title").textContent, "ZIP project", "Cancel kept the active project after the demo fetch");
+      equal(confirmations, 3, "Cancel did not prompt to replace the project");
+    }
     demoRead = undefined;
     await openDemo();
     equal(byId("project-title").textContent, originalName, "Opened the demo without concurrent edits");
@@ -280,7 +291,6 @@
     });
     await open(destinationFolder);
     rename("Edited before Cancel");
-    const cancelButton = () => dialog.querySelector("button[type=button]");
     byId("save").click();
     const canceledSave = submitDialog();
     await stagedWrite.entered;
@@ -313,6 +323,7 @@
     const demo = new Studio(new Uint8Array(await (await fetch(site + "demo/studio.json")).arrayBuffer()));
     const png = demo.export("compass", '{"format":"indexed-png"}');
     const wav = demo.export("test-pulse", '{"format":"wav"}');
+    const originalPcm = JSON.parse(demo.manifest()).assets["test-pulse"].data.pcm;
     demo.free();
 
     const startFileTool = async (action, filename, bytes, beforeRead) => {
@@ -363,6 +374,23 @@
       byId("undo").click();
     }
 
+    const sampleFolder = folder("sample-submission", project("Sample submission"));
+    await open(sampleFolder);
+    const sampleRead = gate();
+    const importingSample = startFileTool("sample", "first.wav", wav, sampleRead.pause);
+    await sampleRead.entered;
+    chooseFile(dialog.querySelector('input[type="file"]'), "second.wav", new Uint8Array());
+    dialog.querySelector('input:not([type])').value = "second-sample";
+    dialog.querySelector("select").value = "brr";
+    sampleRead.resume();
+    await importingSample;
+    equal(hasAsset("sample"), true, "Import used the submitted asset ID");
+    equal(hasAsset("second-sample"), false, "Later edits to the form did not change the submitted import");
+    byId("save").click();
+    await submitDialog();
+    const importedPcm = JSON.parse(new TextDecoder().decode(sampleFolder.files.get("studio.json"))).assets.sample.data.pcm;
+    equal(JSON.stringify(importedPcm), JSON.stringify(originalPcm), "Import used the submitted WAV bytes");
+
     const fixtureRom = new Uint8Array(0x8000);
     fixtureRom.set(new TextEncoder().encode("Studio test"), 0x7fc0);
     const codecInput = Uint8Array.of(1, 1, 1, 2);
@@ -391,9 +419,14 @@
         cancelButton().click();
       }
 
-      await startFileTool("rom", "header.sfc", fixtureRom);
+      const romRead = gate();
+      const readingRom = startFileTool("rom", "header.sfc", fixtureRom, romRead.pause);
+      await romRead.entered;
+      dialog.querySelector("select").value = "hi_rom";
+      romRead.resume();
+      await readingRom;
       equal(byId("dialog-title").textContent, "ROM header", "Active ROM inspection opened its results");
-      equal(JSON.parse(dialog.querySelector("pre").textContent).title, "Studio test", "Read the fixture ROM title");
+      equal(JSON.parse(dialog.querySelector("pre").textContent).title, "Studio test", "Read the fixture ROM with the submitted mapping");
       cancelButton().click();
       await startFileTool("rle", "codec.bin", codecInput);
       equal(downloads.join(","), "codec.bin.srl", "Active RLE operation downloaded its result");
@@ -483,20 +516,63 @@
     const cells = Array(10).fill(null);
     cells[3] = { asset: "edge" };
     cells[5] = { asset: "next-row" };
-    await open(folder("map-bounds", project("Map bounds", {
+    const mapFixture = (name) => project(name, {
       colors: { kind: "palette", data: { colors: [0] } },
       edge: tile,
       "next-row": tile,
       tiles: { kind: "tileset", data: { tiles: ["edge", "next-row"], metatiles: [] } },
       map: { kind: "map", data: { width: 5, height: 2, cell_width: 1, cell_height: 1, tileset: "tiles",
-        layers: [{ id: "ground", visible: true, cells }] } },
-    })));
+        layers: [{ id: "overlay", visible: true, cells: Array(10).fill(null) }, { id: "ground", visible: true, cells }] } },
+    });
+    await open(folder("stroke-source", mapFixture("Stroke source")));
+    const strokeRead = gate();
+    const openingStrokeTarget = open(folder("stroke-target", mapFixture("Stroke target"), { beforeRead: strokeRead.pause }));
+    await strokeRead.entered;
+    const preview = byId("preview");
+    // A synthetic PointerEvent has no browser-owned pointer to capture.
+    let capturedPointer;
+    preview.setPointerCapture = (id) => { capturedPointer = id; };
+    preview.hasPointerCapture = (id) => id === capturedPointer;
+    preview.releasePointerCapture = () => { capturedPointer = undefined; };
+    const pointer = (type) => {
+      const { left, top } = preview.getBoundingClientRect();
+      preview.dispatchEvent(new browser.PointerEvent(type, { pointerId: 1, clientX: left + 1, clientY: top + 1 }));
+    };
+    pointer("pointerdown");
+    strokeRead.resume();
+    await openingStrokeTarget;
+    equal(capturedPointer, undefined, "Opening the new project released the old stroke's capture");
+    pointer("pointerup");
+    equal(byId("project-title").textContent, "Stroke target", "A stroke from the old project left the new map clean");
+    equal(byId("undo").disabled, true, "The old stroke created no history in the new project");
+    pointer("pointerdown");
+    pointer("pointerup");
+    equal(byId("project-title").textContent, "Stroke target · Edited", "A fresh stroke edited the new map");
+    byId("undo").click();
+    delete preview.setPointerCapture;
+    delete preview.hasPointerCapture;
+    delete preview.releasePointerCapture;
+
+    await open(folder("map-bounds", mapFixture("Map bounds")));
     const clickButton = (id, label) => Array.from(byId(id).querySelectorAll("button"))
       .find((node) => node.textContent === label).click();
     const press = (key, shiftKey = false) => byId("preview").dispatchEvent(new browser.KeyboardEvent("keydown", { key, shiftKey }));
     const tool = doc.querySelector('#toolbar select:has(option[value="select"])');
     tool.value = "select";
     tool.dispatchEvent(new browser.Event("change"));
+    press("ArrowRight", true);
+    press("ArrowRight", true);
+    const layer = doc.querySelector('#toolbar select:has(option[value="overlay"])');
+    layer.value = "overlay";
+    layer.dispatchEvent(new browser.Event("change"));
+    equal(byId("coordinates").textContent, "2, 0  ·  5×2 cells", "Switching layers cleared the selection");
+    press("ArrowRight", true);
+    clickButton("toolbar", "Copy");
+    equal(byId("status").textContent, "Copied 2×1 cells from overlay", "Shift selection started from the cursor on the new layer");
+    const activeLayer = doc.querySelector('#toolbar select:has(option[value="ground"])');
+    activeLayer.value = "ground";
+    activeLayer.dispatchEvent(new browser.Event("change"));
+    for (let x = 0; x < 3; x++) press("ArrowLeft");
     for (let x = 0; x < 3; x++) press("ArrowRight");
     press("ArrowRight", true);
     const resizeColumns = (width) => {
