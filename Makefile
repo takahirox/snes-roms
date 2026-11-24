@@ -65,11 +65,12 @@ build/yonaki/yonaki.sfc: build/yonaki/yonaki.o FORCE
 
 # pad-only tests on the unmodified Snes9x 1.63 libretro core with the fixture scenario (tests/yonaki/fixture ->
 # build/yonaki-test/), the real scenario played to every ending (--real), then the same pad traces and battery
-# images replayed on the pinned bsnes 115 core (build/yonaki-test/bsnes/RESULTS.json)
+# images replayed on the pinned bsnes 115 core, and a pre-packing ROM comparison on both cores.
 yonaki-test: yonaki
 	$(PYTHON) -I tests/yonaki/assets.py
 	$(PYTHON) -I tests/yonaki/run.py --real
 	$(PYTHON) -I tests/yonaki/bsnes.py
+	$(PYTHON) -I tests/yonaki/compare.py
 
 # tested ROM -> dist/yonaki.sfc
 yonaki-release: yonaki-test
@@ -77,4 +78,4 @@ yonaki-release: yonaki-test
 	cd dist && shasum -a 256 yonaki.sfc > yonaki.sfc.sha256
 
 yonaki-clean:
-	rm -rf build/yonaki build/yonaki-test
+	rm -rf build/yonaki build/yonaki-test build/yonaki-comparison
