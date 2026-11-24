@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <meta charset="utf-8">
-<title>Studio folder workflow regressions</title>
+<title>Studio project workflow regressions</title>
 <!-- After web/build.sh, serve tools/studio over localhost and open /web/tests/folder-workflows.html. -->
 <pre id="result" data-result="running">Running…</pre>
 <iframe id="workbench" title="Studio under test"></iframe>
@@ -10,11 +10,13 @@
   const iframe = document.getElementById("workbench");
   const picks = [];
   let confirmations = 0;
+  let demoRead;
   window.pickFolder = () => {
     if (!picks.length) throw new Error("No test folder queued");
     return picks.shift();
   };
   window.confirmDiscard = () => { confirmations++; return false; };
+  window.pauseDemoRead = () => demoRead?.pause();
 
   function equal(actual, expected, description) {
     if (actual !== expected) throw new Error(`${description}: expected ${expected}, got ${actual}`);
@@ -75,7 +77,15 @@
     const html = await response.text();
     const loaded = new Promise((resolve) => { iframe.onload = resolve; });
     iframe.srcdoc = html.replace("<head>", `<head><base href="${site}">
-      <script>window.showDirectoryPicker = parent.pickFolder; window.confirm = parent.confirmDiscard;<\/script>`);
+      <script>
+        window.showDirectoryPicker = parent.pickFolder;
+        window.confirm = parent.confirmDiscard;
+        const fetchStudio = window.fetch.bind(window);
+        window.fetch = async (url, options) => {
+          if (url === "./demo/studio.json") await parent.pauseDemoRead();
+          return fetchStudio(url, options);
+        };
+      <\/script>`);
     await loaded;
     const doc = iframe.contentDocument;
     const byId = (id) => doc.getElementById(id);
@@ -87,7 +97,36 @@
     const project = (name) => new TextEncoder().encode(JSON.stringify({ version: 1, name, assets: {} }));
     const savedName = (directory) => JSON.parse(new TextDecoder().decode(directory.files.get("studio.json"))).name;
     const open = (directory) => { picks.push(directory); return byId("directory").onclick(); };
-    const submitSave = () => byId("dialog-content").onsubmit(new iframe.contentWindow.Event("submit"));
+    const submitDialog = () => byId("dialog-content").onsubmit(new iframe.contentWindow.Event("submit"));
+    const rename = (name) => {
+      doc.querySelector("#inspector input").value = name;
+      doc.querySelector("#inspector form").requestSubmit();
+    };
+    const expectEditAndHistory = (name, editedName) => {
+      equal(byId("project-title").textContent, `${editedName} · Edited`, "Kept the edit when discard was declined");
+      byId("undo").click();
+      equal(byId("project-title").textContent, name, "Kept the project's undo history");
+      byId("redo").click();
+      equal(byId("project-title").textContent, `${editedName} · Edited`, "Kept the project's redo history");
+      byId("undo").click();
+    };
+    const openFile = (name, bytes, beforeRead) => {
+      const picker = byId("project-file");
+      picker.click = () => {};
+      byId("open").click();
+      const file = new iframe.contentWindow.File([bytes], name);
+      const read = file.arrayBuffer.bind(file);
+      file.arrayBuffer = async () => { await beforeRead?.(); return read(); };
+      const transfer = new iframe.contentWindow.DataTransfer();
+      transfer.items.add(file);
+      picker.files = transfer.files;
+      return picker.onchange({ target: picker });
+    };
+    const openDemo = () => {
+      byId("tools").click();
+      doc.querySelector("#dialog select").value = "demo";
+      return submitDialog();
+    };
 
     const write = gate();
     const a = folder("folder-a", undefined, { beforeWrite: write.pause });
@@ -96,7 +135,7 @@
     byId("save").click();
     doc.querySelector("#dialog select").value = "new-folder";
     picks.push(a);
-    const savingA = submitSave();
+    const savingA = submitDialog();
     await write.entered;
     byId("dialog").close();
     await open(b);
@@ -107,7 +146,7 @@
     byId("save").click();
     const destination = doc.querySelector("#dialog select").selectedOptions[0].textContent;
     equal(destination, "Save in folder-b", "B kept its save destination after A finished");
-    await submitSave();
+    await submitDialog();
     equal(byId("status").textContent, "Saved studio.json in folder-b", "B's folder save completed");
     equal(savedName(b), "Project B", "B saved with its own disk fingerprint");
     equal(savedName(a), originalName, "B did not overwrite A");
@@ -115,19 +154,52 @@
     const read = gate();
     const openingC = open(folder("folder-c", project("Project C"), { beforeRead: read.pause }));
     await read.entered;
-    doc.querySelector("#inspector input").value = "Edited B";
-    doc.querySelector("#inspector form").requestSubmit();
+    rename("Edited B");
     equal(byId("project-title").textContent, "Edited B · Edited", "Edited B while C was loading");
     read.resume();
     await openingC;
     equal(confirmations, 1, "Asked whether to discard the edit made during the read");
-    equal(byId("project-title").textContent, "Edited B · Edited", "Kept the edit when discard was declined");
-    byId("undo").click();
-    equal(byId("project-title").textContent, "Project B", "Kept B's undo history");
-    byId("redo").click();
-    equal(byId("project-title").textContent, "Edited B · Edited", "Kept B's redo history");
+    expectEditAndHistory("Project B", "Edited B");
 
-    report("passed", "Studio folder workflow regressions passed.");
+    const fileRead = gate();
+    const openingFile = openFile("studio.json", project("File project"), fileRead.pause);
+    await fileRead.entered;
+    rename("Edited during file open");
+    fileRead.resume();
+    await openingFile;
+    equal(confirmations, 2, "Asked whether to discard the edit made during the file read");
+    expectEditAndHistory("Project B", "Edited during file open");
+
+    const { default: init, Studio } = await import(site + "pkg/studio_web.js");
+    await init();
+    const zipProject = new Studio(project("ZIP project"));
+    const zip = zipProject.save(true);
+    zipProject.free();
+    const zipRead = gate();
+    const openingZip = openFile("studio-project.zip", zip, zipRead.pause);
+    await zipRead.entered;
+    await open(folder("folder-d", project("Project D")));
+    zipRead.resume();
+    await openingZip;
+    equal(byId("project-title").textContent, "Project D", "A pending ZIP never replaces a different active project");
+    equal(confirmations, 2, "No discard prompt for a stale ZIP read");
+    await openFile("studio-project.zip", zip);
+    equal(byId("project-title").textContent, "ZIP project", "Opened a ZIP without concurrent edits");
+
+    demoRead = gate();
+    const openingDemo = openDemo();
+    await demoRead.entered;
+    byId("dialog").close();
+    rename("Edited during demo open");
+    demoRead.resume();
+    await openingDemo;
+    equal(confirmations, 3, "Asked whether to discard the edit made during the demo fetch");
+    expectEditAndHistory("ZIP project", "Edited during demo open");
+    demoRead = undefined;
+    await openDemo();
+    equal(byId("project-title").textContent, originalName, "Opened the demo without concurrent edits");
+
+    report("passed", "Studio project workflow regressions passed.");
   } catch (error) {
     report("failed", error.stack);
   } finally {

@@ -460,17 +460,36 @@ function checkReplace() {
   return !dirty || window.confirm("Discard this session’s edits and open a different project?");
 }
 
-async function openFolder() {
-  if (!window.showDirectoryPicker) throw new Error("Folder access is unavailable here. Open studio.json or a project ZIP.");
+function prepareProjectOpen() {
+  if (!checkReplace()) return;
   const openingStudio = studio;
   const openingRevision = studio.revision();
-  if (!checkReplace()) return;
+  return () => studio === openingStudio && (studio.revision() === openingRevision || checkReplace());
+}
+
+function chooseProjectFile() {
+  const canReplace = prepareProjectOpen();
+  if (!canReplace) return;
+  const picker = $("project-file");
+  picker.onchange = () => guarded(async () => {
+    picker.onchange = null;
+    const [file] = picker.files;
+    picker.value = "";
+    if (!file) return;
+    const content = await readFileBytes(file);
+    if (canReplace()) load(content);
+  });
+  picker.click();
+}
+
+async function openFolder() {
+  if (!window.showDirectoryPicker) throw new Error("Folder access is unavailable here. Open studio.json or a project ZIP.");
+  const canReplace = prepareProjectOpen();
+  if (!canReplace) return;
   const folder = await window.showDirectoryPicker({ mode: "readwrite" });
   const handle = await folder.getFileHandle("studio.json");
   const content = await readFileBytes(await handle.getFile());
-  if (studio !== openingStudio) return;
-  if (studio.revision() !== openingRevision && !checkReplace()) return;
-  load(content, { folder, revision: fingerprint(content) });
+  if (canReplace()) load(content, { folder, revision: fingerprint(content) });
 }
 
 async function saveFolder(asNew) {
@@ -554,7 +573,7 @@ function toolsMenu() {
   modal("Tools", [["Action", tool]], "Continue", () => {
     switch (tool.value) {
       case "new": if (checkReplace()) load(); break;
-      case "demo": if (checkReplace()) return openDemo(); break;
+      case "demo": return openDemo();
       case "image": imageDialog(); break;
       case "sample": sampleDialog(); break;
       case "edits": {
@@ -616,12 +635,15 @@ function codecDialog() {
 }
 
 async function openDemo() {
+  const canReplace = prepareProjectOpen();
+  if (!canReplace) return;
   const response = await fetch("./demo/studio.json");
   if (!response.ok) throw new Error("The demo project could not be loaded");
-  load(new Uint8Array(await response.arrayBuffer()), { initial: true });
+  const content = new Uint8Array(await response.arrayBuffer());
+  if (canReplace()) load(content, { initial: true });
 }
 
-$("open").onclick = () => { if (checkReplace()) $("project-file").click(); };
+$("open").onclick = chooseProjectFile;
 $("directory").onclick = () => guarded(openFolder);
 $("save").onclick = saveProject;
 $("tools").onclick = toolsMenu;
@@ -634,11 +656,6 @@ $("validation").onclick = () => {
   const diagnostics = JSON.parse(studio.diagnostics());
   modal("Validation", [], null, null, el("pre", diagnostics.length ? diagnostics.map((d) => `${d.severity.toUpperCase()} [${d.code}] ${d.path}\n${d.message}`).join("\n\n") : "No diagnostics"));
 };
-$("project-file").onchange = (event) => guarded(async () => {
-  const [file] = event.target.files;
-  event.target.value = "";
-  if (file) load(await readFileBytes(file));
-});
 window.addEventListener("keydown", (event) => {
   if (dialog.open || !(event.ctrlKey || event.metaKey) || event.target.matches?.("input, textarea, select") || event.key.toLowerCase() !== "z") return;
   event.preventDefault();
