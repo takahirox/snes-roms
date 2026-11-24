@@ -146,11 +146,11 @@ def make_rom(image):
 
 
 class Player:
-    def __init__(self, image):
-        p = ROOT / ROMPATH
+    def __init__(self, image, rom_path=ROMPATH):
+        p = ROOT / rom_path
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_bytes(make_rom(image))
-        self.e = Emulator(ROMPATH)
+        self.e = Emulator(p)
         self.frame = 0
         self.seq = 0
         for _ in range(600):
