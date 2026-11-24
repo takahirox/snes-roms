@@ -384,9 +384,11 @@ export function inspector(app, asset) {
   }
   const advanced = el("details", [el("summary", "Asset JSON")]);
   advanced.addEventListener("toggle", () => {
-    if (!advanced.open || advanced.children.length > 1) return;
-    const dataField = textarea(data, 9);
-    advanced.append(form(() => edit("put", { asset: { kind, data: JSON.parse(dataField.value) } }), field("Asset data", dataField), apply()));
+    if (!advanced.isConnected || !advanced.open || advanced.children.length > 1) return;
+    guarded(() => {
+      const dataField = el("textarea", null, { value: app.assetData(id), rows: 9, spellcheck: false });
+      advanced.append(form(() => app.putAsset(id, kind, dataField.value), field("Asset data", dataField), apply()));
+    });
   });
   root.append(advanced, row(button("Delete asset", () => modal("Delete asset", [], "Delete", () => edit("remove", {}), el("p", `Delete ${id} from this project?`)))));
 }

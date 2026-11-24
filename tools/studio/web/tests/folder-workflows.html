@@ -219,6 +219,31 @@
     await openDemo();
     equal(byId("project-title").textContent, originalName, "Opened the demo without concurrent edits");
 
+    const undoFolder = folder("open-after-save", project("Before the saves"));
+    await open(undoFolder);
+    rename("First saved revision");
+    byId("save").click();
+    await submitDialog();
+    equal(byId("project-title").textContent, "First saved revision", "Started the open from a clean revision");
+    const savedRevisionRead = gate();
+    const openingAfterSave = openFile("replacement.json", project("Replacement"), savedRevisionRead.pause);
+    await savedRevisionRead.entered;
+    rename("Second saved revision");
+    byId("save").click();
+    await submitDialog();
+    equal(savedName(undoFolder), "Second saved revision", "Saved the new edit during the pending read");
+    byId("undo").click();
+    equal(byId("project-title").textContent, "First saved revision · Edited", "Undo returned to the opening revision with unsaved changes");
+    savedRevisionRead.resume();
+    await openingAfterSave;
+    equal(confirmations, 4, "Asked whether to discard the unsaved undo after the save");
+    equal(byId("project-title").textContent, "First saved revision · Edited", "Declining discard kept the current project");
+    byId("undo").click();
+    equal(byId("project-title").textContent, "Before the saves · Edited", "Kept undo history after declining discard");
+    byId("redo").click();
+    byId("redo").click();
+    equal(byId("project-title").textContent, "Second saved revision", "Kept redo history and the saved revision");
+
     const mapAssets = (source) => ({
       ground: { kind: "tileset", data: { tiles: [], metatiles: [] } },
       map: { kind: "map", data: {
@@ -530,12 +555,14 @@
 
     const withMetadata = JSON.parse(new TextDecoder().decode(mapFixture("Map metadata")));
     const mapData = withMetadata.assets.map.data;
-    const numberMarkers = { metadata: { nested: ["float", "negative-zero"] } };
+    const numberMarkers = { metadata: { nested: ["float", "negative-zero", "large-integer"] } };
     Object.assign(mapData, numberMarkers);
     for (const layer of mapData.layers) Object.assign(layer, numberMarkers);
     Object.assign(mapData.layers[1].cells[3], numberMarkers);
     withMetadata.assets["other-tiles"] = withMetadata.assets.tiles;
-    const originalMap = JSON.stringify(withMetadata).replaceAll('"float"', "1.0").replaceAll('"negative-zero"', "-0.0");
+    const typedMapJson = (value) => JSON.stringify(value)
+      .replaceAll('"float"', "1.0").replaceAll('"negative-zero"', "-0.0").replaceAll('"large-integer"', "9007199254740991");
+    const originalMap = typedMapJson(withMetadata);
     await openFile("map-metadata.json", new TextEncoder().encode(originalMap));
     const control = (label) => Array.from(doc.querySelectorAll("#inspector label"))
       .find((node) => node.firstElementChild.textContent === label).control;
@@ -592,6 +619,45 @@
       .find((node) => node.textContent === label).click();
     const press = (key, shiftKey = false) => byId("preview").dispatchEvent(new browser.KeyboardEvent("keydown", { key, shiftKey }));
     const beforeAdd = await downloadManifest();
+
+    const openAssetJson = async () => {
+      const editor = Array.from(byId("inspector").querySelectorAll("details"))
+        .find((node) => node.querySelector("summary").textContent === "Asset JSON");
+      const toggled = new Promise((resolve) => editor.addEventListener("toggle", resolve, { once: true }));
+      editor.open = true;
+      await toggled;
+      return control("Asset data");
+    };
+    const advancedData = await openAssetJson();
+    const advancedJson = advancedData.value;
+    equal(advancedJson.match(/\b1\.0\b/g)?.length, 4, "Asset JSON displayed floats from Rust");
+    equal(advancedJson.match(/-0\.0\b/g)?.length, 4, "Asset JSON displayed negative zeros from Rust");
+    equal(advancedJson.match(/9007199254740991/g)?.length, 4, "Asset JSON displayed large integers exactly");
+    advancedData.form.requestSubmit();
+    equal(await downloadManifest(), beforeAdd, "Unchanged Asset JSON Apply preserved the manifest byte for byte");
+    equal(byId("undo").disabled, true, "Unchanged Asset JSON Apply created no undo entry");
+    equal(byId("redo").disabled, false, "Unchanged Asset JSON Apply preserved redo history");
+
+    advancedData.value = advancedJson + "{}";
+    advancedData.form.requestSubmit();
+    equal(byId("status").textContent.includes("trailing characters"), true, "The shared parser rejected trailing Asset JSON");
+    advancedData.value = advancedJson.replace("1.0", "1e400");
+    advancedData.form.requestSubmit();
+    equal(byId("status").textContent.includes("number out of range"), true, "The shared parser rejected Asset JSON overflow");
+    equal(await downloadManifest(), beforeAdd, "Rejected Asset JSON left the manifest unchanged");
+    equal(byId("undo").disabled, true, "Rejected Asset JSON created no undo entry");
+    byId("redo").click();
+    equal(byId("project-title").textContent, "Map metadata · Edited", "Rejected Asset JSON preserved redo history");
+    byId("undo").click();
+
+    const editedAssetData = await openAssetJson();
+    editedAssetData.value = editedAssetData.value.replace('"tileset": "tiles"', '"tileset": "other-tiles"');
+    editedAssetData.form.requestSubmit();
+    equal(await downloadManifest(), beforeAdd.replace('"tileset": "tiles"', '"tileset": "other-tiles"'),
+      "Asset JSON applied the tileset change and preserved metadata");
+    byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo restored the asset after Asset JSON Apply");
+
     for (let x = 0; x < 3; x++) press("ArrowRight");
     clickButton("toolbar", "Copy");
     addLayer();
@@ -605,6 +671,7 @@
     equal(JSON.stringify(addedLayer.cells), JSON.stringify(Array(10).fill(null)), "The new layer is empty");
     equal(withLayer.match(/\b1\.0\b/g)?.length, 4, "Adding a layer preserved the floating-point metadata");
     equal(withLayer.match(/-0\.0\b/g)?.length, 4, "Adding a layer preserved negative zero metadata");
+    equal(withLayer.match(/9007199254740991/g)?.length, 4, "Adding a layer preserved large integer metadata");
 
     clickButton("toolbar", "Paste");
     const withPaste = await downloadManifest();
@@ -612,6 +679,7 @@
     equal(JSON.stringify(pastedLayers[2].cells[3]), JSON.stringify(pastedLayers[1].cells[3]), "Pasted the copied cell into the new layer");
     equal(withPaste.match(/\b1\.0\b/g)?.length, 5, "Paste preserved the copied floating-point metadata");
     equal(withPaste.match(/-0\.0\b/g)?.length, 5, "Paste preserved the copied negative zero");
+    equal(withPaste.match(/9007199254740991/g)?.length, 5, "Paste preserved the copied large integer");
     byId("undo").click();
     equal(await downloadManifest(), withLayer, "Undo restored the empty layer and its existing metadata");
     byId("undo").click();
@@ -653,7 +721,7 @@
       field.value = json;
       field.dispatchEvent(new browser.Event("input"));
     };
-    setBrushMetadata('{"nested":[1.0,0.0]}');
+    setBrushMetadata('{"nested":[1.0,0.0,9007199254740991]}');
     const toolMenu = doc.querySelector('#toolbar select:has(option[value="fill"])');
     toolMenu.value = "fill";
     toolMenu.dispatchEvent(new browser.Event("change"));
@@ -687,7 +755,7 @@
     assetKind.dispatchEvent(new browser.Event("change"));
     dialog.querySelector("input").value = "new-map";
     const assetData = dialog.querySelector("textarea");
-    const newMapJson = JSON.stringify(mapData).replaceAll('"float"', "1.0").replaceAll('"negative-zero"', "-0.0");
+    const newMapJson = typedMapJson(mapData);
     assetData.value = newMapJson.replace("1.0", "1e400");
     await submitDialog();
     equal(dialog.open, true, "Asset overflow kept the New asset dialog open");

@@ -9,6 +9,21 @@ pub fn json<T: Serialize>(value: &T) -> Result<Vec<u8>> {
     Ok(bytes)
 }
 
+pub fn asset_data_json(project: &Project, id: &str) -> Result<Vec<u8>> {
+    match asset(project, id)? {
+        Asset::Palette(data) => json(data),
+        Asset::Tile(data) => json(data),
+        Asset::Metatile(data) => json(data),
+        Asset::Tileset(data) => json(data),
+        Asset::Map(data) => json(data),
+        Asset::Sprite(data) => json(data),
+        Asset::Font(data) => json(data),
+        Asset::Sample(data) => json(data),
+        Asset::Sequence(data) => json(data),
+        Asset::Vram(data) => json(data),
+    }
+}
+
 fn write_json(mut output: impl Write, value: &impl Serialize) -> serde_json::Result<()> {
     serde_json::to_writer_pretty(&mut output, value)?;
     output.write_all(b"\n").map_err(serde_json::Error::io)

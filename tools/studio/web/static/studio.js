@@ -196,6 +196,7 @@ function refresh() {
     inspector({
       state, project, id: selected, commands, guarded, refresh, modal, selectAsset, setMapLayer,
       paletteRgb: palette_rgb, quantizeColor: quantize_color, objSize: obj_size,
+      assetData: (id) => studio.assetData(id), putAsset,
       mapMetadata: (layer) => studio.mapMetadata(selected, layer),
       pickMapCellMetadata: (layer, x, y) => studio.pickMapCellMetadata(selected, layer, x, y),
     }, item);
@@ -604,7 +605,9 @@ function prepareProjectOpen() {
   if (!checkReplace()) return;
   const openingStudio = studio;
   const openingRevision = studio.revision();
-  return () => studio === openingStudio && (studio.revision() === openingRevision || checkReplace());
+  const openingCleanRevision = cleanRevision;
+  return () => studio === openingStudio
+    && ((studio.revision() === openingRevision && cleanRevision === openingCleanRevision) || checkReplace());
 }
 
 function chooseProjectFile() {
@@ -711,6 +714,10 @@ function exportAsset() {
   });
 }
 
+function putAsset(id, kind, dataJson) {
+  finishEdit(studio.putAsset(id, kind, dataJson));
+}
+
 function addAsset() {
   const kind = select(Object.entries(names), "palette");
   const id = input("", { required: true, pattern: "[a-zA-Z0-9][a-zA-Z0-9._\\-]{0,63}" });
@@ -718,7 +725,7 @@ function addAsset() {
   kind.addEventListener("change", () => { data.value = pretty(assetDefaults(project, kind.value)); });
   modal("Add an asset", [["Type", kind], ["Asset ID", id], ["Initial asset data", data]], "Create asset", () => {
     if (Object.hasOwn(project.assets, id.value)) throw new Error("Asset ID already exists");
-    finishEdit(studio.putAsset(id.value, kind.value, data.value));
+    putAsset(id.value, kind.value, data.value);
     selectAsset(id.value);
   });
 }
