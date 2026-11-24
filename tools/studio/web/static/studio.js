@@ -5,6 +5,7 @@ import { $, button, checkbox, download, el, field, input, message, number, prett
 
 let studio;
 let project;
+let diagnostics;
 let selected;
 let cleanRevision;
 let dirty = false;
@@ -92,10 +93,16 @@ function modal(title, fields, label, submit, extra, onCancel) {
 }
 
 function dataChanged() {
+  const before = geometry();
   project = JSON.parse(studio.manifest());
+  diagnostics = JSON.parse(studio.diagnostics());
   dirty = studio.revision() !== cleanRevision;
   if (selected && !Object.hasOwn(project.assets, selected)) selectAsset(undefined);
-  else refresh();
+  else {
+    const grid = geometry();
+    if (grid && (grid.width !== before?.width || grid.height !== before?.height)) reconcileGrid(grid);
+    refresh();
+  }
 }
 
 function commands(edits) {
@@ -134,12 +141,13 @@ function load(bytes, { initial = false, folder = null, revision = null } = {}) {
   directory = folder;
   diskRevision = revision;
   project = JSON.parse(studio.manifest());
+  diagnostics = JSON.parse(studio.diagnostics());
   cleanRevision = studio.revision();
   dirty = false;
   clipboard = null;
   selectAsset(initial ? "chromatic-lab" : Object.keys(project.assets).find((id) => project.assets[id].kind === "map") ?? Object.keys(project.assets)[0]);
-  const diagnostics = JSON.parse(studio.diagnostics());
-  status(diagnostics.length ? `Loaded · ${diagnostics.length} diagnostics` : initial ? "Demo loaded" : "Project ready");
+  if (diagnostics.some((item) => item.severity === "error")) status("Loaded with errors. See Validation for details.", true);
+  else status(diagnostics.length ? `Loaded · ${diagnostics.length} diagnostics` : initial ? "Demo loaded" : "Project ready");
 }
 
 function assets() {
@@ -172,7 +180,6 @@ function refresh() {
   $("export-asset").disabled = !item;
   $("undo").disabled = !studio.canUndo();
   $("redo").disabled = !studio.canRedo();
-  const diagnostics = JSON.parse(studio.diagnostics());
   $("validation").textContent = diagnostics.length ? `Validation (${diagnostics.length})` : "Validation";
   assets();
   toolbar(item);
@@ -242,6 +249,26 @@ function geometry() {
   if (asset?.kind === "metatile") return { stepX: 8, stepY: 8, width: asset.data.width, height: asset.data.height };
   if (asset?.kind === "map") return { stepX: asset.data.cell_width * 8, stepY: asset.data.cell_height * 8, width: asset.data.width, height: asset.data.height };
   return undefined;
+}
+
+function reconcileGrid({ width, height }) {
+  capture = undefined;
+  gesture = undefined;
+  const clamp = ({ x, y }) => ({
+    x: Math.max(0, Math.min(x, width - 1)),
+    y: Math.max(0, Math.min(y, height - 1)),
+  });
+  state.cursor = clamp(state.cursor);
+  if (state.anchor) state.anchor = clamp(state.anchor);
+  if (selection) {
+    if (selection.x >= width || selection.y >= height) {
+      selection = null;
+      state.anchor = undefined;
+    } else {
+      selection.width = Math.min(selection.width, width - selection.x);
+      selection.height = Math.min(selection.height, height - selection.y);
+    }
+  }
 }
 
 function renderPreview(animationFrame) {
@@ -662,9 +689,9 @@ function addAsset() {
 
 function fileInput(accept) { return input("", { type: "file", required: true, accept }); }
 
-async function importAsset(file, apply) {
-  const importingStudio = studio;
-  const isActive = () => studio === importingStudio && dialog.open && form.contains(file);
+async function withActiveFile(file, apply) {
+  const sourceStudio = studio;
+  const isActive = () => studio === sourceStudio && dialog.open && form.contains(file);
   let bytes;
   try {
     bytes = await readFileBytes(file.files[0]);
@@ -705,7 +732,7 @@ function imageDialog() {
   modal("Import PNG tiles", [
     ["PNG file", file], ["New tileset ID", set], ["Subpalette ID", palette], ["Bit depth", depth],
     ["Preserve PNG indices and create a new subpalette", preserve],
-  ], "Import PNG", () => importAsset(file, (bytes) => {
+  ], "Import PNG", () => withActiveFile(file, (bytes) => {
     studio.importImage(bytes, JSON.stringify({
       tileset: set.value, palette: palette.value, bpp: Number(depth.value), preserve_indices: preserve.checked,
     }));
@@ -719,7 +746,7 @@ function sampleDialog() {
   const rate = number("", 1, 192000);
   const offset = number("", 0, 2160000);
   rate.required = offset.required = false;
-  modal("Import audio sample", [["Audio file", file], ["Asset ID", id], ["Format", format], ["BRR source rate (optional)", rate], ["BRR loop byte offset (optional)", offset]], "Import sample", () => importAsset(file, (bytes) => {
+  modal("Import audio sample", [["Audio file", file], ["Asset ID", id], ["Format", format], ["BRR source rate (optional)", rate], ["BRR loop byte offset (optional)", offset]], "Import sample", () => withActiveFile(file, (bytes) => {
     studio.importSample(bytes, id.value, JSON.stringify(format.value),
       rate.value ? rate.valueAsNumber : undefined, offset.value ? offset.valueAsNumber : undefined);
     dataChanged(); selectAsset(id.value); status("Sample imported");
@@ -728,19 +755,21 @@ function sampleDialog() {
 function romDialog() {
   const file = fileInput(".smc,.sfc,.bin,.rom");
   const mapping = select([["lo_rom", "LoROM"], ["hi_rom", "HiROM"], ["ex_hi_rom", "ExHiROM"]], "lo_rom");
-  modal("Inspect ROM header", [["ROM file", file], ["Mapping", mapping]], "Read header", async () => {
-    const header = inspect_rom(await readFileBytes(file.files[0]), JSON.stringify(mapping.value));
+  modal("Inspect ROM header", [["ROM file", file], ["Mapping", mapping]], "Read header", () => withActiveFile(file, (bytes) => {
+    const header = inspect_rom(bytes, JSON.stringify(mapping.value));
     modal("ROM header", [], null, null, el("pre", pretty(JSON.parse(header))));
-  });
+  }));
 }
 function codecDialog() {
   const file = fileInput("");
   const mode = select([["compress", "Compress"], ["decompress", "Decompress"]], "compress");
-  modal("Studio RLE v1", [["File", file], ["Mode", mode]], "Download result", async () => {
+  modal("Studio RLE v1", [["File", file], ["Mode", mode]], "Download result", () => {
     const name = file.files[0].name;
     const decompress = mode.value === "decompress";
-    download(rle(await readFileBytes(file.files[0]), decompress), decompress ? name.replace(/\.srl$/i, "") + ".decoded" : name + ".srl");
-    status("Downloaded RLE result");
+    return withActiveFile(file, (bytes) => {
+      download(rle(bytes, decompress), decompress ? name.replace(/\.srl$/i, "") + ".decoded" : name + ".srl");
+      status("Downloaded RLE result");
+    });
   });
 }
 
@@ -763,7 +792,6 @@ $("add").onclick = addAsset;
 $("undo").onclick = () => history(false);
 $("redo").onclick = () => history(true);
 $("validation").onclick = () => {
-  const diagnostics = JSON.parse(studio.diagnostics());
   modal("Validation", [], null, null, el("pre", diagnostics.length ? diagnostics.map((d) => `${d.severity.toUpperCase()} [${d.code}] ${d.path}\n${d.message}`).join("\n\n") : "No diagnostics"));
 };
 window.addEventListener("keydown", (event) => {

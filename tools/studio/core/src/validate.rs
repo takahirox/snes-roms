@@ -2,6 +2,14 @@ use crate::*;
 use std::collections::{BTreeMap, BTreeSet};
 
 pub fn validate(project: &Project) -> Vec<Diagnostic> {
+    let mut diagnostics = validate_content(project);
+    if let Err(error) = require_manifest_fits(project) {
+        diagnostics.extend(error.0);
+    }
+    diagnostics
+}
+
+fn validate_content(project: &Project) -> Vec<Diagnostic> {
     let mut validator = Validator {
         project,
         diagnostics: Vec::new(),
@@ -21,7 +29,15 @@ pub fn validate(project: &Project) -> Vec<Diagnostic> {
 }
 
 pub fn require_valid(project: &Project) -> Result<()> {
-    let diagnostics = validate(project);
+    reject_errors(validate(project))
+}
+
+pub(crate) fn require_valid_content(project: &Project) -> Result<()> {
+    // Asset operations only need structural checks. Saves enforce the byte limit while writing.
+    reject_errors(validate_content(project))
+}
+
+fn reject_errors(diagnostics: Vec<Diagnostic>) -> Result<()> {
     if diagnostics.iter().any(|d| d.severity == Severity::Error) {
         Err(Error(diagnostics))
     } else {

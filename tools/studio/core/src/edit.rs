@@ -111,7 +111,6 @@ pub fn apply(project: &Project, edits: &[Edit]) -> Result<Project> {
         apply_one(&mut next, edit)?;
     }
     require_valid(&next)?;
-    require_manifest_fits(&next)?;
     Ok(next)
 }
 

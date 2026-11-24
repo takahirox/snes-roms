@@ -125,7 +125,7 @@ pub struct SpriteExport {
 }
 
 pub fn export_sprite(project: &Project, id: &str, frame: Option<&str>) -> Result<SpriteExport> {
-    require_valid(project)?;
+    require_valid_content(project)?;
     let Asset::Sprite(sprite) = asset(project, id)? else {
         return Err(invalid("Expected a sprite"));
     };
