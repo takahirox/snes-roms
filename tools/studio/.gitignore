@@ -1,0 +1,4 @@
+/target/
+/_site/
+*.json.lock
+*.zip.lock
