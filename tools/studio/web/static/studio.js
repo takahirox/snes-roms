@@ -462,19 +462,26 @@ function checkReplace() {
 
 async function openFolder() {
   if (!window.showDirectoryPicker) throw new Error("Folder access is unavailable here. Open studio.json or a project ZIP.");
+  const openingStudio = studio;
+  const openingRevision = studio.revision();
   if (!checkReplace()) return;
   const folder = await window.showDirectoryPicker({ mode: "readwrite" });
   const handle = await folder.getFileHandle("studio.json");
   const content = await readFileBytes(await handle.getFile());
+  if (studio !== openingStudio) return;
+  if (studio.revision() !== openingRevision && !checkReplace()) return;
   load(content, { folder, revision: fingerprint(content) });
 }
 
 async function saveFolder(asNew) {
   if (!window.showDirectoryPicker) throw new Error("Folder access is unavailable here. Download JSON or ZIP instead.");
-  const savingRevision = studio.revision();
-  const content = studio.save(false);
+  const savingStudio = studio;
+  const savingRevision = savingStudio.revision();
+  const content = savingStudio.save(false);
+  const expected = asNew ? null : diskRevision;
   const folder = asNew ? await window.showDirectoryPicker({ mode: "readwrite" }) : directory;
-  const warning = await saveFolderManifest(folder, content, asNew ? null : diskRevision);
+  const warning = await saveFolderManifest(folder, content, expected);
+  if (studio !== savingStudio) return;
   directory = folder;
   diskRevision = fingerprint(content);
   cleanRevision = savingRevision;

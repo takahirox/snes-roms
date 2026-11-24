@@ -21,7 +21,7 @@ const write = (name, content) => {
 };
 
 // Model the browser's staged write over the same files that the real CLI sees.
-function folderHandle(directory, beforeClose) {
+function folderHandle(directory, { beforeWrite, beforeClose } = {}) {
   return {
     async *keys() { yield* readdirSync(directory); },
     async getFileHandle(name, { create = false } = {}) {
@@ -29,11 +29,16 @@ function folderHandle(directory, beforeClose) {
       if (create) closeSync(openSync(path, "a"));
       else if (!existsSync(path)) throw new DOMException("Missing file", "NotFoundError");
       return {
+        path,
+        async isSameEntry(other) { return path === other.path; },
         async getFile() { return new Blob([readFileSync(path)]); },
         async createWritable() {
           let pending;
           return {
-            async write(content) { pending = content; },
+            async write(content) {
+              await beforeWrite?.();
+              pending = content;
+            },
             async close() {
               await beforeClose?.();
               writeFileSync(path, pending);
@@ -203,15 +208,17 @@ try {
   browserStudio.apply(readFileSync(humanEdit, "utf8"));
   const browserRevision = Buffer.from(browserStudio.save(false));
   browserStudio.free();
-  const overlappingFolder = folderHandle(directory, () => {
-    // Enter the real CLI after the browser's last fingerprint check, while the
-    // browser's staged data has yet to replace studio.json.
-    assert.throws(() => cli("edit", workingFile, machineUpdate, "--expect", revision), (error) => {
-      assert.equal(error.status, 4);
-      const [diagnostic] = JSON.parse(error.stderr).diagnostics;
-      return diagnostic.code === "conflict" && diagnostic.message.includes("holds a marker");
-    });
-    assert.deepEqual(readFileSync(workingFile), original);
+  const overlappingFolder = folderHandle(directory, {
+    beforeClose() {
+      // Enter the real CLI after the browser's last fingerprint check, while the
+      // browser's staged data has yet to replace studio.json.
+      assert.throws(() => cli("edit", workingFile, machineUpdate, "--expect", revision), (error) => {
+        assert.equal(error.status, 4);
+        const [diagnostic] = JSON.parse(error.stderr).diagnostics;
+        return diagnostic.code === "conflict" && diagnostic.message.includes("holds a marker");
+      });
+      assert.deepEqual(readFileSync(workingFile), original);
+    },
   });
   assert.equal(await saveFolderManifest(overlappingFolder, browserRevision, revision), undefined);
   assert.deepEqual(readFileSync(workingFile), browserRevision);
@@ -229,6 +236,35 @@ try {
   await assert.rejects(saveFolderManifest(folder, browserRevision, savedRevision), /changed on disk/);
   assert.equal(JSON.parse(readFileSync(workingFile)).name, "Machine revision");
   assert.deepEqual(readdirSync(directory).sort(), ["studio.json", "studio.json.lock"]);
+
+  const newDirectory = join(temp, "new-folder");
+  mkdirSync(newDirectory);
+  const failedWrite = new Error("Simulated browser write failure");
+  const failingFolder = folderHandle(newDirectory, { beforeWrite() { throw failedWrite; } });
+  await assert.rejects(saveFolderManifest(failingFolder, original, null), failedWrite);
+  assert.deepEqual(readdirSync(newDirectory), []);
+  const newFolder = folderHandle(newDirectory);
+  const newManifest = join(newDirectory, "studio.json");
+  assert.equal(await saveFolderManifest(newFolder, original, null), undefined);
+  assert.deepEqual(readFileSync(newManifest), original);
+  await assert.rejects(saveFolderManifest(failingFolder, browserRevision, wasm.fingerprint(original)), failedWrite);
+  assert.deepEqual(readFileSync(newManifest), original);
+
+  writeFileSync(newManifest, "");
+  await assert.rejects(saveFolderManifest(newFolder, original, null), /already has a studio.json/);
+  assert.equal(readFileSync(newManifest).length, 0);
+  unlinkSync(newManifest);
+
+  const externalWrite = folderHandle(newDirectory, {
+    beforeWrite() {
+      writeFileSync(newManifest, browserRevision);
+      throw failedWrite;
+    },
+  });
+  await assert.rejects(saveFolderManifest(externalWrite, original, null), failedWrite);
+  assert.deepEqual(readFileSync(newManifest), browserRevision);
+  assert.deepEqual(readdirSync(newDirectory), ["studio.json"]);
+
   console.log("Native/WASM edits, formats, validation and conflict protection match.");
 } finally {
   rmSync(temp, { recursive: true, force: true });

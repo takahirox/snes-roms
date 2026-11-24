@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+<title>Studio folder workflow regressions</title>
+<!-- After web/build.sh, serve tools/studio over localhost and open /web/tests/folder-workflows.html. -->
+<pre id="result" data-result="running">Running…</pre>
+<iframe id="workbench" title="Studio under test"></iframe>
+<script type="module">
+  const result = document.getElementById("result");
+  const iframe = document.getElementById("workbench");
+  const picks = [];
+  let confirmations = 0;
+  window.pickFolder = () => {
+    if (!picks.length) throw new Error("No test folder queued");
+    return picks.shift();
+  };
+  window.confirmDiscard = () => { confirmations++; return false; };
+
+  function equal(actual, expected, description) {
+    if (actual !== expected) throw new Error(`${description}: expected ${expected}, got ${actual}`);
+  }
+
+  function folder(name, content, { beforeRead, beforeWrite } = {}) {
+    const files = new Map(content ? [["studio.json", content]] : []);
+    return {
+      name, files,
+      async *keys() { yield* files.keys(); },
+      async getFileHandle(key, { create = false } = {}) {
+        if (!files.has(key)) {
+          if (!create) throw new DOMException("Missing file", "NotFoundError");
+          files.set(key, new Uint8Array());
+        }
+        return {
+          async getFile() {
+            const file = new Blob([files.get(key)]);
+            return {
+              size: file.size,
+              async arrayBuffer() { await beforeRead?.(); return file.arrayBuffer(); },
+            };
+          },
+          async createWritable() {
+            let pending;
+            return {
+              async write(bytes) { await beforeWrite?.(); pending = bytes; },
+              async close() { files.set(key, pending); },
+              async abort() {},
+            };
+          },
+        };
+      },
+      async removeEntry(key) { files.delete(key); },
+    };
+  }
+
+  function gate() {
+    const entered = Promise.withResolvers();
+    const released = Promise.withResolvers();
+    return {
+      entered: entered.promise,
+      pause() { entered.resolve(); return released.promise; },
+      resume: released.resolve,
+    };
+  }
+
+  function report(state, text) {
+    result.dataset.result = state;
+    result.textContent = text;
+  }
+
+  const timeout = setTimeout(() => report("failed", "Timed out waiting for Studio or test I/O."), 10000);
+  try {
+    const site = "../../_site/";
+    const response = await fetch(site + "index.html");
+    if (!response.ok) throw new Error("Build Studio with web/build.sh before running these tests.");
+    const html = await response.text();
+    const loaded = new Promise((resolve) => { iframe.onload = resolve; });
+    iframe.srcdoc = html.replace("<head>", `<head><base href="${site}">
+      <script>window.showDirectoryPicker = parent.pickFolder; window.confirm = parent.confirmDiscard;<\/script>`);
+    await loaded;
+    const doc = iframe.contentDocument;
+    const byId = (id) => doc.getElementById(id);
+    while (doc.querySelector("header").inert) {
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      if (result.dataset.result === "failed") throw new Error(byId("status").textContent);
+    }
+
+    const project = (name) => new TextEncoder().encode(JSON.stringify({ version: 1, name, assets: {} }));
+    const savedName = (directory) => JSON.parse(new TextDecoder().decode(directory.files.get("studio.json"))).name;
+    const open = (directory) => { picks.push(directory); return byId("directory").onclick(); };
+    const submitSave = () => byId("dialog-content").onsubmit(new iframe.contentWindow.Event("submit"));
+
+    const write = gate();
+    const a = folder("folder-a", undefined, { beforeWrite: write.pause });
+    const b = folder("folder-b", project("Project B"));
+    const originalName = byId("project-title").textContent;
+    byId("save").click();
+    doc.querySelector("#dialog select").value = "new-folder";
+    picks.push(a);
+    const savingA = submitSave();
+    await write.entered;
+    byId("dialog").close();
+    await open(b);
+    equal(byId("project-title").textContent, "Project B", "Opened B while A was writing");
+    write.resume();
+    await savingA;
+    equal(savedName(a), originalName, "A received its own manifest");
+    byId("save").click();
+    const destination = doc.querySelector("#dialog select").selectedOptions[0].textContent;
+    equal(destination, "Save in folder-b", "B kept its save destination after A finished");
+    await submitSave();
+    equal(byId("status").textContent, "Saved studio.json in folder-b", "B's folder save completed");
+    equal(savedName(b), "Project B", "B saved with its own disk fingerprint");
+    equal(savedName(a), originalName, "B did not overwrite A");
+
+    const read = gate();
+    const openingC = open(folder("folder-c", project("Project C"), { beforeRead: read.pause }));
+    await read.entered;
+    doc.querySelector("#inspector input").value = "Edited B";
+    doc.querySelector("#inspector form").requestSubmit();
+    equal(byId("project-title").textContent, "Edited B · Edited", "Edited B while C was loading");
+    read.resume();
+    await openingC;
+    equal(confirmations, 1, "Asked whether to discard the edit made during the read");
+    equal(byId("project-title").textContent, "Edited B · Edited", "Kept the edit when discard was declined");
+    byId("undo").click();
+    equal(byId("project-title").textContent, "Project B", "Kept B's undo history");
+    byId("redo").click();
+    equal(byId("project-title").textContent, "Edited B · Edited", "Kept B's redo history");
+
+    report("passed", "Studio folder workflow regressions passed.");
+  } catch (error) {
+    report("failed", error.stack);
+  } finally {
+    clearTimeout(timeout);
+  }
+</script>

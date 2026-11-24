@@ -9,8 +9,10 @@ export async function readFileBytes(file) {
 }
 
 async function writeManifest(folder, content, expected) {
+  const isNew = expected === null;
+  const original = expected ?? fingerprint(new Uint8Array());
   let handle;
-  if (expected === null) {
+  if (isNew) {
     try {
       await folder.getFileHandle("studio.json");
       throw new Error("The folder already has a studio.json. Open it first or choose another folder.");
@@ -18,22 +20,35 @@ async function writeManifest(folder, content, expected) {
       if (error.name !== "NotFoundError") throw error;
     }
     handle = await folder.getFileHandle("studio.json", { create: true });
-    expected = fingerprint(new Uint8Array());
   } else handle = await folder.getFileHandle("studio.json");
 
   const ensureUnchanged = async () => {
-    if (fingerprint(await readFileBytes(await handle.getFile())) !== expected) {
+    if (fingerprint(await readFileBytes(await handle.getFile())) !== original) {
       throw new Error("The folder’s studio.json changed on disk. Export a copy for comparison.");
     }
   };
-  await ensureUnchanged();
-  const writable = await handle.createWritable({ mode: "exclusive" });
+  let writable;
   try {
+    await ensureUnchanged();
+    writable = await handle.createWritable({ mode: "exclusive" });
     await writable.write(content);
     await ensureUnchanged();
     await writable.close();
   } catch (error) {
-    await writable.abort().catch(() => {});
+    await writable?.abort().catch(() => {});
+    if (isNew) {
+      // Creating the handle exposes an empty file before the staged write commits.
+      try {
+        const current = await folder.getFileHandle("studio.json");
+        if (await handle.isSameEntry(current) && (await current.getFile()).size === 0) {
+          await folder.removeEntry("studio.json");
+        }
+      } catch (cause) {
+        if (cause.name !== "NotFoundError") {
+          throw new Error("Folder save failed. Could not clean up the empty studio.json.", { cause });
+        }
+      }
+    }
     throw error;
   }
 }
