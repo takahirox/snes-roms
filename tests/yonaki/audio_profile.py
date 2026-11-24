@@ -1,7 +1,8 @@
 """Measure the resident Yonaki sound driver without changing the game ROM.
 
-Run after `make yonaki-test` to use its real_E13 pad trace. Writes JSON and
-lossless recordings under build/yonaki-audio/profile/.
+Run after `make yonaki-test` to compare its real_E13 trace against an
+independent ROM build from the same checkout. Writes JSON and lossless
+recordings under build/yonaki-audio/profile/.
 """
 import ctypes as C
 import hashlib
@@ -198,21 +199,26 @@ def record_route(core_name, rom, trace_path, out):
 def compare_route():
     trace_path = ROOT / 'build/yonaki-test/traces/real_E13.json'
     trace = json.loads(trace_path.read_text())
-    roms = {'released': ROOT / 'dist/yonaki.sfc', 'rebuilt': ROOT / trace['rom']}
-    assert sha(roms['rebuilt'].read_bytes()) == trace['rom_sha256']
+    rebuilt = ROOT / trace['rom']
+    rom_sha = trace['rom_sha256']
+    if sha(rebuilt.read_bytes()) != rom_sha:
+        raise ValueError('real_E13 trace ROM hash mismatch. Run make yonaki-test again.')
+    baseline = buildrom.build(OUT / 'baseline')
+    if sha(baseline.read_bytes()) != rom_sha:
+        raise ValueError('Baseline build differs from the real_E13 trace ROM. Run make yonaki-test from this checkout.')
     result = {}
     for name in CORES:
         recordings = {}
-        for kind, rom in roms.items():
+        for kind, rom in [('baseline', baseline), ('rebuilt', rebuilt)]:
             out = OUT / name / kind
             # Start a fresh process for each capture. bsnes keeps audio callback
             # state across unload/load in the same process.
             subprocess.run([sys.executable, '-I', __file__, '--record-route', name,
                             str(rom), str(trace_path), str(out)], check=True)
             recordings[kind] = json.loads((out / 'pcm.json').read_text())
-        assert recordings['released'] == recordings['rebuilt'], (name, recordings)
+        assert recordings['baseline'] == recordings['rebuilt'], (name, recordings)
         result[name] = recordings
-    return dict(trace=trace_path.stem, frames=len(trace['masks']), recordings=result)
+    return dict(trace=trace_path.stem, rom_sha256=rom_sha, frames=len(trace['masks']), recordings=result)
 
 
 def main():
