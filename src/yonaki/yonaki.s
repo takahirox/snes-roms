@@ -6,11 +6,8 @@
 ; tiles are uploaded again.  Colour math subtracts a fixed colour from BG1 (the dim under the text, dark)
 ; or adds one to everything (white / red flash, white transitions).
 ;
-; Frame protocol: the game runs as one straight thread that calls WaitFrame once per frame.  WaitFrame
-; advances the effects (Tick), turns pending uploads into DMA jobs within DMA_BUDGET bytes (PumpUploads),
-; sends one sound command, sets frame_ready and waits for the NMI.  The NMI runs the jobs only when
-; frame_ready is set (the thread is parked in WaitFrame then), writes the PPU registers from their
-; shadows and records the V counter at its end (nmi_end_line_max, vblank_overrun_count).
+; The scheduler in frame.inc advances effects, schedules uploads and sends one sound command per
+; frame. NMI consumes the published DMA jobs, applies PPU shadows and records the V counter.
 ; Long CPU work (picture loads) is done in forced blank or under a full dim, a slice per frame.
 ;
 ; Conventions: native mode, X/Y 16 bit, A 16 bit except around byte work, DB = $00, D = $0000.
@@ -211,6 +208,9 @@ pad_new:  .res 2
 pad_rep:  .res 2
 pad_carry: .res 2
 rep_timer: .res 2
+; one blocking event for the main thread (zero between events)
+wait_event: .res 2
+wait_remaining: .res 2
 ; DMA jobs (8 bytes: dest, type (0 VRAM, 1 CGRAM) | bank << 8, source, length)
 job_head: .res 2
 job_tail: .res 2
@@ -317,6 +317,7 @@ snd_queue: .res 16
 snd_count: .res 2
 spc_toggle: .res 2
 snd_sent:  .res 2
+snd_last:  .res 2              ; last command delivered to the SPC (tests)
 music_cur: .res 2
 amb_cur:   .res 2
 ; menus
@@ -918,95 +919,7 @@ InitState:
     bne :-
     rts
 
-; ---------------------------------------------------------------- frame
-; End of a frame: effects, uploads, sound, wait for the NMI, read the pad.
-WaitFrame:
-    ldx #14                     ; t0-t7 survive a frame
-:   lda t0,x
-    pha
-    dex
-    dex
-    bpl :-
-    stz glyph_count
-    stz work_count
-    jsr Tick
-    jsr PumpUploads
-    jsr SndPump
-    inc main_count
-    lda #1
-    sta frame_ready
-:   wai
-    lda frame_ready
-    bne :-
-    jsr ReadPad
-    ldx #0
-:   pla
-    sta t0,x
-    inx
-    inx
-    cpx #16
-    bne :-
-    rts
-
-; A frame boundary inside long work (glyphs, page clears, compositing): like WaitFrame, but the presses of
-; the frame are added to those the caller has not looked at yet.  Keeps every frame's work well under a frame,
-; so the game takes the same frames on every core (no lag frames to drift by).
-PacedWait:
-    lda pad_new
-    pha
-    lda pad_rep
-    pha
-    jsr WaitFrame
-    lda pad_new                 ; presses of this frame: kept for the next WaitFrame of the caller's loop
-    ora pad_carry
-    sta pad_carry
-    pla
-    sta pad_rep
-    pla
-    sta pad_new
-    rts
-
-; forget the presses made while the screen was being drawn (before a cursor or a wait mark is shown)
-FlushPad:
-    stz pad_carry
-    stz pad_new
-    stz pad_rep
-    rts
-
-; A = frames
-WaitFrames:
-    sta t7
-:   lda t7
-    beq :+
-    pha
-    jsr WaitFrame
-    pla
-    dec a
-    sta t7
-    bra :-
-:   rts
-
-; until every upload went out
-WaitUploads:
-    lda #600
-    sta g_pad
-:   lda text_dirty
-    ora text_dirty+2
-    ora photo_dirty
-    ora photo_dirty+2
-    ora pal_dirty
-    ora tint_dirty
-    ora map_dirty
-    ora ui_dirty
-    bne :+
-    lda job_head
-    cmp job_tail
-    beq @done
-:   jsr WaitFrame
-    dec g_pad
-    bne :--
-@done:
-    rts
+.include "src/yonaki/frame.inc"
 
 ; A = last line on which a main-thread DMA may start: wait (the NMI may come meanwhile) until the beam is
 ; on an earlier line, so the DMA cannot hold the next NMI past the V-blank.  Nothing to wait in forced blank.
@@ -1030,55 +943,6 @@ VGuard:
     bcs @l
 @r:
     rts
-
-; ---------------------------------------------------------------- input
-ReadPad:
-    sep #$20
-    .a8
-:   lda HVBJOY
-    and #$01
-    bne :-
-    rep #$20
-    .a16
-    lda pad
-    sta pad_prev
-    lda JOY1L
-    sta pad
-    lda pad_prev
-    eor #$FFFF
-    and pad
-    sta pad_new
-    sta pad_rep
-    lda pad
-    and #PAD_DIRS
-    beq @none
-    sta t6
-    lda pad_prev
-    and #PAD_DIRS
-    cmp t6
-    bne @none
-    inc rep_timer
-    lda rep_timer
-    cmp #18
-    bcc @done
-    lda #13
-    sta rep_timer
-    lda t6
-    ora pad_rep
-    sta pad_rep
-    bra @done
-@none:
-    stz rep_timer
-@done:
-    lda pad_carry               ; presses made during paced work
-    beq :+
-    ora pad_new
-    sta pad_new
-    lda pad_carry
-    ora pad_rep
-    sta pad_rep
-    stz pad_carry
-:   rts
 
 ; ---------------------------------------------------------------- uploads
 ; Queue one job.  t0 dest, t1 type | bank << 8, t2 source, t3 length.

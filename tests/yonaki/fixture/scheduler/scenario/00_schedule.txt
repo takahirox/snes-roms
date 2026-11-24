@@ -1,0 +1,30 @@
+# A background transition begins on the same frame as pending text DMA and sound.
+*start
+@bg bus cut
+待つ。
+@bgm journey
+@se bell
+@amb rain
+@fx ripple on
+@bg genkan white
+@sil sayo x=4
+次へ。
+@fx wait 12
+まだ読んでいない文章。
+@page
+@choice
+> 部屋の扉を開けて静かな廊下の奥へ進む -> first
+> 窓を開けて雨が降る夜の景色を眺める -> second
+> 玄関へ戻り明かりがつくまで待っている -> third
+
+*first
+一番目。
+@end S01
+
+*second
+二番目。
+@end S01
+
+*third
+三番目。
+@end S01

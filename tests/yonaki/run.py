@@ -449,6 +449,134 @@ def test_effects():
     return rec
 
 
+
+def test_scheduler():
+    """Exercise frame events using actual bytecode and pad input, reading WRAM without modifying it."""
+    build = B / 'scheduler'
+    buildrom.build(build, buildrom.FIXTURE / 'scheduler/scenario', ['--strict', '--unknown-sound-error'])
+    g = new('scheduler', sram=bytes(8192), build=build)
+    rec = {}
+
+    def jobs():
+        return [(g.w('jobs', i), g.w('jobs', i + 2) & 0xFF, g.w('jobs', i + 6))
+                for i in range(g.w('job_head'), g.w('job_tail'), 8)]
+
+    g.new_game()
+    g.until(lambda: g.state() == 'WAIT')
+    g.run(2)
+    sent = g.w('snd_sent')
+    commands = [0x40 + g.layout['songs']['journey'], g.layout['sfx']['bell'], 0x70]  # rain = ambience 0
+    for i, command in enumerate(commands):
+        g.run(1, ('A',) if i == 0 else ())
+        assert (g.w('snd_sent'), g.w('snd_last'), g.w('snd_count')) == (sent + i + 1, command, 2 * (2 - i))
+        assert g.w('reg_hdma') == 1 and g.w('add_level') == 3 * i
+        queued = jobs()
+        assert queued and all(dest >= 0x6020 and kind == 0 and length == 480 for dest, kind, length in queued)
+        assert [job[0] for job in queued] == sorted({job[0] for job in queued})
+        shot(g, f'requests_{i}', settle=False)
+    g.run(1)
+    assert g.w('snd_sent') == sent + len(commands), 'a command was repeated'
+    rec['spc_commands'] = commands
+
+    # The full-white transition schedules the base palette, its tint override and the first
+    # photo row together. Remaining rows proceed top to bottom before the flash can decay.
+    g.until(lambda: g.w('photo_dirty') != 0, 120, 'white transition photo upload')
+    assert jobs() == [(16, 1, 480), (144, 1, 224), (0, 0, 2048)]
+    for row in range(24):
+        queued = jobs()
+        assert g.w('add_level') == 31 and g.w('cur_text') == 0
+        assert queued and queued[-1] == (row * 1024, 0, 2048), (row, queued)
+        assert sum(job[2] for job in queued) <= 3072
+        g.run(1)
+    assert not (g.w('photo_dirty') | g.w('photo_dirty', 2)) and g.w('job_head') == g.w('job_tail')
+    assert g.w('add_level') == 29
+    rec['photo_upload_frames'] = 24
+    shot(g, 'photo_ready', settle=False)
+    g.until(lambda: g.state() == 'WAIT' and g.w('cur_text') == 1)
+    assert g.w('sil_key') != 0xFFFF and g.w('add_level') == 0
+
+    # A beats START at a paragraph. Holding B over a previously unread paragraph cannot
+    # shorten the timed wait or reveal the following unread paragraph.
+    g.run(2)
+    g.run(1, ('A', 'START'))
+    assert g.state() == 'BUSY' and g.w('wait_remaining') == 12
+    for remaining in range(11, 0, -1):
+        g.run(1, ('B',))
+        assert g.state() == 'BUSY' and g.w('wait_remaining') == remaining
+    g.run(1, ('B',))
+    assert g.state() == 'TYPE' and g.w('cur_text') == 2 and not g.w('instant')
+    rec['normal_wait_frames'] = 12
+
+    # An A edge reveals the paragraph. The same press, even held, cannot dismiss the wait mark.
+    g.run(1, ('A',))
+    assert g.w('instant') == 1
+    g.run(20, ('A',))
+    assert g.state() == 'WAIT' and g.w('cur_text') == 2
+    seed = g.sram_image()
+    assert is_read(seed, 0) and is_read(seed, 1) and not is_read(seed, 2)
+
+    # A press during paced choice drawing reaches pad_carry. The choice flushes it on entry.
+    g.run(1)
+    g.run(1, ('A',))
+    g.run(4)
+    g.run(1, ('A', 'DOWN', 'START'))
+    assert g.w('pad_carry') & 0x1480 == 0x1480
+    g.until(lambda: g.state() == 'CHOICE')
+    assert (g.w('opt_sel'), g.w('pad_carry'), g.w('pad_new'), g.w('pad_rep')) == (0, 0, 0, 0)
+    queued = jobs()
+    assert queued[0] == (0x7C00, 0, 2048) and queued[1:], queued
+
+    # Direction beats A and START. Held A/START do not become new edges on the next frame.
+    g.run(9, ('A', 'UP', 'START'))
+    assert g.state() == 'CHOICE' and g.w('opt_sel') == 2
+    shot(g, 'choice_moved')
+    g.run(1, ('A', 'START'))
+    g.until(lambda: g.state() == 'WAIT' and g.w('cur_text') != 2)
+    assert g.layout['texts'][str(g.w('cur_text'))]['label'] == 'third'
+    shot(g, 'choice_accepted')
+    finish(g, rec.setdefault('ordered', {}))
+
+    # Replay the same battery and input twice. A read page gets two full frames. B is
+    # sampled again at the timed wait, so releasing it there restores the full duration.
+    def skip(name, hold):
+        player = new(name, sram=seed, build=build)
+        player.new_game()
+        start = player.frame
+        pages = []
+        for _ in range(600):
+            player.run(1, ('B',))
+            if player.state() == 'WAIT':
+                pages.append((player.frame - start, player.w('cur_text'), player.w('wait_remaining')))
+            if player.state() == 'BUSY' and player.w('wait_remaining') == 12:
+                break
+        else:
+            raise Stuck('B did not reach the timed wait')
+        assert [(text, left) for _, text, left in pages] == [(0, 2), (0, 1), (1, 2), (1, 1)]
+        assert pages[0][0] + 1 == pages[1][0] and pages[2][0] + 1 == pages[3][0]
+        duration = 1 if hold else 12
+        player.run(duration - 1, ('B',) if hold else ())
+        assert player.state() == 'BUSY' and player.w('wait_remaining') == (12 if hold else 1)
+        player.run(1, ('B',) if hold else ())
+        assert player.state() == 'TYPE' and player.w('cur_text') == 2 and player.w('ff') == 0
+        player.until(lambda: player.state() == 'WAIT')
+        timeline = (pages, player.frame - start)
+        player.run(30, ('B',))
+        assert player.state() == 'WAIT' and player.w('cur_text') == 2 and player.w('cur_read') == 0
+        shot(player, 'unread')
+        sram = finish(player, rec.setdefault(name, {}))
+        assert sram == seed
+        return timeline
+
+    hold = skip('scheduler_hold', True)
+    assert skip('scheduler_repeat', True) == hold
+    assert (build / 'shots/scheduler_hold/unread.png').read_bytes() == (build / 'shots/scheduler_repeat/unread.png').read_bytes()
+    release = skip('scheduler_release', False)
+    assert release[0] == hold[0] and release[1] - hold[1] == 11
+    rec['skip_wait_frames'] = 1
+    rec['frames_to_unread'] = hold[1]
+    return rec
+
+
 def test_real():
     """The real scenario: build, boot, and play every ending of tests/yonaki/routes.py's plan."""
     buildrom.build(ROOT / 'build/yonaki', None, ['--quiet'])
@@ -509,7 +637,7 @@ def test_coverage():
 
 
 TESTS = [test_coverage, test_boot, test_corrupt, test_endings, test_endings_list, test_save_load, test_names, test_fastforward, test_speed,
-         test_effects]
+         test_effects, test_scheduler]
 
 
 def main():
