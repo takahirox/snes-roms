@@ -2,3 +2,4 @@
 /_site/
 *.json.lock
 *.zip.lock
+studio.json.save-*.lock

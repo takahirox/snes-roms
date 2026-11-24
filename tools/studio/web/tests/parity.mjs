@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import { execFile, execFileSync } from "node:child_process";
-import { copyFileSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { webcrypto } from "node:crypto";
+import { closeSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, openSync, readFileSync, readdirSync, rmSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+
+globalThis.crypto ??= webcrypto;
 
 const root = fileURLToPath(new URL("../../", import.meta.url));
 const temp = mkdtempSync(join(tmpdir(), "studio-parity-"));
@@ -17,12 +20,44 @@ const write = (name, content) => {
   return path;
 };
 
+// Model the browser's staged write over the same files that the real CLI sees.
+function folderHandle(directory, beforeClose) {
+  return {
+    async *keys() { yield* readdirSync(directory); },
+    async getFileHandle(name, { create = false } = {}) {
+      const path = join(directory, name);
+      if (create) closeSync(openSync(path, "a"));
+      else if (!existsSync(path)) throw new DOMException("Missing file", "NotFoundError");
+      return {
+        async getFile() { return new Blob([readFileSync(path)]); },
+        async createWritable() {
+          let pending;
+          return {
+            async write(content) { pending = content; },
+            async close() {
+              await beforeClose?.();
+              writeFileSync(path, pending);
+            },
+            async abort() { pending = undefined; },
+          };
+        },
+      };
+    },
+    async removeEntry(name) { unlinkSync(join(directory, name)); },
+  };
+}
+
 try {
-  // A .mjs copy loads the bundler-free browser glue in Node without package.json.
-  const glue = join(temp, "studio_web.mjs");
+  // Load the unmodified workbench modules and generated browser glue in Node.
+  write("package.json", '{"type":"module"}');
+  mkdirSync(join(temp, "pkg"));
+  const glue = join(temp, "pkg", "studio_web.js");
   copyFileSync(join(root, "_site", "pkg", "studio_web.js"), glue);
+  const folderModule = join(temp, "folder-save.js");
+  copyFileSync(join(root, "_site", "folder-save.js"), folderModule);
   const wasm = await import(pathToFileURL(glue).href);
   wasm.initSync({ module: readFileSync(join(root, "_site", "pkg", "studio_web_bg.wasm")) });
+  const { saveFolderManifest } = await import(pathToFileURL(folderModule).href);
 
   const original = readFileSync(projectFile);
   const studio = new wasm.Studio(original);
@@ -74,6 +109,52 @@ try {
     assert.deepEqual(Buffer.from(studio.export(asset, JSON.stringify(flags))), readFileSync(result), asset + " " + flags.format);
   }
 
+  const tiles = Array.from({ length: 4097 }, (_, i) => `tile-${i}`);
+  const lastTile = tiles.at(-1);
+  const glyphCount = 8193;
+  const glyphs = Object.fromEntries(Array.from({ length: glyphCount }, (_, i) => [
+    String.fromCodePoint(0x1000 + i), { tile: i === glyphCount - 1 ? lastTile : tiles[0], advance: 8 },
+  ]));
+  const largeProject = write("large-previews.json", JSON.stringify({ version: 1, name: "Preview limits", assets: {
+    colors: { kind: "palette", data: { colors: [0, 31, 992], transparent: 0 } },
+    ...Object.fromEntries(tiles.map((id) => [id, {
+      kind: "tile", data: { bpp: 2, palette: "colors", pixels: Array(64).fill(id === lastTile ? 2 : 1) },
+    }])),
+    "wide-tiles": { kind: "tileset", data: { tiles, metatiles: [] } },
+    "wide-font": { kind: "font", data: { glyphs } },
+    "fast-loop": { kind: "sample", data: {
+      sample_rate: 192000, pcm: [...Array(16).fill(0), -30000, 1000, 20000], loop_start: 16,
+    } },
+    "fast-note": { kind: "sequence", data: { usage: "sfx", ticks_per_beat: 1, bpm: 120, tracks: [{
+      id: "sample", voice: { type: "sample", asset: "fast-loop", root_note: 0 },
+      notes: [{ tick: 0, length: 30, pitch: 127, velocity: 127 }],
+    }] } },
+  } }));
+  const large = new wasm.Studio(readFileSync(largeProject));
+  assert.deepEqual(JSON.parse(cli("validate", largeProject)).diagnostics, []);
+  assert.deepEqual(JSON.parse(large.diagnostics()), []);
+  const fastWav = join(temp, "fast-note.wav");
+  cli("export", largeProject, "fast-note", "wav", fastWav);
+  const expectedWav = readFileSync(fastWav);
+  assert.equal(expectedWav.length, 44 + 480000 * 2);
+  assert.deepEqual(Buffer.from(large.export("fast-note", '{"format":"wav"}')), expectedWav);
+  for (const [id, count] of [["wide-tiles", tiles.length], ["wide-font", glyphCount]]) {
+    const rendered = join(temp, `${id}.png`);
+    cli("render", largeProject, id, rendered);
+    const png = readFileSync(rendered);
+    assert.deepEqual(Buffer.from(large.export(id, '{"format":"png"}')), png);
+    const preview = Buffer.from(large.preview(id));
+    const width = preview.readUInt32LE(0);
+    const height = preview.readUInt32LE(4);
+    assert.deepEqual([width, height], [png.readUInt32BE(16), png.readUInt32BE(20)]);
+    assert.ok(width <= 4096 && height <= 4096 && width * height <= 4 * 1024 * 1024);
+    const columns = width / 8;
+    const last = count - 1;
+    const offset = 8 + (Math.floor(last / columns) * 8 * width + last % columns * 8) * 4;
+    assert.deepEqual([...preview.subarray(offset, offset + 4)], [0, 255, 0, 255]);
+  }
+  large.free();
+
   const png = join(temp, "indexed.png");
   cli("export", nativeEdited, "compass", "indexed-png", png);
   const importedImage = join(temp, "image-import.json");
@@ -116,6 +197,38 @@ try {
   const success = concurrents.find((run) => run.code === 0);
   assert.equal(wasm.fingerprint(readFileSync(workingFile)), success.payload.saved_revision);
   assert.throws(() => cli("pack", projectFile, workingFile), (error) => error.status === 4);
+
+  copyFileSync(projectFile, workingFile);
+  const browserStudio = new wasm.Studio(original);
+  browserStudio.apply(readFileSync(humanEdit, "utf8"));
+  const browserRevision = Buffer.from(browserStudio.save(false));
+  browserStudio.free();
+  const overlappingFolder = folderHandle(directory, () => {
+    // Enter the real CLI after the browser's last fingerprint check, while the
+    // browser's staged data has yet to replace studio.json.
+    assert.throws(() => cli("edit", workingFile, machineUpdate, "--expect", revision), (error) => {
+      assert.equal(error.status, 4);
+      const [diagnostic] = JSON.parse(error.stderr).diagnostics;
+      return diagnostic.code === "conflict" && diagnostic.message.includes("holds a marker");
+    });
+    assert.deepEqual(readFileSync(workingFile), original);
+  });
+  assert.equal(await saveFolderManifest(overlappingFolder, browserRevision, revision), undefined);
+  assert.deepEqual(readFileSync(workingFile), browserRevision);
+  assert.deepEqual(readdirSync(directory).sort(), ["studio.json", "studio.json.lock"]);
+
+  const folder = folderHandle(directory);
+  const heldMarker = join(directory, "studio.json.save-test.lock");
+  writeFileSync(heldMarker, "");
+  const savedRevision = wasm.fingerprint(browserRevision);
+  await assert.rejects(saveFolderManifest(folder, original, savedRevision), /holds a marker/);
+  assert.deepEqual(readFileSync(workingFile), browserRevision);
+  assert.ok(existsSync(heldMarker));
+  unlinkSync(heldMarker);
+  cli("edit", directory, machineUpdate, "--expect", savedRevision);
+  await assert.rejects(saveFolderManifest(folder, browserRevision, savedRevision), /changed on disk/);
+  assert.equal(JSON.parse(readFileSync(workingFile)).name, "Machine revision");
+  assert.deepEqual(readdirSync(directory).sort(), ["studio.json", "studio.json.lock"]);
   console.log("Native/WASM edits, formats, validation and conflict protection match.");
 } finally {
   rmSync(temp, { recursive: true, force: true });

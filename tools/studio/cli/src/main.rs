@@ -414,27 +414,82 @@ fn conflict(path: &Path, message: &str) -> Error {
     Error::new("conflict", path.display().to_string(), message)
 }
 
-fn stage(path: &Path, bytes: &[u8]) -> Result<tempfile::NamedTempFile> {
-    let parent = path
-        .parent()
+fn parent_directory(path: &Path) -> &Path {
+    path.parent()
         .filter(|path| !path.as_os_str().is_empty())
-        .unwrap_or(Path::new("."));
-    let mut file = tempfile::NamedTempFile::new_in(parent).map_err(|error| io(path, error))?;
+        .unwrap_or(Path::new("."))
+}
+
+fn stage(path: &Path, bytes: &[u8]) -> Result<tempfile::NamedTempFile> {
+    let mut file =
+        tempfile::NamedTempFile::new_in(parent_directory(path)).map_err(|error| io(path, error))?;
     file.write_all(bytes).map_err(|error| io(path, error))?;
     file.as_file().sync_all().map_err(|error| io(path, error))?;
     Ok(file)
 }
 
+fn is_folder_manifest(path: &Path) -> bool {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .is_some_and(|name| name.eq_ignore_ascii_case(studio::PROJECT_FILE))
+}
+
+fn claim_folder_save(path: &Path) -> Result<tempfile::NamedTempFile> {
+    // The browser uses the same namespace. Each writer announces itself before
+    // looking for other writers and keeps its marker until the commit finishes.
+    const PREFIX: &str = "studio.json.save-";
+    const SUFFIX: &str = ".lock";
+    let parent = parent_directory(path);
+    let marker = tempfile::Builder::new()
+        .prefix(PREFIX)
+        .suffix(SUFFIX)
+        .tempfile_in(parent)
+        .map_err(|error| io(path, error))?;
+    for entry in fs::read_dir(parent).map_err(|error| io(path, error))? {
+        let name = entry.map_err(|error| io(path, error))?.file_name();
+        if Some(name.as_os_str()) != marker.path().file_name()
+            && name
+                .to_str()
+                .is_some_and(|name| name.starts_with(PREFIX) && name.ends_with(SUFFIX))
+        {
+            return Err(conflict(
+                path,
+                "Another Studio save holds a marker in this folder. Review the project before retrying.",
+            ));
+        }
+    }
+    Ok(marker)
+}
+
+fn lock_project(path: &Path) -> Result<(Option<tempfile::NamedTempFile>, File)> {
+    let mut lock_name = path.file_name().unwrap().to_os_string();
+    lock_name.push(".lock");
+    let lock = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .truncate(false)
+        .open(path.with_file_name(lock_name))
+        .map_err(|error| io(path, error))?;
+    lock.lock().map_err(|error| io(path, error))?;
+    let marker = is_folder_manifest(path)
+        .then(|| claim_folder_save(path))
+        .transpose()?;
+    // Drop the marker before releasing the lock to the next CLI writer.
+    Ok((marker, lock))
+}
+
 fn write_new(path: &Path, bytes: &[u8]) -> Result<()> {
-    stage(path, bytes)?
-        .persist_noclobber(path)
-        .map_err(|error| {
-            if error.error.kind() == std::io::ErrorKind::AlreadyExists {
-                conflict(path, "Destination exists. Choose a new path.")
-            } else {
-                io(path, error.error)
-            }
-        })?;
+    let file = stage(path, bytes)?;
+    let _save = is_folder_manifest(path)
+        .then(|| lock_project(path))
+        .transpose()?;
+    file.persist_noclobber(path).map_err(|error| {
+        if error.error.kind() == std::io::ErrorKind::AlreadyExists {
+            conflict(path, "Destination exists. Choose a new path.")
+        } else {
+            io(path, error.error)
+        }
+    })?;
     Ok(())
 }
 
@@ -468,15 +523,7 @@ fn change_project(
         saved_revision = Some(studio::fingerprint(&bytes));
     } else if let Some(expected) = destination.expect {
         let path = fs::canonicalize(project_path(path)).map_err(|error| io(path, error))?;
-        let mut lock_name = path.file_name().unwrap().to_os_string();
-        lock_name.push(".lock");
-        let lock = OpenOptions::new()
-            .write(true)
-            .create(true)
-            .truncate(false)
-            .open(path.with_file_name(lock_name))
-            .map_err(|error| io(&path, error))?;
-        lock.lock().map_err(|error| io(&path, error))?;
+        let _save = lock_project(&path)?;
         let current = read(&path)?;
         if studio::fingerprint(&current) != expected {
             return Err(conflict(

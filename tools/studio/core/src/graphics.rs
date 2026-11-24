@@ -119,9 +119,16 @@ pub struct Image {
     pub rgba: Vec<u8>,
 }
 
+const MAX_IMAGE_SIDE: u32 = 4096;
+
 pub(crate) fn checked_image(width: u32, height: u32) -> Result<usize> {
     let pixels = width.saturating_mul(height);
-    if width == 0 || height == 0 || width > 4096 || height > 4096 || pixels > MAX_PIXELS as u32 {
+    if width == 0
+        || height == 0
+        || width > MAX_IMAGE_SIDE
+        || height > MAX_IMAGE_SIDE
+        || pixels > MAX_PIXELS as u32
+    {
         return Err(invalid(
             "Image must be 1–4096 pixels per side and at most 4 megapixels",
         ));
@@ -506,24 +513,47 @@ fn waveform(sample: &Sample) -> Result<Image> {
     Ok(image)
 }
 
-fn render_tileset(project: &Project, tileset: &Tileset) -> Result<Image> {
-    let count = tileset.tiles.len() + tileset.metatiles.len();
-    let (mut width, mut height) = (1, 1);
-    for id in &tileset.metatiles {
-        if let Asset::Metatile(metatile) = &project.assets[id] {
-            width = width.max(u32::from(metatile.width));
-            height = height.max(u32::from(metatile.height));
+fn blank_atlas(
+    count: usize,
+    cell_width: u32,
+    cell_height: u32,
+    preferred_columns: usize,
+) -> Result<(Image, usize)> {
+    let count = count.max(1);
+    let max_columns = count.min((MAX_IMAGE_SIDE / cell_width) as usize);
+    let max_rows = (MAX_IMAGE_SIDE / cell_height) as usize;
+    let preferred = preferred_columns.min(max_columns);
+    // Try the usual width first. Narrower layouts can fit when row padding
+    // would push all wider layouts over the pixel budget.
+    for columns in (preferred..=max_columns).chain(1..preferred) {
+        let rows = count.div_ceil(columns);
+        if rows <= max_rows {
+            let width = columns as u32 * cell_width;
+            let height = rows as u32 * cell_height;
+            if width * height <= MAX_PIXELS as u32 {
+                return Ok((Image::blank(width, height)?, columns));
+            }
         }
     }
-    let columns = count.clamp(1, (512 / width).clamp(1, 8) as usize);
-    let mut image = Image::blank(
-        columns as u32 * width * 8,
-        count.max(1).div_ceil(columns) as u32 * height * 8,
-    )?;
+    Err(invalid(
+        "Atlas does not fit within the preview image limits",
+    ))
+}
+
+fn render_tileset(project: &Project, tileset: &Tileset) -> Result<Image> {
+    let count = tileset.tiles.len() + tileset.metatiles.len();
+    let (mut width, mut height) = (8, 8);
+    for id in &tileset.metatiles {
+        if let Asset::Metatile(metatile) = &project.assets[id] {
+            width = width.max(u32::from(metatile.width) * 8);
+            height = height.max(u32::from(metatile.height) * 8);
+        }
+    }
+    let (mut image, columns) = blank_atlas(count, width, height, 8)?;
     for (index, id) in tileset.tiles.iter().chain(&tileset.metatiles).enumerate() {
         let position = Placement {
-            x: (index % columns) as i32 * width as i32 * 8,
-            y: (index / columns) as i32 * height as i32 * 8,
+            x: (index % columns) as i32 * width as i32,
+            y: (index / columns) as i32 * height as i32,
             ..Placement::default()
         };
         match &project.assets[id] {
@@ -571,11 +601,7 @@ fn render_font(project: &Project, font: &Font, text: Option<&str>) -> Result<Ima
         }
         Ok(image)
     } else {
-        let columns = font.glyphs.len().min(16);
-        let mut image = Image::blank(
-            columns as u32 * 8,
-            font.glyphs.len().div_ceil(columns) as u32 * 8,
-        )?;
+        let (mut image, columns) = blank_atlas(font.glyphs.len(), 8, 8, 16)?;
         for (index, glyph) in font.glyphs.values().enumerate() {
             draw_tile(
                 &mut image,
