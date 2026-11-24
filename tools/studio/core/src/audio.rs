@@ -2,6 +2,8 @@ use crate::*;
 
 const PREVIEW_RATE: u32 = 32_000;
 const BRR_SILENT_END: [u8; 9] = [1, 0, 0, 0, 0, 0, 0, 0, 0];
+pub(crate) const BRR_LOOP_LENGTH_MESSAGE: &str =
+    "BRR export requires a loop length divisible by 16 samples";
 
 fn sample_ok(sample: &Sample) -> Result<()> {
     if !(1..=192_000).contains(&sample.sample_rate)
@@ -251,21 +253,19 @@ pub(crate) fn brr_size(sample: &Sample) -> usize {
 
 pub fn write_brr(sample: &Sample) -> Result<Vec<u8>> {
     sample_ok(sample)?;
-    if sample.loop_start.is_some_and(|start| start % 16 != 0) {
-        return Err(invalid("BRR loop start must be divisible by 16 samples"));
+    if let Some(start) = sample.loop_start {
+        if start % 16 != 0 {
+            return Err(invalid("BRR loop start must be divisible by 16 samples"));
+        }
+        if !(sample.pcm.len() - start as usize).is_multiple_of(16) {
+            return Err(invalid(BRR_LOOP_LENGTH_MESSAGE));
+        }
     }
     let mut bytes = Vec::with_capacity(brr_size(sample));
     let mut history = History::default();
     for (index, chunk) in sample.pcm.chunks(16).enumerate() {
         let mut pcm = [0; 16];
         pcm[..chunk.len()].copy_from_slice(chunk);
-        if let Some(start) = sample.loop_start.filter(|_| chunk.len() < 16) {
-            // Continue the beginning of the loop through the padding.
-            let loop_body = &sample.pcm[start as usize..];
-            for (index, value) in pcm[chunk.len()..].iter_mut().enumerate() {
-                *value = loop_body[index % loop_body.len()];
-            }
-        }
         let reset = index == 0 || sample.loop_start == Some(index as u32 * 16);
         let (block, next) = encode_block(&pcm, history, reset);
         bytes.extend_from_slice(&block);

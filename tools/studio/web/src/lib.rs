@@ -36,6 +36,34 @@ impl Studio {
         serde_json::to_string(self.editor.project()).expect("project serializes")
     }
 
+    #[wasm_bindgen(js_name = mapMetadata)]
+    pub fn map_metadata(&self, id: &str, layer: Option<String>) -> Result<String, JsValue> {
+        let Some(studio::Asset::Map(map)) = self.editor.project().assets.get(id) else {
+            return Err(error(studio::Error::new(
+                "invalid_input",
+                id,
+                "Expected a map",
+            )));
+        };
+        let metadata = match layer {
+            Some(id) => {
+                &map.layers
+                    .iter()
+                    .find(|layer| layer.id == id)
+                    .ok_or_else(|| {
+                        error(studio::Error::new(
+                            "invalid_input",
+                            id,
+                            "Map layer does not exist",
+                        ))
+                    })?
+                    .metadata
+            }
+            None => &map.metadata,
+        };
+        Ok(serde_json::to_string_pretty(metadata).expect("metadata serializes"))
+    }
+
     pub fn diagnostics(&self) -> String {
         serde_json::to_string(&studio::validate(self.editor.project()))
             .expect("diagnostics serialize")

@@ -309,6 +309,39 @@ fn wav_and_brr_round_trip_and_require_explicit_loop_offset() {
 }
 
 #[test]
+fn brr_rejects_partial_loops_and_decodes_aligned_wrap_without_padding() {
+    let mut sample = Sample {
+        sample_rate: 32_000,
+        pcm: vec![0; 16],
+        loop_start: Some(16),
+    };
+    sample.pcm.extend([-4096, -2048, 1024, 2048, 4096]);
+    let error = write_brr(&sample).unwrap_err();
+    assert_eq!(error.0[0].code, "invalid_input");
+    assert_eq!(
+        error.0[0].message,
+        "BRR export requires a loop length divisible by 16 samples"
+    );
+    assert_eq!(read_wav(&write_wav(&sample).unwrap()).unwrap(), sample);
+
+    sample.pcm.resize(46, 4096);
+    sample.pcm.extend([3072, 2048]);
+    let brr = write_brr(&sample).unwrap();
+    assert_eq!(brr.len(), 27);
+    assert_eq!(brr[18] & 3, 3);
+    let decoded = read_brr(&brr, 32_000, Some(9)).unwrap();
+    assert_eq!(decoded, sample);
+
+    // Follow the hardware's loop jump with the decoder history still intact.
+    let mut two_periods = brr.clone();
+    two_periods[18] &= !3;
+    two_periods.extend_from_slice(&brr[9..]);
+    let repeated = read_brr(&two_periods, 32_000, Some(9)).unwrap();
+    assert_eq!(&repeated.pcm[46..50], &[3072, 2048, -4096, -2048]);
+    assert_eq!(&repeated.pcm[48..], &sample.pcm[16..]);
+}
+
+#[test]
 fn one_shot_brr_preserves_audio_before_dsp_mutes() {
     for (length, pulse_start) in [(16, 0), (19, 16)] {
         let mut pcm = vec![0; length];

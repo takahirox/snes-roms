@@ -190,6 +190,8 @@ impl<'a> Validator<'a> {
                             path,
                             "BRR export requires a loop start on a 16-sample boundary",
                         );
+                    } else if !(sample.pcm.len() - start as usize).is_multiple_of(16) {
+                        self.warn("brr_loop_length", path, BRR_LOOP_LENGTH_MESSAGE);
                     }
                 }
             }

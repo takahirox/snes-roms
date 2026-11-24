@@ -151,8 +151,22 @@ try {
     }] } },
   } }));
   const large = new wasm.Studio(readFileSync(largeProject));
-  assert.deepEqual(JSON.parse(cli("validate", largeProject)).diagnostics, []);
-  assert.deepEqual(JSON.parse(large.diagnostics()), []);
+  const loopMessage = "BRR export requires a loop length divisible by 16 samples";
+  const loopWarning = [{ severity: "warning", code: "brr_loop_length", path: "/assets/fast-loop/data", message: loopMessage }];
+  assert.deepEqual(JSON.parse(cli("validate", largeProject)).diagnostics, loopWarning);
+  assert.deepEqual(JSON.parse(large.diagnostics()), loopWarning);
+  const exportError = [{ severity: "error", code: "invalid_input", path: "", message: loopMessage }];
+  const invalidBrr = join(temp, "fast-loop.brr");
+  assert.throws(() => cli("export", largeProject, "fast-loop", "brr", invalidBrr), (error) => {
+    assert.equal(error.status, 2);
+    assert.deepEqual(JSON.parse(error.stderr), { ok: false, diagnostics: exportError });
+    return true;
+  });
+  assert.equal(existsSync(invalidBrr), false);
+  assert.throws(() => large.export("fast-loop", '{"format":"brr"}'), (error) => {
+    assert.deepEqual(JSON.parse(error), exportError);
+    return true;
+  });
   const fastWav = join(temp, "fast-note.wav");
   cli("export", largeProject, "fast-note", "wav", fastWav);
   const expectedWav = readFileSync(fastWav);

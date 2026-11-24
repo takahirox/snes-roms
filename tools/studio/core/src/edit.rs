@@ -41,6 +41,20 @@ pub enum Edit {
         width: u16,
         height: u16,
     },
+    SetMapSettings {
+        id: Id,
+        tileset: Id,
+        cell_width: u16,
+        cell_height: u16,
+        metadata_json: Option<String>,
+    },
+    SetMapLayerSettings {
+        id: Id,
+        layer: Id,
+        layer_id: Id,
+        visible: bool,
+        metadata_json: Option<String>,
+    },
     ResizeMetatile {
         id: Id,
         width: u16,
@@ -224,6 +238,14 @@ fn get_asset_mut<'a>(project: &'a mut Project, id: &str) -> Result<&'a mut Asset
         .ok_or_else(|| Error::new("missing_asset", id, "Asset ID does not exist"))
 }
 
+fn update_metadata(metadata: &mut Metadata, json: Option<&str>) -> Result<()> {
+    if let Some(json) = json {
+        *metadata = serde_json::from_str(json)
+            .map_err(|error| Error::new("edit_json", "", format!("Invalid metadata: {error}")))?;
+    }
+    Ok(())
+}
+
 fn layer_mut<'a>(
     project: &'a mut Project,
     id: &str,
@@ -297,6 +319,39 @@ fn apply_one(project: &mut Project, edit: &Edit) -> Result<()> {
                 resize_grid(&mut layer.cells, map.width, map.height, *width, *height)?;
             }
             (map.width, map.height) = (*width, *height);
+        }
+        Edit::SetMapSettings {
+            id,
+            tileset,
+            cell_width,
+            cell_height,
+            metadata_json,
+        } => {
+            let Asset::Map(map) = get_asset_mut(project, id)? else {
+                return Err(invalid("Expected a map"));
+            };
+            map.tileset.clone_from(tileset);
+            (map.cell_width, map.cell_height) = (*cell_width, *cell_height);
+            update_metadata(&mut map.metadata, metadata_json.as_deref())?;
+        }
+        Edit::SetMapLayerSettings {
+            id,
+            layer,
+            layer_id,
+            visible,
+            metadata_json,
+        } => {
+            let Asset::Map(map) = get_asset_mut(project, id)? else {
+                return Err(invalid("Expected a map"));
+            };
+            let layer = map
+                .layers
+                .iter_mut()
+                .find(|item| &item.id == layer)
+                .ok_or_else(|| invalid("Map layer does not exist"))?;
+            layer.id.clone_from(layer_id);
+            layer.visible = *visible;
+            update_metadata(&mut layer.metadata, metadata_json.as_deref())?;
         }
         Edit::ResizeMetatile { id, width, height } => {
             let Asset::Metatile(metatile) = get_asset_mut(project, id)? else {
