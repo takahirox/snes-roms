@@ -3,6 +3,7 @@
 Run after `make yonaki-test` to use its real_E13 pad trace. Writes JSON and
 lossless recordings under build/yonaki-audio/profile/.
 """
+import ctypes as C
 import hashlib
 import io
 import json
@@ -155,16 +156,30 @@ def profile_queue(sound):
         game.close()
 
 
-def record_route(core, rom, trace_path, out):
+def record_route(core_name, rom, trace_path, out):
     trace = json.loads(trace_path.read_text())
     initial_sram = trace_path.with_suffix('.in.srm').read_bytes()
     assert sha(initial_sram) == trace['input_sram_sha256']
-    out.mkdir(parents=True, exist_ok=True)
-    (out / 'yonaki.srm').write_bytes(initial_sram)
-    frontend = Frontend(core, rom, out)
+    if core_name == 'bsnes':
+        out.mkdir(parents=True, exist_ok=True)
+        (out / 'yonaki.srm').write_bytes(initial_sram)
+    frontend = Frontend(CORES[core_name], rom, out)
     pcm = io.BytesIO()
     frontend.audio_file = pcm
     try:
+        if core_name == 'snes9x':
+            # Snes9x expects the frontend to restore battery RAM after loading the ROM.
+            save_ram = 0  # RETRO_MEMORY_SAVE_RAM
+            lib = frontend.lib
+            lib.retro_get_memory_data.argtypes = [C.c_uint]
+            lib.retro_get_memory_data.restype = C.c_void_p
+            lib.retro_get_memory_size.argtypes = [C.c_uint]
+            lib.retro_get_memory_size.restype = C.c_size_t
+            address = lib.retro_get_memory_data(save_ram)
+            size = lib.retro_get_memory_size(save_ram)
+            if not address or size != len(initial_sram):
+                raise ValueError(f'Snes9x save RAM is unavailable or has the wrong size ({size} bytes)')
+            C.memmove(address, initial_sram, size)
         for mask in trace['masks']:
             frontend.step(mask)
         samples = pcm.getvalue()
@@ -217,6 +232,6 @@ def main():
 if __name__ == '__main__':
     if sys.argv[1:2] == ['--record-route']:
         _, _, core, rom, trace, out = sys.argv
-        record_route(CORES[core], Path(rom), Path(trace), Path(out))
+        record_route(core, Path(rom), Path(trace), Path(out))
     else:
         main()
