@@ -1409,14 +1409,9 @@ ChapterCard:
     lda #2
     jsr FadeIn
     lda #150
-    sta t7
-:   jsr WaitFrame
-    lda pad_new
-    and #PAD_A
-    bne :+
-    dec t7
-    bne :-
-:   lda #2
+    ldx #WAIT_CHAPTER
+    jsr WaitTimedEvent
+    lda #2
     jsr FadeOut
     jsr ClearPage
     jsr WaitUploads
@@ -1524,10 +1519,8 @@ EndingScreen:
     sta g_col
     lda #90
     jsr WaitFrames
-:   jsr WaitFrame
-    lda pad_new
-    and #PAD_A|PAD_START
-    beq :-
+    ldx #WAIT_ENDING
+    jsr WaitEvent
     lda #SND_FADE
     jsr SndQueue
     lda #$FFFF
