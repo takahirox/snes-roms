@@ -118,10 +118,7 @@ OpText:
     lda speed
     cmp #3
     beq @inst
-    lda cur_read
-    beq @pos
-    lda pad
-    and #PAD_B
+    jsr ReadSkipHeld
     beq @pos
     lda #1
     sta ff
@@ -172,20 +169,8 @@ OpText:
     dec type_budget
     bne @glyph
 @wait:
-    jsr WaitFrame
-    lda pad_new
-    and #PAD_A
-    beq :+
-    lda #1
-    sta instant
-:   lda cur_read
-    beq @frame
-    lda pad
-    and #PAD_B
-    beq @frame
-    lda #1
-    sta instant
-    sta ff
+    ldx #WAIT_TYPING
+    jsr WaitEvent
     bra @frame
 @ctl:
     cmp #1
@@ -336,39 +321,17 @@ WaitAdvance:
     lda pad
     and #PAD_B
     beq :+
-    jsr WaitFrame               ; fast-forward: a short look at the page
-    jsr WaitFrame
-    rts
+    lda #2                      ; fast-forward: a short look at the page
+    jmp WaitFrames
 :   stz blink
     stz mark_on
     jsr FlushPad
 @loop:
-    lda blink
-    and #32
-    bne @off
-    lda mark_on
-    bne @shown
-    lda #1
-    jsr DrawMark
-    bra @shown
-@off:
-    lda mark_on
-    beq @shown
-    lda #0
-    jsr DrawMark
-@shown:
-    jsr WaitFrame
-    lda pad_new
-    and #PAD_A
+    jsr UpdateWaitMark
+    ldx #WAIT_ADVANCE
+    jsr WaitEvent
+    cmp #PAD_START
     bne @done
-    lda cur_read
-    beq :+
-    lda pad
-    and #PAD_B
-    bne @done
-:   lda pad_new
-    and #PAD_START
-    beq @loop
     jsr OpenMenu
     lda #ST_WAIT
     sta ui_state
@@ -379,6 +342,23 @@ WaitAdvance:
     lda #0
     jsr DrawMark
 :   rts
+
+; Called before the first wait frame and after frames that received no advance or menu input.
+UpdateWaitMark:
+    lda blink
+    and #32
+    bne @off
+    lda mark_on
+    bne @done
+    lda #1
+    jmp DrawMark
+@off:
+    lda mark_on
+    beq @done
+    lda #0
+    jmp DrawMark
+@done:
+    rts
 
 ; A = 1 draw / 0 erase the wait mark
 DrawMark:
@@ -545,13 +525,10 @@ OpChoice:
 @loop:
     lda #ST_CHOICE
     sta ui_state
-    jsr WaitFrame
-    lda pad_rep
-    and #PAD_UP
-    beq @dn
-    lda opt_count
-    cmp #2
-    bcc @dn
+    ldx #WAIT_CHOICE
+    jsr WaitEvent
+    cmp #PAD_UP
+    bne @dn
     jsr HideSel
     lda opt_sel
     bne :+
@@ -562,12 +539,8 @@ OpChoice:
     jsr SndCursor
     bra @loop
 @dn:
-    lda pad_rep
-    and #PAD_DOWN
-    beq @a
-    lda opt_count
-    cmp #2
-    bcc @a
+    cmp #PAD_DOWN
+    bne @a
     jsr HideSel
     lda opt_sel
     inc a
@@ -579,12 +552,8 @@ OpChoice:
     jsr SndCursor
     bra @loop
 @a:
-    lda pad_new
-    and #PAD_A
-    bne @chosen
-    lda pad_new
-    and #PAD_START
-    beq @loop
+    cmp #PAD_A
+    beq @chosen
     jsr OpenMenu
     bra @loop
 @chosen:
@@ -836,10 +805,8 @@ BgWhite:
     stz dim_cur
     lda #2
     sta add_decay
-:   jsr WaitFrame
-    lda add_level
-    bne :-
-    rts
+    ldx #WAIT_FLASH
+    jmp WaitEvent
 
 BgMosaic:
     pha
@@ -990,9 +957,8 @@ FxRedFlash:
     sta add_level
     lda #2
     sta add_decay
-:   jsr WaitFrame
-    lda add_level
-    bne :-
+    ldx #WAIT_FLASH
+    jsr WaitEvent
     stz add_red
     rts
 FxRippleOn:
@@ -1005,11 +971,8 @@ FxRippleOff:
 FxDark:
     lda #1
     sta dark_on
-:   jsr WaitFrame
-    lda dim_cur
-    cmp #31
-    bne :-
-    rts
+    ldx #WAIT_DIM
+    jmp WaitEvent
 FxLight:
     stz dark_on
     lda #40
@@ -1017,16 +980,9 @@ FxLight:
 FxWait:
     lda #ST_BUSY
     sta ui_state
-:   lda t7
-    beq :+
-    dec t7
-    jsr WaitFrame
-    lda ff
-    beq :-
-    lda pad
-    and #PAD_B
-    beq :-
-:   rts
+    lda t7
+    ldx #WAIT_SKIP
+    jmp WaitTimedEvent
 
 OpEnd:
     jsr ReadB
