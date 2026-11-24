@@ -42,6 +42,12 @@ impl Studio {
         serde_json::to_string(self.editor.project()).expect("project serializes")
     }
 
+    #[wasm_bindgen(js_name = assetData)]
+    pub fn asset_data(&self, id: &str) -> Result<String, JsValue> {
+        let json = studio::asset_data_json(self.editor.project(), id).map_err(error)?;
+        Ok(String::from_utf8(json).expect("asset JSON is UTF-8"))
+    }
+
     #[wasm_bindgen(js_name = mapMetadata)]
     pub fn map_metadata(&self, id: &str, layer: Option<String>) -> Result<String, JsValue> {
         let Some(studio::Asset::Map(map)) = self.editor.project().assets.get(id) else {
