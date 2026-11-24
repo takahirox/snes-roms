@@ -31,7 +31,7 @@ def new(name, sram=None, build=B):
 def shot(g, label, settle=True):
     if settle:
         for _ in range(120):
-            if not (g.w('text_dirty') | g.w('text_dirty', 2) | g.w('photo_dirty') | g.w('photo_dirty', 2)):
+            if not (g.w('text_dirty') | g.w('text_dirty', 2) | g.w('photo_dirty')):
                 break
             g.run(1)
         g.run(2)

@@ -839,11 +839,7 @@ ResetScreenState:
     jsr ClearPage
     jsr ClearSlots
     stz sil_dirty
-    stz reg_c1
-    stz reg_c0
-    lda #24
-    sta reg_top
-    rts
+    jmp ClearSilSpans
 
 ; A = number of endings seen
 EndingsSeen:
