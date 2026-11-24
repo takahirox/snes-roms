@@ -10,6 +10,7 @@ All of the sound in 『夜鳴き鐘』 is made inside this repository: 18 songs,
   - [`tools/yonaki/songs.py`](../../../tools/yonaki/songs.py): the scores
   - [`tools/yonaki/sfx.py`](../../../tools/yonaki/sfx.py): sound effects and ambience
 - Review script: [`tests/yonaki/music_review.py`](../../../tests/yonaki/music_review.py)
+- [SPC700 resource loading and command reliability investigation](DYNAMIC_AUDIO.md)
 
 ## Use from the engine
 
