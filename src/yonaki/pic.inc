@@ -276,49 +276,57 @@ SelectPic:
     sta pal_src+2
     rts
 
-; Restore photo rows rs_top..23, tile columns rs_c0..rs_c1 of pic_cur from ROM into WRAM, in slices of at
-; most 8 KiB of DMA per frame (each slice right after a WaitFrame, at the top of the frame).
-RestoreRows:
-    lda #$7FFF
-    sta rs_bytes                ; force a WaitFrame before the first slice
-    lda rs_c1
+; A = span (start | end << 8), X = row * 2 -> t2 = WRAM byte offset, t3 = byte length.
+PhotoSpanDMA:
+    sta t3
+    and #$00FF
+    sta t2
+    lda t3
+    xba
+    and #$00FF
     sec
-    sbc rs_c0
-    jeq @done
+    sbc t2
     xba
     lsr a
     lsr a
-    sta rs_len                  ; bytes per row
-    lda rs_top
-    sta rs_row
+    sta t3
+    lda t2
+    xba
+    lsr a
+    lsr a
+    sta t2
+    txa
+    xba
+    asl a
+    asl a
+    ora t2
+    sta t2
+    rts
+
+; Restore photo_spans from ROM into WRAM, up to 8 KiB per frame, starting right after a WaitFrame.
+RestoreRows:
+    lda #8192
+    sta rs_bytes                ; force a WaitFrame before the first slice
+    stz rs_row
 @row:
-    lda rs_row
-    cmp #24
+    ldx rs_row
+    cpx #PHOTO_SPAN_BYTES
     jcs @done
+    lda photo_spans,x
+    jeq @next
+    jsr PhotoSpanDMA
     lda rs_bytes
     clc
-    adc rs_len
+    adc t3
     cmp #8193
     bcc :+
     jsr WaitFrame
     stz rs_bytes
 :   lda rs_bytes
     clc
-    adc rs_len
+    adc t3
     sta rs_bytes
-    ; destination $7F:(row * 2048 + c0 * 64)
-    lda rs_c0
-    xba
-    lsr a
-    lsr a
-    sta t2                      ; c0 * 64
-    lda rs_row
-    xba
-    asl a
-    asl a
-    asl a
-    clc
-    adc t2
+    lda t2
     sta WMADDL
     sep #$20
     .a8
@@ -329,10 +337,8 @@ RestoreRows:
     rep #$20
     .a16
     lda rs_row
-    sta t0
-    asl a
-    clc
-    adc t0                      ; row * 3
+    lsr a
+    adc rs_row                  ; row * 3, carry clear from shifting an even offset
     clc
     adc pic_entry
     tax
@@ -345,9 +351,10 @@ RestoreRows:
     stz DMAP1
     rep #$20
     .a16
-    lda PicTable+3,x
+    lda t2
+    and #$07FF                  ; offset within the source row
     clc
-    adc t2
+    adc PicTable+3,x
     sta A1T1L
     bra @go
 @solid:
@@ -362,7 +369,7 @@ RestoreRows:
     lda #.loword(FFWord)
     sta A1T1L
 @go:
-    lda rs_len
+    lda t3
     sta DAS1L
     sep #$20
     .a8
@@ -370,6 +377,8 @@ RestoreRows:
     sta MDMAEN
     rep #$20
     .a16
+@next:
+    inc rs_row
     inc rs_row
     jmp @row
 @done:
@@ -416,14 +425,14 @@ UploadPhotoNow:
 ; A = picture: WRAM <- ROM, silhouettes composited, then VRAM (forced blank: now; else by V-blank streaming)
 LoadPic:
     jsr SelectPic
-    stz rs_top
-    stz rs_c0
-    lda #32
-    sta rs_c1
+    lda #PHOTO_COLS << 8         ; full-width spans
+    ldx #PHOTO_SPAN_BYTES-2
+:   sta photo_spans,x
+    dex
+    dex
+    bpl :-
     jsr RestoreRows
     jsr CompositeAll
-    jsr CalcRegion
-    jsr TakeRegion
     lda #1
     sta pal_dirty
     jsr QueueTint
@@ -432,13 +441,12 @@ LoadPic:
     jsr UploadPhotoNow
     jmp WaitUploads
 @stream:
-    lda #$FFFF
+    jmp UploadPhotoSpans
+
+UploadPhotoSpans:
+    stz photo_next
+    lda #1
     sta photo_dirty
-    lda #$00FF
-    sta photo_dirty+2
-    stz photo_c0
-    lda #32
-    sta photo_c1
     jmp WaitUploads
 
 ; ---------------------------------------------------------------- silhouettes
@@ -452,98 +460,63 @@ ClearSlots:
     bpl :-
     rts
 
-; new_c0 / new_c1 / new_top: the columns and top row covered by the silhouettes in the slots (a silhouette covers
-; its rows top .. top + height - 1; the region runs from the top row down to the last photo row)
-CalcRegion:
-    lda #32
-    sta new_c0
-    stz new_c1
-    lda #24
-    sta new_top
-    ldx #0
-@l:
-    lda sil_key,x
-    cmp #$FFFF
-    beq @n
-    lda sil_id,x
-    asl a
-    asl a
-    asl a
-    tay
-    lda SilTable,y
-    and #$00FF
-    clc
-    adc sil_x,x
-    cmp #33
-    bcc :+
-    lda #32
-:   cmp new_c1
-    bcc :+
-    sta new_c1
-:   lda sil_x,x
-    cmp new_c0
-    bcs :+
-    sta new_c0
-:   lda SilTable+5,y            ; top row
-    and #$00FF
-    cmp new_top
-    bcs @n
-    sta new_top
-@n:
-    inx
-    inx
-    cpx #8
-    bne @l
-    lda new_c1
-    bne :+
-    stz new_c0
-:   rts
-
-TakeRegion:
-    lda new_c0
-    sta reg_c0
-    lda new_c1
-    sta reg_c1
-    lda new_top
-    sta reg_top
+ClearSilSpans:
+    ldx #PHOTO_SPAN_BYTES-2
+:   stz sil_spans,x
+    dex
+    dex
+    bpl :-
     rts
 
-; Show the slots: the union of the old and the new regions is restored from ROM, everything composited
-; again and uploaded, under a quick full dim of BG1.
+; Enclose spans A and t1 in a single span. Neither X nor Y changes.
+MergeSpan:
+    cmp #0
+    beq @old
+    sta t0
+    lda t1
+    beq @new
+    cmp t0
+    bcs :+
+    lda t0
+:   and #$FF00
+    sta t2
+    lda t1
+    and #$00FF
+    sta t1
+    lda t0
+    and #$00FF
+    cmp t1
+    bcc :+
+    lda t1
+:   ora t2
+    rts
+@new:
+    lda t0
+    rts
+@old:
+    lda t1
+    rts
+
+; Only the previously composited spans need restoring. Upload their union with the new spans
+; after compositing in slot order, while BG1 is fully dimmed.
 ApplySils:
     stz sil_dirty
-    jsr CalcRegion
-    lda reg_c0
-    sta rs_c0
-    lda reg_c1
-    sta rs_c1
-    lda reg_top
-    sta rs_top
-    lda new_c1
-    beq @merged                 ; no new silhouettes
-    lda rs_c1
+    stz t0
+    ldx #PHOTO_SPAN_BYTES-2
+:   lda sil_spans,x
+    sta photo_spans,x
+    ora t0
+    sta t0
+    dex
+    dex
+    bpl :-
+    lda t0
     bne :+
-    lda new_c0                  ; no old ones
-    sta rs_c0
-    lda new_c1
-    sta rs_c1
-    lda new_top
-    sta rs_top
-    bra @merged
-:   lda new_c0
-    cmp rs_c0
-    bcs :+
-    sta rs_c0
-:   lda new_c1
-    cmp rs_c1
-    bcc :+
-    sta rs_c1
-:   lda new_top
-    cmp rs_top
-    bcs @merged
-    sta rs_top
-@merged:
-    lda rs_c1
+    lda sil_key
+    and sil_key+2
+    and sil_key+4
+    and sil_key+6
+    cmp #$FFFF
     bne :+
     rts                         ; nothing before, nothing now
 :   lda ui_state
@@ -559,51 +532,23 @@ ApplySils:
     jsr RestoreRows
     jsr CompositeAll
     jsr QueueTint
-    jsr TakeRegion
-    lda rs_c0
-    sta photo_c0
-    lda rs_c1
-    sta photo_c1
-    lda rs_top
-    ldx #23
-    jsr MarkPhotoRows
-    jsr WaitUploads
+    ldx #PHOTO_SPAN_BYTES-2
+:   lda photo_spans,x
+    sta t1
+    lda sil_spans,x
+    jsr MergeSpan
+    sta photo_spans,x
+    dex
+    dex
+    bpl :-
+    jsr UploadPhotoSpans
     stz hide_bg1
     pla
     sta ui_state
     rts
 
-; A = first row, X = last row -> photo rows dirty
-MarkPhotoRows:
-    stx t6
-    tax
-@l:
-    txa
-    cmp #16
-    bcs @h
-    asl a
-    tay
-    lda BitTable,y
-    ora photo_dirty
-    sta photo_dirty
-    bra @n
-@h:
-    sec
-    sbc #16
-    asl a
-    tay
-    lda BitTable,y
-    ora photo_dirty+2
-    sta photo_dirty+2
-@n:
-    cpx t6
-    beq @d
-    inx
-    bra @l
-@d:
-    rts
-
 CompositeAll:
+    jsr ClearSilSpans
     jsr PickTint
     ldx #0
 @l:
@@ -721,23 +666,65 @@ Composite:
     tay
     lda SilTable,y
     and #$00FF
-    sta c_w
+    sta c_ty
     lda SilTable+1,y
     and #$00FF
-    sta c_h
+    asl a
+    sta c_row
     lda SilTable+2,y
     sta p0
     lda SilTable+4,y
     and #$00FF
     sta p0+2
-    lda SilTable+5,y
-    and #$00FF
-    sta c_row
     ldy #0                      ; mask offset
-    lda c_h
-    sta c_ty
 @trow:
-    stz c_tx
+    lda [p0],y                  ; first column | tile count << 8
+    iny
+    iny
+    cmp #0
+    jeq @row_done
+    sta t0
+    and #$00FF
+    clc
+    adc c_x
+    sta c_start
+    lda t0
+    xba
+    and #$00FF
+    sta t3
+    asl a
+    asl a
+    asl a
+    asl a
+    sta t0
+    tya
+    clc
+    adc t0
+    sta c_next
+    lda c_start
+    cmp #PHOTO_COLS
+    jcs @next_row
+    adc t3
+    cmp #PHOTO_COLS+1
+    bcc :+
+    lda #PHOTO_COLS
+:   sta t0
+    sec
+    sbc c_start
+    sta c_left
+    lda t0
+    xba
+    ora c_start
+    sta t4
+    ldx c_row
+    jsr PhotoSpanDMA
+    lda t2
+    sta c_dest
+    lda sil_spans,x
+    sta t1
+    lda t4
+    jsr MergeSpan
+    sta sil_spans,x
 @tile:
     lda work_count
     cmp #TILES_PER_FRAME
@@ -746,31 +733,7 @@ Composite:
     jsr PacedWait
     ply
 :   inc work_count
-    lda c_x
-    clc
-    adc c_tx
-    cmp #32
-    bcc :+
-    tya
-    clc
-    adc #16
-    tay
-    jmp @tnext
-:   sta t0
-    lda c_row
-    xba
-    lsr a
-    lsr a
-    lsr a                       ; row * 32
-    clc
-    adc t0
-    asl a
-    asl a
-    asl a
-    asl a
-    asl a
-    asl a                       ; tile * 64
-    tax
+    ldx c_dest
     lda #8
     sta c_n
     lda s_tr
@@ -835,10 +798,17 @@ Composite:
     dec c_n
     bne @pxt
 @tnext:
-    inc c_tx
-    lda c_tx
-    cmp c_w
-    jcc @tile
+    dec c_left
+    beq @next_row
+    lda c_dest
+    clc
+    adc #64
+    sta c_dest
+    jmp @tile
+@next_row:
+    ldy c_next                  ; skip any tiles clipped off the right edge
+@row_done:
+    inc c_row
     inc c_row
     dec c_ty
     beq :+

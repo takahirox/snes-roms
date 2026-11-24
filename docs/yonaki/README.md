@@ -5,6 +5,7 @@ An original sound novel for the Super Famicom. On the last night of 水明館 (S
 - ROM: [`dist/yonaki.sfc`](../../dist/yonaki.sfc) (LoROM 4 MiB, 8 KiB battery-backed SRAM, no copier header)
 - The version 2 save format starts fresh with version 1 battery files. See [save format and recovery](ENGINE.md#save-format-and-recovery).
 - Design (spoilers): [DESIGN.md](DESIGN.md). Engine: [ENGINE.md](ENGINE.md). Music: [music/README.md](music/README.md)
+- [Performance baseline and Kamaitachi no Yoru research](PERFORMANCE_BASELINE.md)
 
 ## How to play
 - A: advance text / select. Up/down: choices (each is prefixed with a letter A, B, C…). Hold B: fast-forward through text already read (stops at unread text). START: menu (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
