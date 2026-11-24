@@ -1,2 +1,0 @@
-# ID KIND SCENARIO TITLE
-S01 true main 夜明け
