@@ -199,13 +199,14 @@ OpText:
 @chunk:
     cmp #2
     bne @end
-    lda [p0]                    ; line count of the next chunk
-    inc p0
+    inc p0                      ; skip the next chunk's line count
+    lda redraw
+    bne :+
     jsr SetMark
     lda #GLYPH_PAGE
     sta mark_glyph
     jsr WaitAdvance
-    jsr ClearPage
+:   jsr ClearPage
     lda #1
     sta text_on
     stz cur_line

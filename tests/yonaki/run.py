@@ -10,6 +10,7 @@ usage: python3 -I tests/yonaki/run.py [--real] [test ...]
   --real   also build the real scenario (data/yonaki/scenario -> build/yonaki) and play every ending of it
 """
 import sys, json, pathlib, traceback, struct, random, time
+from binascii import crc_hqx
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import buildrom                       # noqa: E402
 import routes                         # noqa: E402
@@ -62,27 +63,47 @@ def words(b, a, n):
     return struct.unpack_from(f'<{n}H', b, a)
 
 
+def record(sram, k):
+    copies = []
+    for a in (0x100 * k, 0x400 + 0x100 * k):
+        b = sram[a:a + 150]
+        if b[:2] == b'YN' and words(b, 2, 2) == (k, 2) and crc_hqx(b[2:148], 0xFFFF) == words(b, 148, 1)[0]:
+            copies.append(a)
+    if len(copies) == 2:
+        delta = (words(sram, copies[1] + 48, 1)[0] - words(sram, copies[0] + 48, 1)[0]) & 0xFFFF
+        if 0 < delta < 0x8000:
+            return copies[1]
+    return copies[0] if copies else None
+
+
+def patch_record_word(image, a, offset, value):
+    struct.pack_into('<H', image, a + offset, value)
+    struct.pack_into('<H', image, a + 148, crc_hqx(image[a + 2:a + 148], 0xFFFF))
+
+
 def global_block(sram):
-    w = words(sram, 0, 128)
-    ok = sum(w[:126]) & 0xFFFF == w[126] and w[126] ^ 0xFFFF == w[127] and sram[:4] == b'YNKG'
-    return dict(valid=ok, speed=w[3], endings=w[4] | w[5] << 16, gflags=w[6] | w[7] << 16)
+    a = record(sram, 0)
+    if a is None:
+        return dict(valid=False, speed=1, endings=0, gflags=0)
+    speed, endings, gflags = struct.unpack_from('<HII', sram, a + 10)
+    return dict(valid=True, speed=speed, endings=endings, gflags=gflags)
 
 
-def read_block(sram):
-    w = words(sram, 0x400, (0x2000 - 0x400) // 2)
-    n = (0x1FFC - 0x400) // 2
-    return dict(valid=sram[0x400:0x404] == b'YNKR' and sum(w[:n]) & 0xFFFF == w[n] and w[n] ^ 0xFFFF == w[n + 1],
-                marks=sram[0x408:0x1FFC])
+def read_header(sram, build_id):
+    return sram[0x800:0x808] == struct.pack('<2sHI', b'YR', 2, build_id)
 
 
 def slot_block(sram, k):
-    a = 0x100 * (k + 1)
-    w = words(sram, a, 128)
-    return dict(valid=sram[a:a + 4] == b'YNKS' and sum(w[:126]) & 0xFFFF == w[126], kind=w[5], id=w[6])
+    a = record(sram, k + 1)
+    if a is None:
+        return dict(valid=False)
+    kind, tid = words(sram, a + 10, 2)
+    return dict(valid=True, kind=kind, id=tid)
 
 
 def is_read(sram, tid):
-    return bool(read_block(sram)['marks'][tid >> 3] >> (tid & 7) & 1)
+    i, bit = divmod(tid, 8)
+    return bool(sram[0x808 + i] & sram[0x1400 + i] & (1 << bit))
 
 
 # ------------------------------------------------------------------ tests
@@ -101,7 +122,7 @@ def test_boot():
     sram = finish(g, rec)
     gb = global_block(sram)
     assert gb['valid'] and gb['endings'] == 0 and gb['speed'] == 1, gb
-    assert read_block(sram)['valid']
+    assert read_header(sram, g.layout['build_id'])
     return rec
 
 
@@ -114,8 +135,8 @@ def test_corrupt():
     assert g.w('sram_resets') == 3, g.w('sram_resets')
     assert g.w('slot_any') == 0
     sram = finish(g, rec)
-    assert global_block(sram)['valid'] and read_block(sram)['valid']
-    # a valid battery with one bookmark broken by a flipped bit: that slot is empty, the others stay
+    assert global_block(sram)['valid'] and read_header(sram, g.layout['build_id'])
+    assert not any(sram[0x808:0x13F8]) and not any(sram[0x1400:0x1FF0])
     return rec
 
 
@@ -195,18 +216,29 @@ def to_wait(g, text_id):
         raise Stuck(st)
 
 
+def checkpoint(g):
+    fields = ('pic_cur', 'music_cur', 'amb_cur', 'chapter_cur', 'dark_on', 'ripple_on')
+    silhouettes = [
+        tuple(g.w(field, i) for field in ('sil_key', 'sil_id', 'sil_x', 'sil_col'))
+        for i in range(0, 8, 2) if g.w('sil_key', i) != 0xFFFF
+    ]
+    return [g.w(field) for field in fields], silhouettes, g.b('lflags', 64), g.b('names', 20)
+
+
 def test_save_load():
     """START menu bookmark at a paragraph (slot 2) and at a choice (slot 3), タイトルへ, then しおりから after a
     power cycle resumes at the same paragraph / choice."""
     rec = {}
     g = new('save', sram=bytes(8192))
     g.new_game()
-    # stop at the 6th paragraph
+    # stop at a paragraph with three silhouettes
     g.until(lambda: g.state() == 'WAIT', 2000, 'first wait')
-    while g.w('cur_text') < 5:
+    while g.w('cur_text') < 3:
         g.tap('A', 1, 2)
         g.until(lambda: g.state() in ('WAIT', 'CHOICE'), 2000, 'wait')
     tid = g.w('cur_text')
+    text_checkpoint = checkpoint(g)
+    assert len(text_checkpoint[1]) == 3
     shot(g, 'wait')
     g.press('START', 'MENU')
     shot(g, 'menu')
@@ -221,6 +253,9 @@ def test_save_load():
     st = g.advance()
     assert st == 'CHOICE'
     cid = g.w('choice_id')
+    choice_checkpoint = checkpoint(g)
+    choice_options = g.options()
+    choice_text = g.w('last_text')
     shot(g, 'choice')
     g.press('START', 'MENU')
     g.menu_to(0)
@@ -256,6 +291,7 @@ def test_save_load():
     g.until(lambda: g.state() == 'WAIT', 1200, 'resumed paragraph')
     assert g.w('cur_text') == tid, (g.w('cur_text'), tid)
     assert g.w('loads_done') == 1
+    assert checkpoint(g) == text_checkpoint
     shot(g, 'loaded_text')
     finish(g, rec.setdefault('load_text', {}))
     # load slot 3 -> the same choice, the paragraph before it redrawn
@@ -268,13 +304,118 @@ def test_save_load():
     g.tap('A', 2, 4)
     g.until(lambda: g.state() == 'CHOICE', 1200, 'resumed choice')
     assert g.w('choice_id') == cid
-    assert g.w('last_text') != 0xFFFF and g.w('text_on') == 1, 'the paragraph before the choice was not redrawn'
+    assert choice_text != 0xFFFF and g.w('last_text') == choice_text and g.w('text_on') == 1
+    assert checkpoint(g) == choice_checkpoint and g.options() == choice_options
     shot(g, 'loaded_choice')
     g.choose(index=0)
     assert g.advance() in ('CHOICE', 'ENDING')
     finish(g, rec.setdefault('load_choice', {}))
+
+    # Exercise a choice whose preceding paragraph spans multiple pages, with the music stopped.
+    long_text = next(int(k) for k, t in g.layout['texts'].items() if len(t['pages']) > 1)
+    silent = bytearray(sram)
+    a = record(sram, 3)
+    patch_record_word(silent, a, 14, long_text)
+    patch_record_word(silent, a, 18, 0xFFFF)
+    g = new('load_choice_multipage', sram=silent)
+    g.title()
+    assert g.w('music_cur') != 0xFFFF
+    g.title_pick(1)
+    g.until(lambda: g.state() == 'SLOTS', 300, 'slots')
+    g.menu_to(2)
+    g.press('A', 'CHOICE', limit=1200)
+    assert g.w('choice_id') == cid and g.w('last_text') == long_text and g.w('music_cur') == 0xFFFF
+    shot(g, 'loaded_choice')
+    finish(g, rec.setdefault('load_choice_multipage', {}))
     rec['text_id'] = tid
     rec['choice_id'] = cid
+    return rec
+
+
+def test_recovery():
+    """Boot from images cut during actual overwrites and from selectively damaged copies."""
+    rec = {}
+    g = new('recovery_source', sram=bytes(8192))
+    g.new_game()
+    g.until(lambda: g.state() == 'WAIT', 2000, 'first wait')
+
+    def save(slot):
+        g.press('START', 'MENU')
+        g.press('A', 'SLOTS')
+        g.menu_to(slot)
+        g.press('A', 'WAIT')
+        assert g.w('save_ok') == 1
+
+    def next_text():
+        old = g.w('cur_text')
+        g.tap('A', 1, 2)
+        g.until(lambda: g.state() == 'WAIT' and g.w('cur_text') != old, 2000, 'next paragraph')
+        return g.w('cur_text')
+
+    def next_speed(speed):
+        g.press('START', 'MENU')
+        g.menu_to(1)
+        g.tap('A', 2, 2)
+        g.until(lambda: g.state() == 'MENU' and g.w('speed') == speed, 300, 'next speed')
+        g.press('B', 'WAIT')
+
+    save(0)
+    previous_text = next_text()
+    save(0)
+    save(1)
+    latest_text = next_text()
+    next_speed(2)
+    before = g.sram_image()
+    save(0)
+    next_speed(3)
+    after = finish(g, rec.setdefault('source', {}))
+    old_global, old_slot = (record(before, k) for k in (0, 1))
+    new_global, new_slot = (record(after, k) for k in (0, 1))
+    assert (new_global, new_slot) == (old_global ^ 0x400, old_slot ^ 0x400)
+    assert all(before[a:a + 2] == b'YN' for a in (new_global, new_slot)), 'overwrite must reuse occupied copies'
+    assert is_read(before, previous_text)
+
+    def check(name, battery, speed, tid, slot=0, resets=0):
+        g = new(f'recovery_{name}', sram=battery)
+        g.title()
+        assert g.w('speed') == speed and g.w('sram_resets') == resets
+        assert g.w('slot_any') == 1 and is_read(g.sram_image(), previous_text)
+        g.title_pick(1)
+        g.until(lambda: g.state() == 'SLOTS', 300, 'slots')
+        assert g.w('slot_valid') == (slot == 0) and g.w('slot_valid', 2) == 1
+        g.menu_to(slot)
+        g.press('A', 'WAIT', limit=1200)
+        assert g.w('loads_done') == 1 and g.w('cur_text') == tid
+        shot(g, 'resumed')
+        finish(g, rec.setdefault(name, {}))
+
+    for name, end in (('invalidated', 1), ('mid_write', 23), ('before_commit', 150)):
+        torn = bytearray(before)
+        for a in (new_global, new_slot):
+            torn[a] = 0                   # marker invalidated before any payload writes
+            torn[a + 1:a + end] = after[a + 1:a + end]
+        check(name, torn, 2, previous_text)
+    check('committed', after, 3, latest_text)
+
+    damaged = bytearray(after)
+    damaged[new_global + 10] ^= 1         # plausible speed and paragraph, invalid CRC
+    damaged[new_slot + 12] ^= 1
+    check('bad_crc', damaged, 2, previous_text)
+
+    malformed = bytearray(after)
+    patch_record_word(malformed, new_global, 10, 4)
+    patch_record_word(malformed, new_slot, 26, 0xFFFE)
+    check('bad_range', malformed, 2, previous_text)
+
+    for a in (old_global, old_slot):
+        damaged[a] = 0
+    check('both_invalid', damaged, 1, previous_text, slot=1, resets=1)
+
+    wrapped = bytearray(after)
+    for old, new_copy in ((old_global, new_global), (old_slot, new_slot)):
+        patch_record_word(wrapped, old, 48, 0xFFFF)
+        patch_record_word(wrapped, new_copy, 48, 0)
+    check('wrapped', wrapped, 3, latest_text)
     return rec
 
 
@@ -325,8 +466,9 @@ def test_names():
     g.tap('A', 2, 4)
     g.title()
     sram = finish(g, rec.setdefault('typed', {}))
-    w = lambda o: sram[o] | sram[o + 1] << 8
-    assert [w(16), w(18), w(20)] == [2, gi['佐'], gi['藤']] and [w(26), w(28), w(30)] == [2, gi['ま'], gi['り']]
+    a = record(sram, 0) + 20
+    assert words(sram, a, 3) == (2, gi['佐'], gi['藤'])
+    assert words(sram, a + 10, 3) == (2, gi['ま'], gi['り'])
     g = new('names2', sram=sram)              # kept after a power cycle
     g.title()
     g.menu_to(g.title_items().index(0))
@@ -347,7 +489,7 @@ def test_fastforward():
     g = new('ff', sram=bytes(8192))
     g.new_game()
     g.until(lambda: g.state() == 'WAIT', 2000, 'first wait')
-    while g.w('cur_text') < 8:
+    while g.w('cur_text') < 7:
         g.tap('A', 1, 2)
         g.until(lambda: g.state() in ('WAIT', 'CHOICE'), 2000, 'wait')
     last = g.w('cur_text')         # waiting on it: not read yet
@@ -359,7 +501,9 @@ def test_fastforward():
     g.title()
     sram = finish(g, rec.setdefault('read', {}))
     assert is_read(sram, last - 1) and not is_read(sram, last), 'read marks'
-    g = new('ff2', sram=sram)
+    interrupted = bytearray(sram)
+    interrupted[0x808 + (last >> 3)] |= 1 << (last & 7)  # power lost before the mirror byte
+    g = new('ff2', sram=interrupted)
     g.new_game()
     t0 = g.frame
     g.until(lambda: g.state() in ('TYPE', 'WAIT'), 2000, 'first text')
@@ -508,8 +652,8 @@ def test_coverage():
     return dict(ops=sorted(kinds))
 
 
-TESTS = [test_coverage, test_boot, test_corrupt, test_endings, test_endings_list, test_save_load, test_names, test_fastforward, test_speed,
-         test_effects]
+TESTS = [test_coverage, test_boot, test_corrupt, test_endings, test_endings_list, test_save_load, test_recovery,
+         test_names, test_fastforward, test_speed, test_effects]
 
 
 def main():

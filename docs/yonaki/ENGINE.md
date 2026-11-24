@@ -86,17 +86,55 @@ script (ops never cross a bank; a bank ends with GOTO to the next), resume table
 address), pictures (48 KiB each, 2 KiB rows that never cross a bank), palettes, silhouette masks (16 bytes a
 tile: 8 × (cover, rim)), the SPC image.  The ROM size is rounded up to 512 KiB / 1 / 2 / 4 MiB.
 
-SRAM (8 KiB at `$70:0000`, all little-endian, every block with a 16-bit sum and its complement):
+## Save format and recovery
 
-| offset | content |
+SRAM is 8 KiB at `$70:0000`. Words and long values are little-endian. Version 2 uses the following layout.
+
+| Offset | Content |
 |---|---|
-| `$0000` | global: "YNKG", version, text speed, endings seen (32 bits), global flags (32 bits), the names (+16, 20 bytes), sum at +252 |
-| `$0100/$0200/$0300` | bookmarks 1–3: "YNKS", version, build id, kind (1 paragraph / 2 choice), text or choice id, paragraph to redraw before a choice, picture, song, chapter, dark, ripple, ambience, 4 silhouette slots, 512 local flags, the names (+128), sum at +252 |
-| `$0400` | read marks: "YNKR", build id, one bit per paragraph ($0408–$1FFB, 57 248 paragraphs), sum at $1FFC (kept up to date one bit at a time) |
+| `$0000 / $0400` | Global record primary and mirror |
+| `$0100 / $0500`, `$0200 / $0600`, `$0300 / $0700` | Primary and mirror for bookmarks 1–3 |
+| `$0800–$0807` | Read-mark header: `YR`, version (16 bits), build ID (32 bits) |
+| `$0808–$13F7`, `$1400–$1FEF` | Read-mark bitmaps, one bit per paragraph ID in each copy |
+| `$13F8–$13FF`, `$1FF0–$1FFF` | Reserved. Review ROMs use `$1FF0–$1FF5` for the debug start address. |
 
-At power-on the global block and the read marks are checked (magic, version, sum, ranges, build id for the
-marks) and reset when broken; a bookmark is checked field by field when it is listed and shown as empty when
-broken or made by another build (the build id is a hash of the script and the font).
+Each journal record has `YN` at +0, a logical record number at +2 (0 global, 1–3 bookmarks), version at +4,
+32-bit build ID at +6, 16-bit generation at +48, and CRC-16/CCITT-FALSE (initial value `$FFFF`, polynomial
+`$1021`) at +148 covering bytes +2 through +147. The bytes after the CRC in each 256-byte allocation are reserved.
+
+| Record | Payload |
+|---|---|
+| Global | +10 text speed, +12 endings seen (32 bits), +16 global flags (32 bits), +20 names (20 bytes) |
+| Bookmark | +10 kind (1 paragraph, 2 choice), +12 resume ID, +14 paragraph to redraw for a choice, +16 picture, +18 song, +20 chapter, +22 dark, +24 ripple, +26 ambience, +32 four silhouette slots (four bytes each), +64 local flags (64 bytes), +128 names (20 bytes). Absent paragraph, song, chapter and ambience use `$FFFF`. |
+
+Each update writes the other copy. It first clears the first magic byte, then writes the payload and CRC,
+and commits with a single store of `Y`. The game verifies the result. An earlier valid record stays selectable
+through an interruption before that final store. Loading checks both copies for the marker, version, record
+number, build ID, CRC and field ranges, then uses the newest valid generation. Generations wrap at 65,536.
+For equal generations or a difference of exactly 32,768, the primary wins. If both copies fail validation,
+the game uses default global data or shows that bookmark as empty. Other logical records are independent.
+Names use their existing per-name glyph validation and default substitution.
+
+A paragraph counts as read once its bit is set in both bitmaps. An interruption between the two byte stores
+can leave the current paragraph unread while preserving previously committed bits. A flipped bit in one
+bitmap cannot make an unread paragraph count as read and may make a read paragraph unread. Damage at the
+same bit in both copies can affect that paragraph. A bad read header clears both bitmaps at boot, with
+the header's first magic byte committed only after the clear completes.
+
+Paragraph and choice IDs are sequential indices assigned by the scenario compiler. They resolve through ROM
+tables to VM instructions. The build ID is a truncated SHA-256 over the compiled script, font and saved-index
+mappings. It guards the meaning of indices and glyphs across builds. Version 1 had in-place records with
+additive checksums and no rollback copy. The new format starts with defaults, empty slots and no read marks
+when given an image from that version. Migration would require both a reader for each supported schema and
+stable authored IDs or a mapping for each supported scenario revision. This work covers saves written by the
+new format for the same scenario build. [Issue #5 clarification](https://github.com/takahirox/snes-roms/issues/5#issuecomment-7127624406)
+
+The bookmark payload captures the VM at a paragraph or choice boundary, including local flags and scene state.
+Resumed choices use the current global unlocks. The payload can serve as the starting point for a future
+checkpoint system. Read marks can answer whether a paragraph
+was read, but lose visit order, repeated visits and branch decisions. A future backlog would need an ordered
+visit log. Chapter navigation would need separately defined entry checkpoints with the appropriate flags and
+scene state. The previous journal copy exists for recovery and has no user-facing navigation.
 
 ## Frame protocol and timing
 
@@ -192,8 +230,27 @@ after them a full-width space; other ASCII stays half width (6 px).  Kinsoku: no
 coverage of the fixture, boot with an empty and a random battery, every fixture ending in route order with the
 gated option checked before / after the unlock and おまけ after 3 endings, 結末の一覧, bookmarks at a paragraph
 and at a choice across a power cycle, B fast-forward stopping at unread text, text speed kept in the battery,
-the effects (screenshots of every page), and with `--real` every ending of the real scenario plus the list's
-second page.  Every session must end with no V-blank overrun, no deferred DMA job and no clipped glyph.
-`bsnes.py` replays the traces on bsnes 115 and compares the battery and the screenshots.
+and the effects (screenshots of every page). The save tests compare the resumed scene, local flags, names and
+visible choices. Recovery cases boot from battery images captured before and after real overwrites, with cuts
+after invalidation, during the payload and immediately before commit. They also cover a bad CRC, an invalid
+field with a valid CRC, two unusable copies, a wrapped generation and a read bit stored in only one bitmap.
+With `--real`, `run.py` also plays every ending of the real scenario and opens the ending list's second page.
+Every session must end with no V-blank overrun, no deferred DMA job and no clipped glyph.
+`bsnes.py` replays the traces on bsnes 115 and compares the battery and screenshots. Pass `--real` to include
+the real scenario traces.
 Results: `build/yonaki-test/tests.json`, `build/yonaki-test/bsnes/RESULTS.json`, screenshots in
 `build/yonaki-test/shots/` and `build/yonaki/shots/` (real endings).
+
+### Issue #5 validation
+
+Snes9x 1.63 passed all 11 fixture checks and the real-scenario run, which reached all 20 endings and opened
+the second page of the ending list. There were zero V-blank overruns, deferred DMA jobs or clipped glyphs
+in the checked sessions.
+
+| bsnes 115 replay | Sessions passed | Frames | Screenshots | Battery images matched | Maximum RGB difference |
+|---|---:|---:|---:|---:|---:|
+| Fixture, including save recovery | 30 / 30 | 22,330 | 60 | 30 / 30 | 2 |
+| Real scenario | 21 / 21 | 264,492 | 22 | 21 / 21 | 2 |
+
+The rebuilt 4 MiB ROM differs from the previous release only in LoROM bank 0. The data banks containing
+the scenario bytecode, font, photos, silhouettes and SPC image are byte-identical.
