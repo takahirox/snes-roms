@@ -5,6 +5,7 @@ import { closeSync, copyFileSync, existsSync, mkdirSync, mkdtempSync, openSync, 
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { deflateSync } from "node:zlib";
 
 globalThis.crypto ??= webcrypto;
 
@@ -19,6 +20,20 @@ const write = (name, content) => {
   writeFileSync(path, content);
   return path;
 };
+
+function pngChunk(type, data) {
+  const body = Buffer.concat([Buffer.from(type), data]);
+  let crc = 0xffffffff;
+  for (const byte of body) {
+    crc ^= byte;
+    for (let bit = 0; bit < 8; bit++) crc = (crc >>> 1) ^ ((crc & 1) ? 0xedb88320 : 0);
+  }
+  const length = Buffer.alloc(4);
+  length.writeUInt32BE(data.length);
+  const checksum = Buffer.alloc(4);
+  checksum.writeUInt32BE((~crc) >>> 0);
+  return Buffer.concat([length, body, checksum]);
+}
 
 // Model the browser's staged write over the same files that the real CLI sees.
 function folderHandle(directory, { beforeWrite, beforeClose } = {}) {
@@ -166,6 +181,47 @@ try {
   cli("import-image", nativeEdited, png, "sheet", "new-colors", "--preserve-indices", "--output", importedImage);
   studio.importImage(readFileSync(png), JSON.stringify({ tileset: "sheet", palette: "new-colors", bpp: 4, preserve_indices: true }));
   assert.deepEqual(Buffer.from(studio.save(false)), readFileSync(importedImage));
+
+  // A supported indexed image can expand into more than 64 MiB of canonical JSON.
+  const side = 2048;
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(side, 0);
+  header.writeUInt32BE(side, 4);
+  header[8] = 8;
+  header[9] = 3;
+  const oversized = Buffer.concat([
+    Buffer.from("89504e470d0a1a0a", "hex"),
+    pngChunk("IHDR", header),
+    pngChunk("PLTE", Buffer.from([0, 0, 0])),
+    pngChunk("IDAT", deflateSync(Buffer.alloc(side * (side + 1)))),
+    pngChunk("IEND", Buffer.alloc(0)),
+  ]);
+  const limited = new wasm.Studio(original);
+  assert.equal(limited.apply('[{"op":"name","name":"Redo name"}]'), true);
+  assert.equal(limited.undo(), true);
+  const beforeImport = limited.revision();
+  const limitDiagnostic = [{ severity: "error", code: "invalid_input", path: "", message: "Canonical project manifest exceeds 64 MiB" }];
+  assert.throws(() => limited.importImage(oversized, JSON.stringify({
+    tileset: "large-sheet", palette: "large-colors", bpp: 4, preserve_indices: true,
+  })), (error) => {
+    assert.deepEqual(JSON.parse(error), limitDiagnostic);
+    return true;
+  });
+  assert.equal(limited.revision(), beforeImport);
+  assert.equal(limited.canUndo(), false);
+  assert.equal(limited.canRedo(), true);
+  assert.deepEqual(Buffer.from(limited.save(false)), original);
+  assert.deepEqual(Buffer.from(limited.save(true)), readFileSync(archive));
+  limited.free();
+
+  const oversizedPng = write("oversized-manifest.png", oversized);
+  assert.throws(() => cli("import-image", projectFile, oversizedPng, "large-sheet", "large-colors",
+    "--bpp", "4", "--preserve-indices", "--dry-run"), (error) => {
+    assert.equal(error.status, 2);
+    assert.deepEqual(JSON.parse(error.stderr), { ok: false, diagnostics: limitDiagnostic });
+    return true;
+  });
+  assert.deepEqual(readFileSync(projectFile), original);
 
   const brr = join(temp, "loop.brr");
   cli("export", importedImage, "test-pulse", "brr", brr);

@@ -1,13 +1,21 @@
 use crate::*;
 use serde::Serialize;
-use std::io::{Cursor, Read, Write};
+use std::io::{self, Cursor, Read, Write};
 use zip::write::SimpleFileOptions;
 
 pub fn json<T: Serialize>(value: &T) -> Result<Vec<u8>> {
-    let mut bytes = serde_json::to_vec_pretty(value)
-        .map_err(|error| Error::new("json", "", error.to_string()))?;
-    bytes.push(b'\n');
+    let mut bytes = Vec::new();
+    write_json(&mut bytes, value).map_err(json_error)?;
     Ok(bytes)
+}
+
+fn write_json(mut output: impl Write, value: &impl Serialize) -> serde_json::Result<()> {
+    serde_json::to_writer_pretty(&mut output, value)?;
+    output.write_all(b"\n").map_err(serde_json::Error::io)
+}
+
+fn json_error(error: serde_json::Error) -> Error {
+    Error::new("json", "", error.to_string())
 }
 
 pub fn load_project(bytes: &[u8]) -> Result<Project> {
@@ -73,12 +81,48 @@ fn has_single_zip_entry(directory: &[u8]) -> bool {
         .is_some_and(|rest| !rest.starts_with(b"PK\x01\x02"))
 }
 
+struct ManifestWriter<W> {
+    output: W,
+    remaining: usize,
+}
+
+impl<W: Write> Write for ManifestWriter<W> {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        if bytes.len() > self.remaining {
+            return Err(io::ErrorKind::FileTooLarge.into());
+        }
+        let written = self.output.write(bytes)?;
+        self.remaining -= written;
+        Ok(written)
+    }
+
+    fn flush(&mut self) -> io::Result<()> {
+        self.output.flush()
+    }
+}
+
+fn write_manifest(project: &Project, output: impl Write) -> Result<()> {
+    let writer = ManifestWriter {
+        output,
+        remaining: MAX_PROJECT_BYTES,
+    };
+    write_json(writer, project).map_err(|error| {
+        if error.io_error_kind() == Some(io::ErrorKind::FileTooLarge) {
+            invalid("Canonical project manifest exceeds 64 MiB")
+        } else {
+            json_error(error)
+        }
+    })
+}
+
+pub(crate) fn require_manifest_fits(project: &Project) -> Result<()> {
+    write_manifest(project, io::sink())
+}
+
 pub fn save_project(project: &Project, archive: bool) -> Result<Vec<u8>> {
     require_valid(project)?;
-    let manifest = json(project)?;
-    if manifest.len() > MAX_PROJECT_BYTES {
-        return Err(invalid("Canonical project manifest exceeds 64 MiB"));
-    }
+    let mut manifest = Vec::new();
+    write_manifest(project, &mut manifest)?;
     if !archive {
         return Ok(manifest);
     }
