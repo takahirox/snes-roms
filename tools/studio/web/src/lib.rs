@@ -14,6 +14,7 @@ fn parse<T: serde::de::DeserializeOwned>(text: &str) -> Result<T, JsValue> {
 pub struct Studio {
     editor: studio::Editor,
     clipboard: Option<studio::Selection>,
+    picked_metadata: studio::Metadata,
 }
 
 #[wasm_bindgen]
@@ -24,6 +25,7 @@ impl Studio {
         Ok(Self {
             editor: studio::Editor::new(project),
             clipboard: None,
+            picked_metadata: studio::Metadata::default(),
         })
     }
 
@@ -32,6 +34,7 @@ impl Studio {
         Self {
             editor: studio::Editor::default(),
             clipboard: None,
+            picked_metadata: studio::Metadata::default(),
         }
     }
 
@@ -74,6 +77,76 @@ impl Studio {
 
     pub fn apply(&mut self, edits: &str) -> Result<bool, JsValue> {
         let edits = studio::edits_from_json(edits.as_bytes()).map_err(error)?;
+        self.editor.edit(&edits).map_err(error)
+    }
+
+    #[wasm_bindgen(js_name = putAsset)]
+    pub fn put_asset(&mut self, id: String, kind: &str, data_json: &str) -> Result<bool, JsValue> {
+        let edit = studio::put_asset_from_json(id, kind, data_json).map_err(error)?;
+        self.editor.edit(&[edit]).map_err(error)
+    }
+
+    #[wasm_bindgen(js_name = pickMapCellMetadata)]
+    pub fn pick_map_cell_metadata(
+        &mut self,
+        id: &str,
+        layer: &str,
+        x: u16,
+        y: u16,
+    ) -> Result<String, JsValue> {
+        let rect = studio::Rect {
+            x,
+            y,
+            width: 1,
+            height: 1,
+        };
+        let selection =
+            studio::copy_selection(self.editor.project(), id, layer, rect).map_err(error)?;
+        let cell = selection
+            .cells
+            .into_iter()
+            .next()
+            .flatten()
+            .ok_or_else(|| {
+                error(studio::Error::new(
+                    "invalid_input",
+                    "",
+                    "The active layer has no artwork at the cursor",
+                ))
+            })?;
+        self.picked_metadata = cell.metadata;
+        Ok(serde_json::to_string_pretty(&self.picked_metadata).expect("metadata serializes"))
+    }
+
+    #[wasm_bindgen(js_name = paintMap)]
+    pub fn paint_map(
+        &mut self,
+        edits: &str,
+        metadata_json: Option<String>,
+    ) -> Result<bool, JsValue> {
+        let mut edits = studio::edits_from_json(edits.as_bytes()).map_err(error)?;
+        let metadata = metadata_json
+            .as_deref()
+            .map(studio::metadata_from_edit_json)
+            .transpose()
+            .map_err(error)?;
+        let metadata = metadata.as_ref().unwrap_or(&self.picked_metadata);
+        for edit in &mut edits {
+            match edit {
+                studio::Edit::Place { cell, .. } | studio::Edit::Fill { cell, .. } => {
+                    if let Some(cell) = cell {
+                        cell.metadata.clone_from(metadata);
+                    }
+                }
+                _ => {
+                    return Err(error(studio::Error::new(
+                        "invalid_input",
+                        "",
+                        "Expected map brush edits",
+                    )));
+                }
+            }
+        }
         self.editor.edit(&edits).map_err(error)
     }
 

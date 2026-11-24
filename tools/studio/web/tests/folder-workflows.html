@@ -617,6 +617,94 @@
     byId("undo").click();
     equal(await downloadManifest(), beforeAdd, "Undo restored the original map manifest");
 
+    const selectLayer = (layer) => {
+      const menu = doc.querySelector('#toolbar select:has(option[value="overlay"])');
+      menu.value = layer;
+      menu.dispatchEvent(new browser.Event("change"));
+    };
+    selectLayer("ground");
+    clickButton("inspector", "Earlier");
+    const reordered = await downloadManifest();
+    equal(JSON.parse(reordered).assets.map.data.layers.map(({ id }) => id).join(","), "ground,overlay", "Moved the active layer earlier");
+    equal(reordered.match(/\b1\.0\b/g)?.length, 4, "Reordering preserved map, layer, and cell floats");
+    equal(reordered.match(/-0\.0\b/g)?.length, 4, "Reordering preserved map, layer, and cell negative zeros");
+    clickButton("inspector", "Later");
+    equal(await downloadManifest(), beforeAdd, "Moving the layer later restored the original manifest");
+    selectLayer("overlay");
+    clickButton("inspector", "Remove");
+    const removed = await downloadManifest();
+    equal(JSON.parse(removed).assets.map.data.layers.map(({ id }) => id).join(","), "ground", "Removed the selected layer");
+    equal(removed.match(/\b1\.0\b/g)?.length, 3, "Removing a layer preserved all surviving floats");
+    equal(removed.match(/-0\.0\b/g)?.length, 3, "Removing a layer preserved all surviving negative zeros");
+    for (let i = 0; i < 3; i++) byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo restored the original layer order and metadata");
+
+    clickButton("inspector", "Pick from cursor");
+    equal(control("Cell metadata").value.includes("-0.0"), true, "Displayed the picked negative zero");
+    press("ArrowRight");
+    press("Enter");
+    const picked = await downloadManifest();
+    const pickedCells = JSON.parse(picked).assets.map.data.layers[1].cells;
+    equal(JSON.stringify(pickedCells[4]), JSON.stringify(pickedCells[3]), "Painted a copy of the picked cell");
+    equal(picked.match(/\b1\.0\b/g)?.length, 5, "Painting preserved the picked float");
+    equal(picked.match(/-0\.0\b/g)?.length, 5, "Painting preserved the picked negative zero");
+    const setBrushMetadata = (json) => {
+      const field = control("Cell metadata");
+      field.value = json;
+      field.dispatchEvent(new browser.Event("input"));
+    };
+    setBrushMetadata('{"nested":[1.0,0.0]}');
+    const toolMenu = doc.querySelector('#toolbar select:has(option[value="fill"])');
+    toolMenu.value = "fill";
+    toolMenu.dispatchEvent(new browser.Event("change"));
+    press("Enter");
+    const signedZero = await downloadManifest();
+    equal(signedZero.match(/\b1\.0\b/g)?.length, 5, "Filling preserved the typed float");
+    equal(signedZero.match(/-0\.0\b/g)?.length, 3, "A sign-only fill changed both matching cells");
+    equal(signedZero.match(/(?<!-)\b0\.0\b/g)?.length, 2, "Exported both zeros as positive floating-point values");
+    equal(Object.is(JSON.parse(signedZero).assets.map.data.layers[1].cells[4].metadata.nested[1], 0), true,
+      "Saved the typed positive floating-point zero");
+    byId("undo").click();
+    equal(await downloadManifest(), picked, "Undo restored the picked negative zero");
+    byId("redo").click();
+    equal(await downloadManifest(), signedZero, "Redo restored the sign-only fill");
+    byId("undo").click();
+    byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo removed the painted cell");
+
+    setBrushMetadata('{"overflow":1e400}');
+    press("Enter");
+    equal(byId("status").textContent.includes("number out of range"), true, "The shared parser rejected brush overflow");
+    setBrushMetadata('{"unfinished":');
+    press("Enter");
+    equal(byId("status").classList.contains("error"), true, "The shared parser rejected malformed brush JSON");
+    equal(byId("undo").disabled, true, "The rejected brush edits created no history");
+    equal(await downloadManifest(), beforeAdd, "The rejected brush edits left the manifest unchanged");
+
+    byId("add").click();
+    const assetKind = dialog.querySelector("select");
+    assetKind.value = "map";
+    assetKind.dispatchEvent(new browser.Event("change"));
+    dialog.querySelector("input").value = "new-map";
+    const assetData = dialog.querySelector("textarea");
+    const newMapJson = JSON.stringify(mapData).replaceAll('"float"', "1.0").replaceAll('"negative-zero"', "-0.0");
+    assetData.value = newMapJson.replace("1.0", "1e400");
+    await submitDialog();
+    equal(dialog.open, true, "Asset overflow kept the New asset dialog open");
+    equal(byId("dialog-error").textContent.includes("number out of range"), true, "The shared parser rejected New asset overflow");
+    assetData.value = newMapJson + "{}";
+    await submitDialog();
+    equal(dialog.open, true, "Trailing JSON kept the New asset dialog open");
+    equal(byId("undo").disabled, true, "The rejected asset edits created no history");
+    assetData.value = newMapJson;
+    await submitDialog();
+    equal(dialog.open, false, "Created a map with valid metadata");
+    const newMap = await downloadManifest();
+    equal(newMap.match(/\b1\.0\b/g)?.length, 8, "New asset preserved typed floats throughout the new map");
+    equal(newMap.match(/-0\.0\b/g)?.length, 8, "New asset preserved typed negative zeros throughout the new map");
+    byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo removed the new map");
+
     byId("tools").click();
     dialog.querySelector("select").value = "edits";
     await submitDialog();

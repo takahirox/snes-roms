@@ -1,6 +1,6 @@
-use crate::*;
+use crate::{model::json_values_equal, *};
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
+use serde_json::{Value, value::RawValue};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -51,6 +51,15 @@ pub enum Edit {
     AddMapLayer {
         id: Id,
         layer_id: Id,
+    },
+    MoveMapLayer {
+        id: Id,
+        layer: Id,
+        index: u32,
+    },
+    RemoveMapLayer {
+        id: Id,
+        layer: Id,
     },
     SetMapLayerSettings {
         id: Id,
@@ -120,7 +129,19 @@ pub struct Change {
 }
 
 pub fn edits_from_json(bytes: &[u8]) -> Result<Vec<Edit>> {
+    parse_edit_json(bytes)
+}
+
+fn parse_edit_json<'a, T: Deserialize<'a>>(bytes: &'a [u8]) -> Result<T> {
     serde_json::from_slice(bytes).map_err(|error| Error::new("edit_json", "", error.to_string()))
+}
+
+pub fn put_asset_from_json(id: Id, kind: &str, data_json: &str) -> Result<Edit> {
+    // Require one complete JSON value before embedding it in the asset envelope.
+    let data: &RawValue = parse_edit_json(data_json.as_bytes())?;
+    let kind = serde_json::to_string(kind).expect("asset kind serializes");
+    let asset = parse_edit_json(format!(r#"{{"kind":{kind},"data":{data}}}"#).as_bytes())?;
+    Ok(Edit::Put { id, asset })
 }
 
 pub fn apply(project: &Project, edits: &[Edit]) -> Result<Project> {
@@ -152,7 +173,11 @@ fn diff_value(
     after: Option<&Value>,
     changes: &mut Vec<Change>,
 ) {
-    if before == after {
+    if match (before, after) {
+        (Some(before), Some(after)) => json_values_equal(before, after),
+        (None, None) => true,
+        _ => false,
+    } {
         return;
     }
     match (before, after) {
@@ -185,11 +210,7 @@ pub fn copy_selection(project: &Project, id: &str, layer: &str, rect: Rect) -> R
     let Asset::Map(map) = asset(project, id)? else {
         return Err(invalid("Expected a map"));
     };
-    let layer = map
-        .layers
-        .iter()
-        .find(|item| item.id == layer)
-        .ok_or_else(|| invalid("Map layer does not exist"))?;
+    let layer = &map.layers[layer_index(map, layer)?];
     let mut cells = Vec::new();
     for row in rows(map.width, map.height, rect)? {
         cells.extend_from_slice(
@@ -242,12 +263,30 @@ fn get_asset_mut<'a>(project: &'a mut Project, id: &str) -> Result<&'a mut Asset
         .ok_or_else(|| Error::new("missing_asset", id, "Asset ID does not exist"))
 }
 
+pub fn metadata_from_edit_json(json: &str) -> Result<Metadata> {
+    serde_json::from_str(json)
+        .map_err(|error| Error::new("edit_json", "", format!("Invalid metadata: {error}")))
+}
+
 fn update_metadata(metadata: &mut Metadata, json: Option<&str>) -> Result<()> {
     if let Some(json) = json {
-        *metadata = serde_json::from_str(json)
-            .map_err(|error| Error::new("edit_json", "", format!("Invalid metadata: {error}")))?;
+        *metadata = metadata_from_edit_json(json)?;
     }
     Ok(())
+}
+
+fn map_mut<'a>(project: &'a mut Project, id: &str) -> Result<&'a mut Map> {
+    match get_asset_mut(project, id)? {
+        Asset::Map(map) => Ok(map),
+        _ => Err(invalid("Expected a map")),
+    }
+}
+
+fn layer_index(map: &Map, layer: &str) -> Result<usize> {
+    map.layers
+        .iter()
+        .position(|item| item.id == layer)
+        .ok_or_else(|| invalid("Map layer does not exist"))
 }
 
 fn layer_mut<'a>(
@@ -255,14 +294,9 @@ fn layer_mut<'a>(
     id: &str,
     layer: &str,
 ) -> Result<(u16, u16, &'a mut [Option<Cell>])> {
-    let Asset::Map(map) = get_asset_mut(project, id)? else {
-        return Err(invalid("Expected a map"));
-    };
-    let selected = map
-        .layers
-        .iter_mut()
-        .find(|item| item.id == layer)
-        .ok_or_else(|| invalid("Map layer does not exist"))?;
+    let map = map_mut(project, id)?;
+    let index = layer_index(map, layer)?;
+    let selected = &mut map.layers[index];
     if selected.cells.len() != usize::from(map.width) * usize::from(map.height) {
         return Err(invalid("Map grid does not match its dimensions"));
     }
@@ -312,9 +346,7 @@ fn apply_one(project: &mut Project, edit: &Edit) -> Result<()> {
                 .ok_or_else(|| invalid("Tile does not have 64 pixels"))? = *index;
         }
         Edit::ResizeMap { id, width, height } => {
-            let Asset::Map(map) = get_asset_mut(project, id)? else {
-                return Err(invalid("Expected a map"));
-            };
+            let map = map_mut(project, id)?;
             checked_image(
                 u32::from(*width).saturating_mul(u32::from(map.cell_width) * 8),
                 u32::from(*height).saturating_mul(u32::from(map.cell_height) * 8),
@@ -331,17 +363,13 @@ fn apply_one(project: &mut Project, edit: &Edit) -> Result<()> {
             cell_height,
             metadata_json,
         } => {
-            let Asset::Map(map) = get_asset_mut(project, id)? else {
-                return Err(invalid("Expected a map"));
-            };
+            let map = map_mut(project, id)?;
             map.tileset.clone_from(tileset);
             (map.cell_width, map.cell_height) = (*cell_width, *cell_height);
             update_metadata(&mut map.metadata, metadata_json.as_deref())?;
         }
         Edit::AddMapLayer { id, layer_id } => {
-            let Asset::Map(map) = get_asset_mut(project, id)? else {
-                return Err(invalid("Expected a map"));
-            };
+            let map = map_mut(project, id)?;
             checked_image(
                 u32::from(map.width).saturating_mul(u32::from(map.cell_width) * 8),
                 u32::from(map.height).saturating_mul(u32::from(map.cell_height) * 8),
@@ -353,6 +381,21 @@ fn apply_one(project: &mut Project, edit: &Edit) -> Result<()> {
                 metadata: Metadata::default(),
             });
         }
+        Edit::MoveMapLayer { id, layer, index } => {
+            let map = map_mut(project, id)?;
+            let from = layer_index(map, layer)?;
+            let index = *index as usize;
+            if index >= map.layers.len() {
+                return Err(invalid("Map layer index is out of bounds"));
+            }
+            let layer = map.layers.remove(from);
+            map.layers.insert(index, layer);
+        }
+        Edit::RemoveMapLayer { id, layer } => {
+            let map = map_mut(project, id)?;
+            let index = layer_index(map, layer)?;
+            map.layers.remove(index);
+        }
         Edit::SetMapLayerSettings {
             id,
             layer,
@@ -360,14 +403,9 @@ fn apply_one(project: &mut Project, edit: &Edit) -> Result<()> {
             visible,
             metadata_json,
         } => {
-            let Asset::Map(map) = get_asset_mut(project, id)? else {
-                return Err(invalid("Expected a map"));
-            };
-            let layer = map
-                .layers
-                .iter_mut()
-                .find(|item| &item.id == layer)
-                .ok_or_else(|| invalid("Map layer does not exist"))?;
+            let map = map_mut(project, id)?;
+            let index = layer_index(map, layer)?;
+            let layer = &mut map.layers[index];
             layer.id.clone_from(layer_id);
             layer.visible = *visible;
             update_metadata(&mut layer.metadata, metadata_json.as_deref())?;

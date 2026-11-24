@@ -133,7 +133,7 @@ function selectAsset(id) {
     frame: data?.frames?.[0]?.id,
     layer: data?.layers?.at(-1)?.id,
     brush: item?.kind === "map" ? mapBrushes(project, data)[0]?.[0] ?? "" : Object.keys(project.assets).find((id) => project.assets[id].kind === "tile") ?? "",
-    metadata: {}, palette: "", flipX: false, flipY: false, tool: "paint", paint: 1,
+    metadataJson: "{}", palette: "", flipX: false, flipY: false, tool: "paint", paint: 1,
     grid: ["tile", "map", "metatile"].includes(item?.kind), cursor: { x: 0, y: 0 }, text: "",
   };
   refresh();
@@ -197,6 +197,7 @@ function refresh() {
       state, project, id: selected, commands, guarded, refresh, modal, selectAsset, setMapLayer,
       paletteRgb: palette_rgb, quantizeColor: quantize_color, objSize: obj_size,
       mapMetadata: (layer) => studio.mapMetadata(selected, layer),
+      pickMapCellMetadata: (layer, x, y) => studio.pickMapCellMetadata(selected, layer, x, y),
     }, item);
   } catch (error) {
     if (!diagnostics.some((item) => item.severity === "error")) throw error;
@@ -391,8 +392,15 @@ function brushEdit({ x, y }) {
   }
   const attributes = { palette: state.palette || null, flip_x: state.flipX, flip_y: state.flipY };
   if (kind === "metatile") return { op: "set_metatile_cell", id, x, y, cell: state.brush ? { ...attributes, tile: state.brush } : null };
-  const cell = state.brush ? { ...attributes, asset: state.brush, metadata: state.metadata } : null;
+  const cell = state.brush ? { ...attributes, asset: state.brush } : null;
   return { op: state.tool === "fill" ? "fill" : "place", id, layer: state.layer, x, y, cell };
+}
+
+function applyBrushEdits(edits) {
+  if (project.assets[selected].kind === "map") {
+    const metadataJson = state.brush ? state.metadataJson : "{}";
+    finishEdit(studio.paintMap(JSON.stringify(edits), metadataJson));
+  } else commands(edits);
 }
 
 function addStroke(from, to) {
@@ -442,7 +450,7 @@ canvas.addEventListener("pointerup", (event) => {
   if (event.pointerId !== capture) return;
   const edits = state.tool === "select" ? [] : gesture ? Array.from(gesture.values()) : [brushEdit(state.cursor)];
   endGesture();
-  if (edits.length) guarded(() => commands(edits));
+  if (edits.length) guarded(() => applyBrushEdits(edits));
 });
 canvas.addEventListener("lostpointercapture", (event) => {
   if (event.pointerId === capture) endGesture();
@@ -468,7 +476,7 @@ canvas.addEventListener("keydown", (event) => {
       state.anchor ??= state.cursor;
       selection = rectangle(state.anchor, state.cursor);
       drawOverlay();
-    } else guarded(() => commands([brushEdit(state.cursor)]));
+    } else guarded(() => applyBrushEdits([brushEdit(state.cursor)]));
   } else return;
   event.preventDefault();
 });
@@ -710,7 +718,7 @@ function addAsset() {
   kind.addEventListener("change", () => { data.value = pretty(assetDefaults(project, kind.value)); });
   modal("Add an asset", [["Type", kind], ["Asset ID", id], ["Initial asset data", data]], "Create asset", () => {
     if (Object.hasOwn(project.assets, id.value)) throw new Error("Asset ID already exists");
-    commands([{ op: "put", id: id.value, asset: { kind: kind.value, data: JSON.parse(data.value) } }]);
+    finishEdit(studio.putAsset(id.value, kind.value, data.value));
     selectAsset(id.value);
   });
 }

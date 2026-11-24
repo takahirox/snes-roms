@@ -1,4 +1,4 @@
-import { $, button, checkbox, clone, details, el, field, hex, input, number, pretty, rgb, select, textarea } from "./ui.js";
+import { $, button, checkbox, clone, details, el, field, hex, input, number, pretty, rgb, select } from "./ui.js";
 
 const row = (...children) => el("div", children, { className: "actions" });
 const bitDepths = [2, 4, 8];
@@ -165,29 +165,33 @@ export function inspector(app, asset) {
     const flipY = checkbox(state.flipY);
     flipX.onchange = () => { state.flipX = flipX.checked; };
     flipY.onchange = () => { state.flipY = flipY.checked; };
-    const cellData = textarea(state.metadata, 3);
-    cellData.onchange = () => guarded(() => {
-      const metadata = JSON.parse(cellData.value);
-      if (!metadata || Array.isArray(metadata) || typeof metadata !== "object") throw new Error("Cell metadata must be a JSON object");
-      state.metadata = metadata;
+    const cellData = el("textarea", null, {
+      value: state.metadataJson ?? state.pickedMetadataJson, rows: 3, spellcheck: false,
     });
+    const updateMetadata = () => {
+      // Reuse Rust's copy while the displayed metadata matches the picked cell.
+      state.metadataJson = cellData.value === state.pickedMetadataJson ? undefined : cellData.value;
+    };
+    cellData.addEventListener("input", updateMetadata);
+    cellData.addEventListener("change", updateMetadata);
     const palette = select([...optional, ...palettes()], state.palette, (value) => { state.palette = value; });
     root.append(details("Brush", field("Artwork", selectBrush), field("Subpalette override", palette), field("Flip horizontally", flipX), field("Flip vertically", flipY), field("Cell metadata", cellData),
       button("Pick from cursor", () => guarded(() => {
         const { x, y } = state.cursor;
         const cell = x < data.width && y < data.height ? layer?.cells[y * data.width + x] : null;
         if (!cell) throw new Error("The active layer has no artwork at the cursor");
-        Object.assign(state, { brush: cell.asset, palette: cell.palette ?? "", flipX: cell.flip_x, flipY: cell.flip_y, metadata: cell.metadata ?? {} });
+        const pickedMetadataJson = app.pickMapCellMetadata(layer.id, x, y);
+        Object.assign(state, {
+          brush: cell.asset, palette: cell.palette ?? "", flipX: cell.flip_x, flipY: cell.flip_y,
+          metadataJson: undefined, pickedMetadataJson,
+        });
         refresh();
       }))));
     const visible = checkbox(layer?.visible);
     const layerId = input(layer?.id, { required: true });
     const layerMeta = layer ? metadataField(layer.id, 3) : null;
     const layerIndex = data.layers.indexOf(layer);
-    const moveLayer = (direction) => update((d) => {
-      const other = layerIndex + direction;
-      [d.layers[layerIndex], d.layers[other]] = [d.layers[other], d.layers[layerIndex]];
-    });
+    const moveLayer = (direction) => edit("move_map_layer", { layer: layer.id, index: layerIndex + direction });
     root.append(details("Layers", layer ? form(() => {
       edit("set_map_layer_settings", {
         layer: layer.id, layer_id: layerId.value, visible: visible.checked, metadata_json: changedMetadata(layerMeta),
@@ -204,7 +208,7 @@ export function inspector(app, asset) {
       })),
       button("Earlier", () => guarded(() => moveLayer(-1)), { disabled: layerIndex <= 0 }),
       button("Later", () => guarded(() => moveLayer(1)), { disabled: layerIndex < 0 || layerIndex >= data.layers.length - 1 }),
-      button("Remove", () => guarded(() => update((d) => d.layers.splice(layerIndex, 1))), { disabled: data.layers.length <= 1 }),
+      button("Remove", () => guarded(() => edit("remove_map_layer", { layer: layer.id })), { disabled: data.layers.length <= 1 }),
     )));
     const tileset = choice("tileset", data.tileset);
     const cellWidth = number(data.cell_width, 1, 512);

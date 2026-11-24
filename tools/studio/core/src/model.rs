@@ -10,6 +10,38 @@ pub const MAX_PROJECT_BYTES: usize = 64 * 1024 * 1024;
 pub const MAX_PIXELS: usize = 4 * 1024 * 1024;
 pub const MAX_SAMPLES: usize = 32_000 * 120;
 
+pub(crate) fn json_values_equal(left: &Value, right: &Value) -> bool {
+    match (left, right) {
+        // JSON serialization distinguishes 0.0 and -0.0.
+        (Value::Number(left), Value::Number(right)) if left.is_f64() && right.is_f64() => {
+            left.as_f64().map(f64::to_bits) == right.as_f64().map(f64::to_bits)
+        }
+        (Value::Object(left), Value::Object(right)) => {
+            object_entries_equal(left.iter(), right.iter())
+        }
+        (Value::Array(left), Value::Array(right)) => {
+            left.len() == right.len()
+                && left
+                    .iter()
+                    .zip(right)
+                    .all(|(left, right)| json_values_equal(left, right))
+        }
+        _ => left == right,
+    }
+}
+
+fn object_entries_equal<'a>(
+    left: impl ExactSizeIterator<Item = (&'a String, &'a Value)>,
+    right: impl ExactSizeIterator<Item = (&'a String, &'a Value)>,
+) -> bool {
+    left.len() == right.len()
+        && left
+            .zip(right)
+            .all(|((left_key, left), (right_key, right))| {
+                left_key == right_key && json_values_equal(left, right)
+            })
+}
+
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Project {
@@ -124,7 +156,7 @@ pub struct Tileset {
     pub metatiles: Vec<Id>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Cell {
     pub asset: Id,
@@ -138,7 +170,17 @@ pub struct Cell {
     pub metadata: Metadata,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+impl PartialEq for Cell {
+    fn eq(&self, other: &Self) -> bool {
+        self.asset == other.asset
+            && self.palette == other.palette
+            && self.flip_x == other.flip_x
+            && self.flip_y == other.flip_y
+            && object_entries_equal(self.metadata.iter(), other.metadata.iter())
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Map {
     pub tileset: Id,
@@ -151,7 +193,19 @@ pub struct Map {
     pub metadata: Metadata,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+impl PartialEq for Map {
+    fn eq(&self, other: &Self) -> bool {
+        self.tileset == other.tileset
+            && self.width == other.width
+            && self.height == other.height
+            && self.cell_width == other.cell_width
+            && self.cell_height == other.cell_height
+            && self.layers == other.layers
+            && object_entries_equal(self.metadata.iter(), other.metadata.iter())
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub struct Layer {
     pub id: Id,
@@ -159,6 +213,15 @@ pub struct Layer {
     pub cells: Vec<Option<Cell>>,
     #[serde(default, skip_serializing_if = "BTreeMap::is_empty")]
     pub metadata: Metadata,
+}
+
+impl PartialEq for Layer {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id
+            && self.visible == other.visible
+            && self.cells == other.cells
+            && object_entries_equal(self.metadata.iter(), other.metadata.iter())
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]

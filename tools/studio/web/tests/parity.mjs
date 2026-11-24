@@ -105,6 +105,27 @@ try {
   assert.deepEqual(JSON.parse(cli("copy", nativeEdited, "chromatic-lab", "signals", "4", "4", "2", "2")),
     JSON.parse(studio.copy("chromatic-lab", "signals", clip)));
 
+  const mapSettings = JSON.parse(original).assets["console-grid"].data;
+  const zeroEdit = (zero) => JSON.stringify([{
+    op: "set_map_settings", id: "console-grid", tileset: mapSettings.tileset,
+    cell_width: mapSettings.cell_width, cell_height: mapSettings.cell_height,
+    metadata_json: `{"nested":[${zero}]}`,
+  }]);
+  const positiveZero = write("positive-zero-edit.json", zeroEdit("0.0"));
+  const negativeZero = write("negative-zero-edit.json", zeroEdit("-0.0"));
+  const beforeZero = join(temp, "positive-zero.json");
+  const afterZero = join(temp, "negative-zero.json");
+  cli("edit", projectFile, positiveZero, "--output", beforeZero);
+  cli("edit", beforeZero, negativeZero, "--output", afterZero);
+  const zeroChange = [{ path: "/assets/console-grid/data/metadata/nested/0", before: 0, after: -0 }];
+  assert.deepEqual(JSON.parse(cli("diff", beforeZero, afterZero)).changes, zeroChange);
+  const zeroDryRun = JSON.parse(cli("edit", beforeZero, negativeZero, "--dry-run"));
+  assert.deepEqual(zeroDryRun.changes, zeroChange);
+  const zeroSave = JSON.parse(cli("edit", beforeZero, negativeZero, "--expect", zeroDryRun.revision));
+  assert.deepEqual(zeroSave.changes, zeroChange);
+  assert.notEqual(zeroSave.saved_revision, zeroDryRun.revision);
+  assert.deepEqual(readFileSync(beforeZero), readFileSync(afterZero));
+
   for (const [index, options] of [
     ["chromatic-lab", { format: "png" }],
     ["signals", { format: "png" }],
