@@ -16,7 +16,8 @@ YONAKI_FLAGS="--allow-missing-art --strict" make yonaki
 `tools/yonaki/build.py` options: `--scenario DIR` (default `data/yonaki/scenario`, every `*.txt` sorted by
 name), `--endings FILE` (default: `endings.txt` beside the scenario directory), `--allow-missing-art` (a missing
 background is black, a missing silhouette a plain figure), `--strict` (warnings are errors),
-`--unknown-sound-error`, `--out DIR`, `--omake-endings N` (default 10), `--debug-start` (review builds).
+`--unknown-sound-error`, `--out DIR`, `--omake-endings N` (default 10), `--debug-start` (review builds),
+`--benchmark-assets` (write compression measurements to `assets-benchmark.json`).
 Diagnostics go to stderr and `build/yonaki/report.txt`; `build/yonaki/previews/` has every picture as the SNES
 shows it.  Python needs Pillow and numpy: `python3 -m pip install --target tools/vendor/pylib pillow numpy`
 (the tools add that directory to `sys.path`, so `python3 -I` works).
@@ -35,6 +36,7 @@ Review tools:
 |---|---|
 | `tools/yonaki/script.py` | parser, text normalization, wrapping (kinsoku), checks, VM simulation / routes |
 | `tools/yonaki/build.py` | encoding, bank layout, `const.inc`, `data.inc`, `yonaki.cfg`, `layout.json` |
+| `tools/yonaki/asset_codec.py` | silhouette span encoding, tile dictionaries and compression benchmarks |
 | `tools/yonaki/pictures.py` | photos → 240 colours (112 + their translucent-figure versions where silhouettes appear) + 8bpp tiles; silhouettes → masks (cached in `build/yonaki/cache`) |
 | `tools/yonaki/font.py`, `logo.py` | Shinonome 12-dot glyphs; the title logo |
 | `tools/yonaki/romfix.py` | header checks and checksum |
@@ -82,13 +84,20 @@ WRAM: `$0000-$00FF` direct page, `$0100-$1DFF` variables, `$1E00-$1FFF` stack; `
 (11 520 bytes, tile (c, r) at (r·30 + c)·16); `$7E:5000` BG2 map shadow; `$7E:5800` the bitmap under the
 START menu; `$7F:0000-$BFFF` the photo tiles (silhouettes are composited here).
 
-ROM: LoROM, FastROM ($30), up to 4 MiB; code and tables in bank 0 (`$00:8000`), data banks read at `$81:8000…`.
-Bank order: font (32 bytes a glyph: 12 rows as words, bit 15 leftmost, byte 24 = width; 1024 glyphs a bank),
-script (ops never cross a bank; a bank ends with GOTO to the next), resume tables (text id / choice id → op
-address), pictures (48 KiB each, 2 KiB rows that never cross a bank), palettes, packed silhouette masks and
-the SPC image. Each mask row stores the first covered column and the number of tiles through its last covered
-column, then 16 bytes per tile (8 pairs of cover and rim bytes). An empty row stores two zero bytes. Each
-packed mask fits in one bank. The ROM size is rounded up to 512 KiB / 1 / 2 / 4 MiB.
+LoROM uses FastROM ($30) for data banks starting at `$81:8000`. Code and tables are in bank 0 (`$00:8000`).
+The font, script and SPC image each start at a bank boundary. A full font bank holds 1,024 glyphs of
+32 bytes each, with 12 row words (bit 15 leftmost) and the width at byte 24. Script ops fit within one bank
+and a GOTO links each full script bank to the next. The builder places resume tables, 2 KiB photo rows,
+palettes and packed masks into available bank tails, largest blob first. Each blob fits within one bank.
+The resume tables stay together and map text and choice IDs to op addresses.
+
+Each mask row stores the first covered column and the tile count through its last covered column. An empty
+row stores two zero bytes. Tile data follows the row header as either 16 bytes per tile (eight cover and rim
+pairs) or one index byte per tile. For indexed masks the dictionary follows the last row and the word at
+`SilTable+6` holds its address within the same bank. Zero selects raw spans.
+
+The file size rounds up to 512 KiB, 1 MiB, 2 MiB, 3 MiB or 4 MiB. For a 3 MiB image the header uses
+`$0C` and the checksum counts the upper MiB twice. [Nintendo SNES Development Manual, Book I, pp. 1-2-19 to 1-2-21](https://floating.muncher.se/bot/manual/book1_text.pdf)
 
 ## Save format and recovery
 
@@ -228,10 +237,10 @@ before per-job setup. The fixture's cut and fade use the same forced-blank durat
 holds full white for 38 frames, down from 42, with the same ramp durations. The mosaic sequence takes
 83 frames in both builds. [Snes9x 1.63 DMA timing implementation](https://github.com/snes9xgit/snes9x/blob/1.63/dma.cpp)
 
-Across the 106 production masks, the cached cover and rim bytes pack from 154,512 to 102,732 ROM bytes,
-including row headers. All 106 packed masks decoded byte-for-byte to the original cover and rim data
-in a ROM audit. The builder derives spans from the existing mask cache. This adds 74 bytes of runtime
-variables overall and reduces occupied ROM from 78 to 76 banks within the same 4 MiB image.
+The span renderer packed the 106 production masks from 154,512 to 102,732 ROM bytes, including row headers.
+All 106 packed masks decoded byte-for-byte to the original cover and rim data in a ROM audit. The builder
+derives spans from the existing mask cache. The renderer added 74 bytes of runtime variables overall and
+reduced occupied ROM from 78 to 76 banks within the 4 MiB image.
 
 - **Exact tile runs.** In the three-figure fixture batch the upload spans cover 442 tiles in 20 jobs.
   Exact coverage would use 288 tiles in 49 jobs. That saves 9,856 bytes but requires tracking multiple
@@ -326,6 +335,171 @@ scenarios by any of theirs), shows 終 ("The End"; Noto Serif rendering), the ti
 waits for A and returns to the title.  The title shows おまけ (bonus; jumps to `*omake`) once `--omake-endings`
 endings (10) have been seen.  Chapter cards: `@chapter 序章　霧見沢` — black screen, the part before the first
 full-width space letter-spaced, the rest below; the old picture comes back unless a `@bg` follows.
+
+## ROM asset measurements
+
+Independent reverse-engineering notes on *Kamaitachi no Yoru* describe separate compression for background
+tilesets, tilemaps and silhouettes, with an LZSS variant for name-entry font graphics. Notes on Konami's SFC
+games describe a combination of RLE and LZ-style references. Those examples informed the comparisons below.
+Yonaki uses its own mask format. [Kamaitachi no Yoru research notes](https://github.com/ButThouMust/kamaitachi-sfc-english#graphics-compression-formats) ·
+[Konami SFC compression notes](https://github.com/gocha/sfc-goemon-3-disassembly/blob/main/docs/konami-snes-compression.md)
+
+Run `YONAKI_FLAGS="--benchmark-assets --quiet" make yonaki` to reproduce the codec measurements.
+The input blocks are 2 KiB photo rows, rectangular cached masks and script banks. The PackBits model uses
+packets of up to 128 bytes and repeat runs from length three. Raw DEFLATE at zlib's default level provides
+an LZ77-based size reference. Figures exclude pointer metadata and omit solid photo fills, which use zero
+tile bytes.
+
+| Input | Blocks | Raw bytes | PackBits model | Raw DEFLATE | Stored bytes |
+|---|---:|---:|---:|---:|---:|
+| Photo rows | 1,008 | 2,064,384 | 1,900,482 | 1,673,646 | 2,064,384 |
+| Silhouette masks | 106 | 154,512 | 89,872 | 32,895 | 79,402 |
+| Script banks | 3 | 93,080 | 93,803 | 60,808 | 93,080 |
+
+- **Photos.** All 32,256 stored tiles are distinct. PackBits saves about 8% and can generate 145 packets
+  in one row. Its savings would still leave the payload above 2 MiB. A row decoder could require up to
+  2 KiB of output storage and would add work when restoring selected columns. Raw rows let DMA read a
+  column span directly. A full forced-blank scene change uses six 8 KiB restore slices and three 16 KiB
+  VRAM upload slices.
+- **Masks.** The builder compares each indexed span stream with its raw spans and chooses the dictionary
+  for 96 of 106 production masks. Raw spans handle dictionaries exceeding 256 unique tiles and cases
+  where indexing would use at least as many bytes. The builder round-trips each encoded mask to its
+  original rectangular cover and rim bytes. The compositor reads one index per visited tile for indexed
+  spans, uses two additional WRAM bytes for the cursor and keeps the 12-tile frame quota. A DEFLATE
+  decoder would add a decode step and could use up to 12 KiB of output storage for a full-screen mask.
+- **Script.** PackBits grows the glyph-coded script. Bank-wide DEFLATE would save about 32 KiB with up to
+  32 KiB of output storage and a decode on first access or a bank cache miss. Direct reads preserve random
+  access for VM jumps, lookahead, choices and bookmarks.
+
+| Real scenario ROM category | `main` (`ff5fe48`), bytes | With indexing and bank packing, bytes |
+|---|---:|---:|
+| Code, resident tables and header | 23,770 | 23,815 |
+| Font | 40,992 | 40,992 |
+| Script | 93,080 | 93,080 |
+| Resume tables | 7,587 | 7,587 |
+| Photo rows | 2,064,384 | 2,064,384 |
+| Photo palettes and tint tables | 34,112 | 34,112 |
+| Silhouette masks | 102,732 | 79,402 |
+| SPC image | 48,523 | 48,523 |
+| **Payload** | **2,415,180** | **2,391,895** |
+| Padding inside occupied banks | 75,188 | 32,937 |
+| Whole empty banks | 1,703,936 | 720,896 |
+| **Linked ROM** | **4,194,304** | **3,145,728** |
+
+Indexing saves 23,330 mask bytes (22.7%) beyond the spans already on `main`. The combined changes reduce
+occupied banks from 76 to 74 and select the 3 MiB size tier. `manifest.json` records data payload and
+padding for the packed build, and the linker map records bank 0 payload. The baseline's occupied-bank
+padding includes 605 bytes to align the first photo row. An audit of both linked ROMs recovered
+byte-identical photos, palettes, masks, font, script, resume pointers and SPC image. Mask placements and
+the production save build ID (`2CCE7228`) also matched. The linked packed ROM's SHA-256 is
+`87f7d70d9deafdf3d0881088de6f9466d5a7ac5f31640af24be466d278c9faba`.
+
+### Timing with the scheduler
+
+The timing comparison uses `main` at `ff5fe48` and the packed build with the same save journal and scheduler.
+Snes9x passed all 13 checks on both builds. All 55 traces matched in controller masks and initial and final
+SRAM. All 91 captures matched byte for byte at the same frames. The effects trace took 1,254 frames on each
+build. The packed fixture also loaded the paragraph and choice bookmarks written by the baseline fixture
+after opening a fresh Snes9x session.
+
+Separate copies of the pinned Snes9x 1.63 and bsnes 115 cores logged the beam position on return from NMI.
+The Snes9x probe ran at the end of `Op40Slow`, using the vertical counter and the PPU latch's
+cycle-to-dot conversion. The bsnes probe ran at the end of the S-CPU's `instructionReturnInterrupt`,
+using `vcounter()` and `hdot()` with the accuracy PPU enabled. The probes logged writes that changed
+`INIDISP` bit 7 in `S9xSetPPU` and `PPU::writeIO`. For master-clock timestamps, Snes9x added completed
+scanline lengths to `CPU.Cycles` and bsnes read the S-CPU's clock counter.
+
+Each replay pair used identical recorded pads and initial SRAM, and the final SRAM was checked at the
+replay boundary. The table shows the latest NMI completion while the display was enabled, measured as
+scanline and dot. Every sampled completion was in VBlank.
+
+| Matched trace | Snes9x 1.63 main → packed | bsnes 115 main → packed |
+|---|---:|---:|
+| `effects` | 249:72 → 249:72 | 249:69 → 249:69 |
+| `ending_G02` | 249:72 → 249:72 | 249:69 → 249:69 |
+| `real_C01` | 257:258 → 257:258 | 257:256 → 257:256 |
+| `real_C02` | 257:258 → 257:257 | 257:256 → 257:256 |
+| `real_E06` | 256:326 → 256:326 | 256:322 → 256:321 |
+| `real_list` | 249:72 → 249:72 | 249:69 → 249:69 |
+
+The scene measurements use 1-based frontend frame numbers. First response is the first callback showing
+a change from the frame before the A press. Settled photo is the first callback matching the photo after
+the transition. Both use the sampled photo margins at x 4–17 and 238–251, y 24–199, outside the text.
+The settled reference frames are 1,098 for Old Bath, 879 for Genkan and 1,042 for Lobby. Visible-frame
+results were identical across both cores and revisions. Blanking duration is the number of emulated master
+clocks between the bit 7 set and clear, with NTSC short lines included.
+
+| Scene and trace | A press | First response / settled photo, frames after A | Forced blank, Snes9x main → packed, clocks | Forced blank, bsnes main → packed, clocks |
+|---|---:|---:|---:|---:|
+| Old Bath cut, `ending_G02` | 1,083 | 3 / 15 | 3,543,124 → 3,543,122 | 3,543,126 → 3,543,126 |
+| Bus fade after the timed chapter card, `effects` | — | — | 5,717,858 → 5,717,858 | 5,717,854 → 5,717,854 |
+| Genkan white, `effects` | 808 | 2 / 66 | 0 → 0 | 0 → 0 |
+| Lobby mosaic, `effects` | 954 | 2 / 85 | 3,573,658 → 3,573,656 | 3,573,660 → 3,573,660 |
+
+The Bus photo first appeared on frame 570 and reached full brightness on frame 598 in all four runs.
+
+Run `make yonaki-test` for mask round trips, Snes9x fixture and production tests, and bsnes fixture
+replays. Run `python3 -I tests/yonaki/bsnes.py --real` to include the 21 production replays. On the
+packed build all 55 bsnes replays matched Snes9x's final SRAM and stayed within two RGB levels per
+channel across all 91 captures. Both cores recorded zero VBlank overruns or deferred DMA jobs. Peak
+queued payload was 3,008 bytes for fixture traces and 3,072 bytes for production traces.
+`bsnes.py` unloads after the last recorded pad frame to compare final SRAM and collects the VBlank
+counters from serialized WRAM in a separate replay.
+
+### Automated baseline comparison for issue #1
+
+`make yonaki-test` now runs `tests/yonaki/compare.py` after generating the pad traces and completing the
+stock-core fixture replay. To rerun just the comparison, use `python3 -I tests/yonaki/compare.py` after
+`python3 -I tests/yonaki/run.py --real`. The test exports commit
+`ff5fe48380161e4235ceb41856662f5afc47018e` from the local Git history and rebuilds its fixture and production
+ROMs with the bootstrapped tools. It builds separate probes from the pinned Snes9x 1.63 and bsnes 115
+sources. Each replay starts a fresh process with the same pad masks and initial battery image.
+The JSON report at `build/yonaki-comparison/RESULTS.json` contains the ROM, SRAM, capture and PCM hashes,
+scene frame numbers and transfer measurements for each core and revision.
+
+All 33 recorded captures per core matched across revisions, as did the photo margins at every
+sampled frame. Old Bath cut first responded and settled at
+3 and 15 frames after A, Genkan white at 2 and 66, and Lobby mosaic at 2 and 85. The Bus fade first
+appeared at frame 570 and reached full brightness at frame 598. The test asserts those milestones.
+
+The probes time general PPU DMA channels through completion and check that the whole transfer stays
+in VBlank or forced blank. They measure channel 7 BG1 scroll HDMA payload through completion and check
+that it stays in the same scanline's HBlank. These measurements use the cores' beam counters and
+exclude HDMA table fetches and CPU register writes. Both builds hit a 3,072-byte visible DMA frame
+in `real_E06` and a 450-byte ripple HDMA frame in `effects` and `real_E06`.
+
+| Trace and core | Visible DMA peak, bytes | Last completion at the peak, baseline → packed (scanline / clock) | Ripple payload window, master clocks |
+| --- | ---: | --- | --- |
+| `effects`, Snes9x | 3,008 | 246 / 54 → 246 / 54 | 1124–1168 |
+| `effects`, bsnes | 3,008 | 246 / 48 → 246 / 48 | 1120–1148 |
+| `real_E06`, Snes9x | 3,072 | 245 / 804 → 245 / 806 | 1124–1170 |
+| `real_E06`, bsnes | 3,072 | 245 / 804 → 245 / 804 | 1112–1148 |
+
+The latest visible DMA completion across these traces was on line 255, at clock 758 on Snes9x and
+748 on bsnes, on both revisions. Both cores recorded zero VBlank overruns, deferred DMA jobs and
+out-of-window transfers in the comparison.
+
+Native stereo PCM matched byte for byte within each core, including the fixture bell, rain and music
+in `effects` and the production routes E06 and E13. The table gives the equal sample-frame counts
+and SHA-256 prefixes for the baseline and packed recordings. Snes9x delivered 32,040 Hz and bsnes
+delivered 48,000 Hz.
+
+| Trace | Snes9x sample frames | Snes9x hash prefix | bsnes sample frames | bsnes hash prefix |
+| --- | ---: | --- | ---: | --- |
+| `effects` | 668,993 | `cb746060d982` | 1,000,800 | `3d004736b788` |
+| `ending_G02` | 766,554 | `9fab73b26b3c` | 1,147,200 | `2cd67c83e16c` |
+| `real_E06` | 7,258,380 | `2fbc34ae6bd8` | 10,872,800 | `9297ff828520` |
+| `real_E13` | 1,010,724 | `18dd9e36e5c6` | 1,512,800 | `1435080e7a12` |
+
+For save compatibility, the baseline starts with empty SRAM, records the production E01 ending and
+its unlock flag, and writes paragraph 58 and choice 1 in separate slots using the game's menu.
+The cold boots carry only that 8 KiB image. Both cores check the restored custom names, speed 2,
+ending and unlock bits, scene state and local flags. Paragraph 58 comes back marked read. Choice 1
+has two options and redraws paragraph 78. The resume captures match and the battery stays byte-identical
+through both loads.
+
+These runs cover the selected replay paths on emulators. Physical cartridge timing and power-off
+persistence were outside the measurements.
 
 ## Build checks
 

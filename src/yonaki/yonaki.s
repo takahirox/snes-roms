@@ -304,6 +304,7 @@ c_row:     .res 2              ; byte offset into sil_spans
 c_ty:      .res 2
 c_start:   .res 2
 c_next:    .res 2              ; offset of the next packed mask row
+c_idx:     .res 2              ; offset of the next tile index, or 0 for raw spans
 c_dest:    .res 2              ; WRAM photo byte offset of the current tile
 c_left:    .res 2
 c_n:       .res 2

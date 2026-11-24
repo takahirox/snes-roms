@@ -8,18 +8,26 @@ p = pathlib.Path(sys.argv[1])
 rom = bytearray(p.read_bytes())
 H = 0x7FC0
 size = 1024 << rom[H + 0x17]
-assert len(rom) == size, f'size {len(rom)} (header says {size}; no 512-byte copier header)'
+mirrored_tail = len(rom) == 0x300000 and size == 0x400000
+assert len(rom) == size or mirrored_tail, f'size {len(rom)} (header says {size}; no 512-byte copier header)'
 assert rom[H:H + 21] == b'YONAKIGANE           ', rom[H:H + 21]
 assert rom[H + 0x15] == 0x30, 'map mode must be LoROM + FastROM ($30)'
 assert rom[H + 0x16] == 0x02, 'cartridge type must be ROM + RAM + battery ($02)'
 assert rom[H + 0x18] == 0x03, 'SRAM size byte must be $03 (8 KiB)'
+
+
+def checksum():
+    # The 24-Mbit LoROM mapping repeats its upper 8 Mbit to fill the 32-Mbit address space.
+    return (sum(rom) + (sum(rom[0x200000:]) if mirrored_tail else 0)) & 0xFFFF
+
+
 rom[H + 0x1C:H + 0x20] = b'\xff\xff\x00\x00'
-s = sum(rom) & 0xFFFF
+s = checksum()
 rom[H + 0x1E] = s & 0xFF
 rom[H + 0x1F] = s >> 8
 rom[H + 0x1C] = (s ^ 0xFFFF) & 0xFF
 rom[H + 0x1D] = (s ^ 0xFFFF) >> 8
-assert sum(rom) & 0xFFFF == s
+assert checksum() == s
 p.write_bytes(rom)
 reset = rom[0x7FFC] | rom[0x7FFD] << 8
 nmi = rom[0x7FEA] | rom[0x7FEB] << 8
