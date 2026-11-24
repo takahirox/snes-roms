@@ -82,6 +82,16 @@ impl Studio {
         studio::export(self.editor.project(), id, &parse(options)?).map_err(error)
     }
 
+    #[wasm_bindgen(js_name = audioPreviewPcm)]
+    pub fn audio_preview_pcm(&self, id: &str) -> Result<Vec<f32>, JsValue> {
+        let sample = studio::audio_preview(self.editor.project(), id).map_err(error)?;
+        Ok(sample
+            .pcm
+            .into_iter()
+            .map(|value| f32::from(value) / 32_768.0)
+            .collect())
+    }
+
     pub fn preview(
         &self,
         id: &str,

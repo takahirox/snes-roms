@@ -243,6 +243,10 @@ try {
   const failingFolder = folderHandle(newDirectory, { beforeWrite() { throw failedWrite; } });
   await assert.rejects(saveFolderManifest(failingFolder, original, null), failedWrite);
   assert.deepEqual(readdirSync(newDirectory), []);
+  const controller = new AbortController();
+  const canceledFolder = folderHandle(newDirectory, { beforeWrite() { controller.abort(); } });
+  await assert.rejects(saveFolderManifest(canceledFolder, original, null, { signal: controller.signal }), { name: "AbortError" });
+  assert.deepEqual(readdirSync(newDirectory), []);
   const newFolder = folderHandle(newDirectory);
   const newManifest = join(newDirectory, "studio.json");
   assert.equal(await saveFolderManifest(newFolder, original, null), undefined);

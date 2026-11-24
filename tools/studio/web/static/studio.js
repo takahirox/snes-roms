@@ -57,29 +57,35 @@ async function guarded(callback) {
   }
 }
 
-function modal(title, fields, label, submit, extra) {
+function modal(title, fields, label, submit, extra, onCancel) {
   const heading = el("h2", title, { id: "dialog-title" });
+  const cancel = button(submit ? "Cancel" : "Close", (event) => {
+    onCancel?.(event);
+    if (!event.defaultPrevented) dialog.close();
+  });
+  const apply = submit ? button(label, null, { className: "primary", type: "submit" }) : null;
   const actions = el("div", [
     extra instanceof HTMLButtonElement ? extra : null,
-    button(submit ? "Cancel" : "Close", () => dialog.close()),
-    submit ? button(label, null, { className: "primary", type: "submit" }) : null,
+    cancel, apply,
   ], { className: "actions" });
   form.replaceChildren(heading,
     extra instanceof HTMLButtonElement ? null : extra,
     ...fields.map(([label, node]) => field(label, node)),
     el("p", "", { id: "dialog-error", role: "alert" }), actions);
   dialog.setAttribute("aria-labelledby", heading.id);
+  dialog.oncancel = onCancel ?? null;
   form.onsubmit = async (event) => {
     event.preventDefault();
     if (!submit) { dialog.close(); return; }
+    if (apply.disabled) return;
     $("dialog-error").textContent = "";
-    const apply = actions.querySelector("[type=submit]");
     apply.disabled = true;
     if (await guarded(() => submit(fields.map((item) => item[1])))) {
       if (form.firstElementChild === heading) dialog.close();
     } else if (form.firstElementChild === heading) apply.disabled = false;
   };
   if (!dialog.open) dialog.showModal();
+  return { cancel, apply };
 }
 
 function dataChanged() {
@@ -450,12 +456,54 @@ function history(forward) {
 }
 
 function playAudio() {
+  const { kind, data } = project.assets[selected];
+  if (kind === "sample" && data.loop_start != null) {
+    playSampleLoop(data);
+    return;
+  }
   const bytes = studio.export(selected, JSON.stringify({ format: "wav" }));
   const url = URL.createObjectURL(new Blob([bytes], { type: "audio/wav" }));
   const audio = el("audio", null, { src: url, controls: true });
-  dialog.addEventListener("close", () => { audio.pause(); URL.revokeObjectURL(url); }, { once: true });
   modal(`Play ${selected}`, [], null, null, audio);
+  stopAudioOnClose(audio, () => { audio.pause(); URL.revokeObjectURL(url); });
   audio.play().catch(() => {});
+}
+
+function stopAudioOnClose(control, stop) {
+  dialog.addEventListener("close", function cleanup() {
+    // A queued close event can belong to the previous use of the dialog.
+    if (dialog.open && form.contains(control)) return;
+    dialog.removeEventListener("close", cleanup);
+    stop();
+  });
+}
+
+function playSampleLoop(sample) {
+  const pcm = studio.audioPreviewPcm(selected);
+  const playback = new AudioContext();
+  try {
+    // Store one buffer frame per authored PCM sample, even at rates that
+    // AudioBuffer does not accept. The source rate restores the authored timing.
+    const buffer = playback.createBuffer(1, pcm.length, playback.sampleRate);
+    buffer.copyToChannel(pcm, 0);
+    const source = playback.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = sample.sample_rate / buffer.sampleRate;
+    source.loop = true;
+    source.loopStart = sample.loop_start / buffer.sampleRate;
+    source.connect(playback.destination);
+
+    const toggle = button(playback.state === "running" ? "Pause" : "Play", () => guarded(() =>
+      playback.state === "running" ? playback.suspend() : playback.resume()));
+    playback.onstatechange = () => { toggle.textContent = playback.state === "running" ? "Pause" : "Play"; };
+    source.start();
+    modal(`Play ${selected}`, [], null, null, toggle);
+    stopAudioOnClose(toggle, () => { void playback.close(); });
+    playback.resume().catch(() => {});
+  } catch (error) {
+    void playback.close();
+    throw error;
+  }
 }
 
 function checkReplace() {
@@ -494,7 +542,7 @@ async function openFolder() {
   if (canReplace()) load(content, { folder, revision: fingerprint(content) });
 }
 
-async function saveFolder(asNew) {
+async function saveFolder(asNew, options) {
   if (!window.showDirectoryPicker) throw new Error("Folder access is unavailable here. Download JSON or ZIP instead.");
   const saveSequence = ++folderSaveSequence;
   const savingStudio = studio;
@@ -502,7 +550,7 @@ async function saveFolder(asNew) {
   const content = savingStudio.save(false);
   const expected = asNew ? null : diskRevision;
   const folder = asNew ? await window.showDirectoryPicker({ mode: "readwrite" }) : directory;
-  const warning = await saveFolderManifest(folder, content, expected);
+  const warning = await saveFolderManifest(folder, content, expected, options);
   if (studio !== savingStudio || saveSequence < completedFolderSave) return;
   completedFolderSave = saveSequence;
   directory = folder;
@@ -522,13 +570,31 @@ function saveProject() {
     ...(directory ? [["folder", `Save in ${directory.name}`]] : []),
   ];
   const mode = select(options, directory ? "folder" : "zip");
-  modal("Save project", [["Destination", mode]], "Save", async () => {
-    if (mode.value.endsWith("folder")) await saveFolder(mode.value === "new-folder");
-    else {
+  let pendingSave;
+  const { cancel, apply } = modal("Save project", [["Destination", mode]], "Save", async () => {
+    if (mode.value.endsWith("folder")) {
+      pendingSave = new AbortController();
+      try {
+        await saveFolder(mode.value === "new-folder", {
+          signal: pendingSave.signal,
+          beginCommit() {
+            cancel.disabled = true;
+            apply.textContent = "Saving…";
+          },
+        });
+      } finally {
+        pendingSave = undefined;
+        cancel.disabled = false;
+        apply.textContent = "Save";
+      }
+    } else {
       const archive = mode.value === "zip";
       download(studio.save(archive), archive ? "studio-project.zip" : "studio.json", archive ? "application/zip" : "application/json");
       status(archive ? "Downloaded project ZIP" : "Downloaded studio.json");
     }
+  }, undefined, (event) => {
+    if (cancel.disabled) event.preventDefault();
+    else pendingSave?.abort();
   });
 }
 

@@ -2,7 +2,8 @@
 <html lang="en">
 <meta charset="utf-8">
 <title>Studio project workflow regressions</title>
-<!-- After web/build.sh, serve tools/studio over localhost and open /web/tests/folder-workflows.html. -->
+<!-- After web/build.sh, serve tools/studio over localhost and open /web/tests/folder-workflows.html.
+     Launch Chrome with --autoplay-policy=no-user-gesture-required for the scripted playback tests. -->
 <pre id="result" data-result="running">Running…</pre>
 <iframe id="workbench" title="Studio under test"></iframe>
 <script type="module">
@@ -22,7 +23,7 @@
     if (actual !== expected) throw new Error(`${description}: expected ${expected}, got ${actual}`);
   }
 
-  function folder(name, content, { beforeRead, beforeWrite } = {}) {
+  function folder(name, content, { beforeRead, beforeWrite, beforeClose, onAbort } = {}) {
     const files = new Map(content ? [["studio.json", content]] : []);
     return {
       name, files,
@@ -44,8 +45,8 @@
             let pending;
             return {
               async write(bytes) { await beforeWrite?.(); pending = bytes; },
-              async close() { files.set(key, pending); },
-              async abort() {},
+              async close() { await beforeClose?.(); files.set(key, pending); },
+              async abort() { pending = undefined; onAbort?.(); },
             };
           },
         };
@@ -94,7 +95,7 @@
       if (result.dataset.result === "failed") throw new Error(byId("status").textContent);
     }
 
-    const project = (name) => new TextEncoder().encode(JSON.stringify({ version: 1, name, assets: {} }));
+    const project = (name, assets = {}) => new TextEncoder().encode(JSON.stringify({ version: 1, name, assets }));
     const savedName = (directory) => JSON.parse(new TextDecoder().decode(directory.files.get("studio.json"))).name;
     const open = (directory) => { picks.push(directory); return byId("directory").onclick(); };
     const submitDialog = () => byId("dialog-content").onsubmit(new iframe.contentWindow.Event("submit"));
@@ -227,7 +228,109 @@
     await submitDialog();
     equal(byId("status").textContent, "Saved studio.json in newer-save", "Next save used the newer destination's fingerprint");
 
-    report("passed", "Studio project workflow regressions passed.");
+    let stagedWrite = gate();
+    let committing;
+    let abortedWrites = 0;
+    const originalManifest = project("Project before Cancel");
+    const destinationFolder = folder("cancel-save", originalManifest, {
+      beforeWrite: () => stagedWrite?.pause(),
+      beforeClose: () => committing?.pause(),
+      onAbort: () => { abortedWrites++; },
+    });
+    await open(destinationFolder);
+    rename("Edited before Cancel");
+    const dialog = byId("dialog");
+    const cancelButton = () => dialog.querySelector("button[type=button]");
+    byId("save").click();
+    const canceledSave = submitDialog();
+    await stagedWrite.entered;
+    equal(cancelButton().textContent, "Cancel", "Found the save dialog's Cancel button");
+    equal(cancelButton().disabled, false, "Cancel was available while the write was staged");
+    cancelButton().click();
+    equal(dialog.open, false, "Cancel closed the save dialog");
+    stagedWrite.resume();
+    await canceledSave;
+    equal(abortedWrites, 1, "Cancel aborted the staged writable");
+    equal(destinationFolder.files.get("studio.json"), originalManifest, "Cancel preserved the on-disk manifest");
+    equal(destinationFolder.files.size, 1, "Cancel removed the save marker");
+    equal(byId("project-title").textContent, "Edited before Cancel · Edited", "Canceled edits stayed unsaved");
+
+    stagedWrite = undefined;
+    committing = gate();
+    byId("save").click();
+    const committedSave = submitDialog();
+    await committing.entered;
+    equal(cancelButton().disabled, true, "Cancel was disabled once commit began");
+    equal(dialog.querySelector("button[type=submit]").textContent, "Saving…", "The dialog showed commit progress");
+    cancelButton().click();
+    dialog.requestClose();
+    equal(dialog.open, true, "A dismissal request could not close the dialog during commit");
+    committing.resume();
+    await committedSave;
+    equal(savedName(destinationFolder), "Edited before Cancel", "Retry committed the edited manifest");
+    equal(byId("project-title").textContent, "Edited before Cancel", "Commit marked the edit saved");
+
+    const sampleRate = 32000;
+    const loopStart = sampleRate / 10;
+    const pcm = [...Array(loopStart).fill(-8192), ...Array(loopStart).fill(16384)];
+    const audioPreview = (loop_start) => ({ kind: "sample", data: { sample_rate: sampleRate, pcm, loop_start } });
+    await open(folder("audio-preview", project("Audio preview", {
+      "one-shot": audioPreview(null),
+      "with-loop": audioPreview(loopStart),
+    })));
+    const play = (id) => {
+      Array.from(byId("assets").querySelectorAll("button")).find((node) => node.textContent === id).click();
+      Array.from(byId("toolbar").querySelectorAll("button")).find((node) => node.textContent === "Play audio").click();
+    };
+    const browser = iframe.contentWindow;
+    const AudioContext = browser.AudioContext;
+    let playback;
+    let source;
+    let analyser;
+    browser.AudioContext = class extends AudioContext {
+      constructor() {
+        super({ sinkId: { type: "none" } });
+        playback = this;
+      }
+      createBufferSource() {
+        source = super.createBufferSource();
+        analyser = this.createAnalyser();
+        source.connect(analyser);
+        return source;
+      }
+    };
+    try { play("with-loop"); } finally { browser.AudioContext = AudioContext; }
+    equal(source?.loop, true, "Sample with a loop point used looping playback");
+    const loopSeconds = source.loopStart / source.playbackRate.value;
+    if (Math.abs(loopSeconds - 0.1) > 0.00001) throw new Error(`Unexpected loop start at ${loopSeconds} s`);
+    while (playback.currentTime < 0.35) {
+      if (result.dataset.result === "failed") {
+        throw new Error(`Looping audio stopped at ${playback.currentTime} s (${playback.state})`);
+      }
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    const output = new Float32Array(analyser.fftSize);
+    analyser.getFloatTimeDomainData(output);
+    if (!output.every((value) => Math.abs(value - 0.5) < 0.01)) {
+      throw new Error("Looping playback did not continue with the authored tail");
+    }
+    const closedPlayback = new Promise((resolve) => playback.addEventListener("statechange", () => {
+      if (playback.state === "closed") resolve();
+    }));
+    Array.from(dialog.querySelectorAll("button")).find((node) => node.textContent === "Close").click();
+    await closedPlayback;
+
+    play("one-shot");
+    const audio = dialog.querySelector("audio");
+    equal(audio?.loop, false, "Sample without a loop point used one-shot playback");
+    await new Promise((resolve, reject) => {
+      audio.addEventListener("ended", resolve, { once: true });
+      audio.addEventListener("error", () => reject(audio.error), { once: true });
+    });
+    equal(audio.ended, true, "One-shot preview stopped at the end of the sample");
+    cancelButton().click();
+
+    report("passed", "Studio project and audio workflow regressions passed.");
   } catch (error) {
     report("failed", error.stack);
   } finally {
