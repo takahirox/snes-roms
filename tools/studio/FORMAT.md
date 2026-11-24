@@ -67,6 +67,7 @@ Each entry is an object with a `kind` discriminator and a `data` object.
 | `set_metatile_cell` | Metatile `id`, `x`, `y`, `cell` or `null` |
 | `resize_metatile`, `resize_map` | `id`, `width`, `height` and preserve cells inside the new top-left-anchored bounds |
 | `set_map_settings` | Map `id`, `tileset`, `cell_width`, `cell_height`, and optional `metadata_json` containing a JSON object as text |
+| `add_map_layer` | Map `id` and new `layer_id`. Appends an empty, visible layer. |
 | `set_map_layer_settings` | Map `id`, current `layer` ID, resulting `layer_id`, `visible`, and optional `metadata_json` containing a JSON object as text |
 | `place`, `fill` | Map `id`, `layer` ID, `x`, `y`, `cell` or `null`. Fill follows four-way neighbors identical to the starting cell, including its metadata. |
 | `paste` | Map `id`, `layer` ID, destination `x`, `y`, `selection` with `width`, `height` and row-major `cells`. The full selection must fit. |

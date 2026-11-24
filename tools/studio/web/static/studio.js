@@ -14,7 +14,7 @@ let diskRevision;
 let folderSaveSequence = 0;
 let completedFolderSave = 0;
 let playing = 0;
-let clipboard;
+let clipboardSize;
 let gesture;
 let capture;
 let selection;
@@ -106,7 +106,15 @@ function dataChanged() {
 }
 
 function commands(edits) {
-  if (studio.apply(JSON.stringify(edits))) {
+  applyJsonEdits(JSON.stringify(edits));
+}
+
+function applyJsonEdits(json) {
+  finishEdit(studio.apply(json));
+}
+
+function finishEdit(changed) {
+  if (changed) {
     stopAnimation();
     dataChanged();
     status("Edit applied");
@@ -145,7 +153,7 @@ function load(bytes, { initial = false, folder = null, revision = null } = {}) {
   diagnostics = JSON.parse(studio.diagnostics());
   cleanRevision = studio.revision();
   dirty = false;
-  clipboard = null;
+  clipboardSize = null;
   selectAsset(initial ? "chromatic-lab" : Object.keys(project.assets).find((id) => project.assets[id].kind === "map") ?? Object.keys(project.assets)[0]);
   if (diagnostics.some((item) => item.severity === "error")) status("Loaded with errors. See Validation for details.", true);
   else status(diagnostics.length ? `Loaded · ${diagnostics.length} diagnostics` : initial ? "Demo loaded" : "Project ready");
@@ -221,7 +229,7 @@ function toolbar(item) {
       refresh();
     }), options("Tool", [["paint", "Paint"], ["fill", "Fill"], ["select", "Select"]],
       state.tool, (tool) => { endGesture(); state.tool = tool; drawOverlay(); }),
-    button("Copy", () => guarded(copy)), button("Paste", () => guarded(paste), { disabled: !clipboard }));
+    button("Copy", () => guarded(copy)), button("Paste", () => guarded(paste), { disabled: !clipboardSize }));
   }
   if (kind === "sprite") {
     if (!data.frames.some((frame) => frame.id === state.frame)) state.frame = data.frames[0]?.id;
@@ -467,14 +475,16 @@ canvas.addEventListener("keydown", (event) => {
 
 function copy() {
   const rect = selection ?? rectangle(state.cursor, state.cursor);
-  clipboard = JSON.parse(studio.copy(selected, state.layer, JSON.stringify(rect)));
+  studio.copyToClipboard(selected, state.layer, JSON.stringify(rect));
+  clipboardSize = { width: rect.width, height: rect.height };
   toolbar(project.assets[selected]);
   status(`Copied ${rect.width}×${rect.height} cells from ${state.layer}`);
 }
 function paste() {
-  if (!clipboard) return;
-  commands([{ op: "paste", id: selected, layer: state.layer, ...state.cursor, selection: clipboard }]);
-  selection = rectangle(state.cursor, { x: state.cursor.x + clipboard.width - 1, y: state.cursor.y + clipboard.height - 1 });
+  if (!clipboardSize) return;
+  const { x, y } = state.cursor;
+  finishEdit(studio.pasteFromClipboard(selected, state.layer, x, y));
+  selection = rectangle(state.cursor, { x: x + clipboardSize.width - 1, y: y + clipboardSize.height - 1 });
   drawOverlay();
 }
 
@@ -734,7 +744,7 @@ function toolsMenu() {
       case "sample": sampleDialog(); break;
       case "edits": {
         const edits = textarea([], 10);
-        modal("Apply JSON edits", [["Edit array", edits]], "Apply edits", () => commands(JSON.parse(edits.value))); break;
+        modal("Apply JSON edits", [["Edit array", edits]], "Apply edits", () => applyJsonEdits(edits.value)); break;
       }
       case "rom": romDialog(); break;
       case "rle": codecDialog(); break;

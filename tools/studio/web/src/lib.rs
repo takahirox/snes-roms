@@ -13,6 +13,7 @@ fn parse<T: serde::de::DeserializeOwned>(text: &str) -> Result<T, JsValue> {
 #[wasm_bindgen]
 pub struct Studio {
     editor: studio::Editor,
+    clipboard: Option<studio::Selection>,
 }
 
 #[wasm_bindgen]
@@ -22,6 +23,7 @@ impl Studio {
         let project = studio::load_project(bytes).map_err(error)?;
         Ok(Self {
             editor: studio::Editor::new(project),
+            clipboard: None,
         })
     }
 
@@ -29,6 +31,7 @@ impl Studio {
     pub fn empty() -> Studio {
         Self {
             editor: studio::Editor::default(),
+            clipboard: None,
         }
     }
 
@@ -104,6 +107,41 @@ impl Studio {
         let selection = studio::copy_selection(self.editor.project(), id, layer, parse(rect)?)
             .map_err(error)?;
         Ok(serde_json::to_string(&selection).expect("selection serializes"))
+    }
+
+    #[wasm_bindgen(js_name = copyToClipboard)]
+    pub fn copy_to_clipboard(&mut self, id: &str, layer: &str, rect: &str) -> Result<(), JsValue> {
+        self.clipboard = Some(
+            studio::copy_selection(self.editor.project(), id, layer, parse(rect)?)
+                .map_err(error)?,
+        );
+        Ok(())
+    }
+
+    #[wasm_bindgen(js_name = pasteFromClipboard)]
+    pub fn paste_from_clipboard(
+        &mut self,
+        id: &str,
+        layer: &str,
+        x: u16,
+        y: u16,
+    ) -> Result<bool, JsValue> {
+        let selection = self.clipboard.clone().ok_or_else(|| {
+            error(studio::Error::new(
+                "invalid_input",
+                "",
+                "Clipboard is empty",
+            ))
+        })?;
+        self.editor
+            .edit(&[studio::Edit::Paste {
+                id: id.into(),
+                layer: layer.into(),
+                x,
+                y,
+                selection,
+            }])
+            .map_err(error)
     }
 
     pub fn export(&self, id: &str, options: &str) -> Result<Vec<u8>, JsValue> {

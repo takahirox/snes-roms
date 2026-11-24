@@ -199,7 +199,7 @@ export function inspector(app, asset) {
       button("Add", () => modal("Add map layer", [
         ["Layer ID", input("", { required: true })],
       ], "Add layer", ([newId]) => {
-        update((d) => d.layers.push({ id: newId.value, visible: true, cells: Array(d.width * d.height).fill(null) }));
+        edit("add_map_layer", { layer_id: newId.value });
         setMapLayer(newId.value); refresh();
       })),
       button("Earlier", () => guarded(() => moveLayer(-1)), { disabled: layerIndex <= 0 }),

@@ -588,6 +588,54 @@
     for (let i = 0; i < 3; i++) byId("undo").click();
     equal(byId("project-title").textContent, "Map metadata", "Undid the metadata and settings edits");
 
+    const clickButton = (id, label) => Array.from(byId(id).querySelectorAll("button"))
+      .find((node) => node.textContent === label).click();
+    const press = (key, shiftKey = false) => byId("preview").dispatchEvent(new browser.KeyboardEvent("keydown", { key, shiftKey }));
+    const beforeAdd = await downloadManifest();
+    for (let x = 0; x < 3; x++) press("ArrowRight");
+    clickButton("toolbar", "Copy");
+    addLayer();
+    dialog.querySelector("input").value = "extra-layer";
+    await submitDialog();
+    const withLayer = await downloadManifest();
+    const withLayerData = JSON.parse(withLayer).assets.map.data;
+    const addedLayer = withLayerData.layers[2];
+    equal(addedLayer.id, "extra-layer", "Appended the new layer");
+    equal(addedLayer.visible, true, "The new layer is visible");
+    equal(JSON.stringify(addedLayer.cells), JSON.stringify(Array(10).fill(null)), "The new layer is empty");
+    equal(withLayer.match(/\b1\.0\b/g)?.length, 4, "Adding a layer preserved the floating-point metadata");
+    equal(withLayer.match(/-0\.0\b/g)?.length, 4, "Adding a layer preserved negative zero metadata");
+
+    clickButton("toolbar", "Paste");
+    const withPaste = await downloadManifest();
+    const pastedLayers = JSON.parse(withPaste).assets.map.data.layers;
+    equal(JSON.stringify(pastedLayers[2].cells[3]), JSON.stringify(pastedLayers[1].cells[3]), "Pasted the copied cell into the new layer");
+    equal(withPaste.match(/\b1\.0\b/g)?.length, 5, "Paste preserved the copied floating-point metadata");
+    equal(withPaste.match(/-0\.0\b/g)?.length, 5, "Paste preserved the copied negative zero");
+    byId("undo").click();
+    equal(await downloadManifest(), withLayer, "Undo restored the empty layer and its existing metadata");
+    byId("undo").click();
+    equal(await downloadManifest(), beforeAdd, "Undo restored the original map manifest");
+
+    byId("tools").click();
+    dialog.querySelector("select").value = "edits";
+    await submitDialog();
+    const edits = dialog.querySelector("textarea");
+    edits.value = `[
+      {"op":"name", "name":"Renamed by invalid batch"},
+      {"op":"place", "id":"map", "layer":"ground", "x":3, "y":0,
+        "cell":{"asset":"edge", "metadata":{"overflow":1e400}}}
+    ]`;
+    await submitDialog();
+    equal(dialog.open, true, "An out-of-range number kept the edit dialog open");
+    if (!byId("dialog-error").textContent.includes("number out of range")) {
+      throw new Error(`Expected the shared JSON parser's diagnostic, got ${byId("dialog-error").textContent}`);
+    }
+    equal(byId("project-title").textContent, "Map metadata", "The invalid batch left the project clean");
+    equal(byId("undo").disabled, true, "The invalid batch created no undo entry");
+    cancelButton().click();
+    equal(await downloadManifest(), beforeAdd, "The invalid batch left the exported project unchanged");
+
     await open(folder("stroke-source", mapFixture("Stroke source")));
     const strokeRead = gate();
     const openingStrokeTarget = open(folder("stroke-target", mapFixture("Stroke target"), { beforeRead: strokeRead.pause }));
@@ -618,9 +666,6 @@
     delete preview.releasePointerCapture;
 
     await open(folder("map-bounds", mapFixture("Map bounds")));
-    const clickButton = (id, label) => Array.from(byId(id).querySelectorAll("button"))
-      .find((node) => node.textContent === label).click();
-    const press = (key, shiftKey = false) => byId("preview").dispatchEvent(new browser.KeyboardEvent("keydown", { key, shiftKey }));
     const tool = doc.querySelector('#toolbar select:has(option[value="select"])');
     tool.value = "select";
     tool.dispatchEvent(new browser.Event("change"));

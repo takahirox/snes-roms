@@ -48,6 +48,10 @@ pub enum Edit {
         cell_height: u16,
         metadata_json: Option<String>,
     },
+    AddMapLayer {
+        id: Id,
+        layer_id: Id,
+    },
     SetMapLayerSettings {
         id: Id,
         layer: Id,
@@ -333,6 +337,21 @@ fn apply_one(project: &mut Project, edit: &Edit) -> Result<()> {
             map.tileset.clone_from(tileset);
             (map.cell_width, map.cell_height) = (*cell_width, *cell_height);
             update_metadata(&mut map.metadata, metadata_json.as_deref())?;
+        }
+        Edit::AddMapLayer { id, layer_id } => {
+            let Asset::Map(map) = get_asset_mut(project, id)? else {
+                return Err(invalid("Expected a map"));
+            };
+            checked_image(
+                u32::from(map.width).saturating_mul(u32::from(map.cell_width) * 8),
+                u32::from(map.height).saturating_mul(u32::from(map.cell_height) * 8),
+            )?;
+            map.layers.push(Layer {
+                id: layer_id.clone(),
+                visible: true,
+                cells: vec![None; usize::from(map.width) * usize::from(map.height)],
+                metadata: Metadata::default(),
+            });
         }
         Edit::SetMapLayerSettings {
             id,
