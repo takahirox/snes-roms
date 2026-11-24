@@ -356,17 +356,17 @@ fn render_sequence(project: &Project, sequence: &Sequence) -> Result<Sample> {
             for output in &mut mix[range] {
                 let value = match (&track.voice, sample) {
                     (_, Some((sample, _))) => {
-                        let index = (phase >> 24) as usize;
-                        if let Some(&value) = sample.pcm.get(index) {
-                            i32::from(value)
+                        let index = phase >> 24;
+                        let length = sample.pcm.len() as u64;
+                        let index = if index < length {
+                            index
                         } else if let Some(start) = sample.loop_start {
-                            let start = start as usize;
-                            i32::from(
-                                sample.pcm[start + (index - start) % (sample.pcm.len() - start)],
-                            )
+                            let start = u64::from(start);
+                            start + (index - start) % (length - start)
                         } else {
                             break;
-                        }
+                        };
+                        i32::from(sample.pcm[index as usize])
                     }
                     (Voice::Square, _) => {
                         if phase as u32 & 0x8000_0000 == 0 {

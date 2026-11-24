@@ -1,4 +1,5 @@
 import init, { Studio, fingerprint, inspect_rom, obj_size, palette_rgb, quantize_color, rle } from "./pkg/studio_web.js";
+import { readFileBytes, saveFolderManifest } from "./folder-save.js";
 import { assetDefaults, inspector, mapBrushes, names } from "./inspector.js";
 import { $, button, checkbox, download, el, field, input, message, number, pretty, select, textarea } from "./ui.js";
 
@@ -20,7 +21,6 @@ const canvas = $("preview");
 const context = canvas.getContext("2d");
 const dialog = $("dialog");
 const form = $("dialog-content");
-const maxInput = 66 * 1024 * 1024;
 
 const formats = {
   palette: ["png", "palette"],
@@ -460,17 +460,12 @@ function checkReplace() {
   return !dirty || window.confirm("Discard this session’s edits and open a different project?");
 }
 
-async function bytes(file) {
-  if (file.size > maxInput) throw new Error("Input exceeds 66 MiB");
-  return new Uint8Array(await file.arrayBuffer());
-}
-
 async function openFolder() {
   if (!window.showDirectoryPicker) throw new Error("Folder access is unavailable here. Open studio.json or a project ZIP.");
   if (!checkReplace()) return;
   const folder = await window.showDirectoryPicker({ mode: "readwrite" });
   const handle = await folder.getFileHandle("studio.json");
-  const content = await bytes(await handle.getFile());
+  const content = await readFileBytes(await handle.getFile());
   load(content, { folder, revision: fingerprint(content) });
 }
 
@@ -479,38 +474,13 @@ async function saveFolder(asNew) {
   const savingRevision = studio.revision();
   const content = studio.save(false);
   const folder = asNew ? await window.showDirectoryPicker({ mode: "readwrite" }) : directory;
-  let expected = diskRevision;
-  let handle;
-  if (asNew) {
-    try {
-      await folder.getFileHandle("studio.json");
-      throw new Error("The folder already has a studio.json. Open it first or choose another folder.");
-    } catch (error) {
-      if (error.name !== "NotFoundError") throw error;
-    }
-    handle = await folder.getFileHandle("studio.json", { create: true });
-    expected = fingerprint(new Uint8Array());
-  } else handle = await folder.getFileHandle("studio.json");
-  const ensureUnchanged = async () => {
-    if (fingerprint(await bytes(await handle.getFile())) !== expected) {
-      throw new Error("The folder’s studio.json changed on disk. Export a copy for comparison.");
-    }
-  };
-  await ensureUnchanged();
-  const writable = await handle.createWritable({ mode: "exclusive" });
-  try {
-    await writable.write(content);
-    await ensureUnchanged();
-    await writable.close();
-  } catch (error) {
-    await writable.abort().catch(() => {});
-    throw error;
-  }
+  const warning = await saveFolderManifest(folder, content, asNew ? null : diskRevision);
   directory = folder;
   diskRevision = fingerprint(content);
   cleanRevision = savingRevision;
   dataChanged();
-  status(`Saved studio.json in ${folder.name}`);
+  const saved = `Saved studio.json in ${folder.name}`;
+  status(warning ? `${saved}. ${warning}` : saved, Boolean(warning));
 }
 
 function saveProject() {
@@ -600,7 +570,7 @@ function imageDialog() {
     ["PNG file", file], ["New tileset ID", set], ["Subpalette ID", palette], ["Bit depth", depth],
     ["Preserve PNG indices and create a new subpalette", preserve],
   ], "Import PNG", async () => {
-    studio.importImage(await bytes(file.files[0]), JSON.stringify({
+    studio.importImage(await readFileBytes(file.files[0]), JSON.stringify({
       tileset: set.value, palette: palette.value, bpp: Number(depth.value), preserve_indices: preserve.checked,
     }));
     dataChanged(); selectAsset(set.value); status("PNG imported");
@@ -614,7 +584,7 @@ function sampleDialog() {
   const offset = number("", 0, 2160000);
   rate.required = offset.required = false;
   modal("Import audio sample", [["Audio file", file], ["Asset ID", id], ["Format", format], ["BRR source rate (optional)", rate], ["BRR loop byte offset (optional)", offset]], "Import sample", async () => {
-    studio.importSample(await bytes(file.files[0]), id.value, JSON.stringify(format.value),
+    studio.importSample(await readFileBytes(file.files[0]), id.value, JSON.stringify(format.value),
       rate.value ? rate.valueAsNumber : undefined, offset.value ? offset.valueAsNumber : undefined);
     dataChanged(); selectAsset(id.value); status("Sample imported");
   });
@@ -623,7 +593,7 @@ function romDialog() {
   const file = fileInput(".smc,.sfc,.bin,.rom");
   const mapping = select([["lo_rom", "LoROM"], ["hi_rom", "HiROM"], ["ex_hi_rom", "ExHiROM"]], "lo_rom");
   modal("Inspect ROM header", [["ROM file", file], ["Mapping", mapping]], "Read header", async () => {
-    const header = inspect_rom(await bytes(file.files[0]), JSON.stringify(mapping.value));
+    const header = inspect_rom(await readFileBytes(file.files[0]), JSON.stringify(mapping.value));
     modal("ROM header", [], null, null, el("pre", pretty(JSON.parse(header))));
   });
 }
@@ -633,7 +603,7 @@ function codecDialog() {
   modal("Studio RLE v1", [["File", file], ["Mode", mode]], "Download result", async () => {
     const name = file.files[0].name;
     const decompress = mode.value === "decompress";
-    download(rle(await bytes(file.files[0]), decompress), decompress ? name.replace(/\.srl$/i, "") + ".decoded" : name + ".srl");
+    download(rle(await readFileBytes(file.files[0]), decompress), decompress ? name.replace(/\.srl$/i, "") + ".decoded" : name + ".srl");
     status("Downloaded RLE result");
   });
 }
@@ -660,7 +630,7 @@ $("validation").onclick = () => {
 $("project-file").onchange = (event) => guarded(async () => {
   const [file] = event.target.files;
   event.target.value = "";
-  if (file) load(await bytes(file));
+  if (file) load(await readFileBytes(file));
 });
 window.addEventListener("keydown", (event) => {
   if (dialog.open || !(event.ctrlKey || event.metaKey) || event.target.matches?.("input, textarea, select") || event.key.toLowerCase() !== "z") return;

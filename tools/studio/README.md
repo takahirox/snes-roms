@@ -58,7 +58,7 @@ target/debug/sfc-studio validate /path/to/studio-project.zip
 target/debug/sfc-studio render /path/to/studio-project.zip chromatic-lab /tmp/studio-after.png
 ```
 
-For a shared project folder, the CLI prints the input SHA-256 as `revision` in `validate`. An in-place edit requires that exact fingerprint through `edit --expect SHA256`. Concurrent CLI writers serialize on a sibling lock file and the losing edit reports a conflict. A browser folder save checks the file fingerprint against the bytes read when the folder was opened or last saved. It checks again immediately before closing the write and uses an exclusive writer where supported. An editor outside Studio may still write between a browser or CLI's last read and commit. For an active handoff, export a separate revision and review the diff before replacing the shared manifest. Output paths in the CLI fail if they already exist.
+For a shared project folder, the CLI prints the input SHA-256 as `revision` in `validate`. An in-place edit requires that exact fingerprint through `edit --expect SHA256`. A browser folder save uses the fingerprint from when the project was opened or last saved. Both writers hold a temporary `studio.json.save-*.lock` marker while verifying the fingerprint and committing. An overlapping writer that finds a marker reports a conflict. Review the current manifest or export a separate copy before retrying. If an interrupted save leaves a marker behind, remove it after confirming that the writer has stopped. Use updated Studio clients for this protection. Other editors can still change the manifest concurrently. Output paths in the CLI fail if they already exist.
 
 CLI reports are JSON. Successful write commands for binary files are quiet. `validate` writes diagnostics to stdout for a parsed project, including validation failures. Other failures use stderr. Exit codes are `0` for success, `2` for usage, parse, conversion or validation errors, `3` for I/O errors, and `4` for conflicts. Warnings permit preview and save.
 
@@ -74,7 +74,7 @@ target/debug/sfc-studio rom-header /path/to/image.sfc lo-rom
 
 `core/` exposes the Rust operations. `cli/` handles arguments, file I/O and exit codes. `web/` binds those same operations through `wasm-bindgen`. Its DOM shell handles controls, pointer input, file access and audio playback. The original [Chromatic Lab fixture](fixtures/README.md) exercises each asset type.
 
-Run `./check.sh` with Cargo, Clippy, rustfmt, wasm-pack and Node.js available. It runs native tests, builds the static workbench, and compares its WASM exports, diagnostics, project edits and imports against the production CLI. The test checks byte equality across targets and exercises concurrent CLI saves with a shared expected revision.
+Run `./check.sh` with Cargo, Clippy, rustfmt, wasm-pack and Node.js available. It runs native tests, builds the static workbench, and compares its WASM exports, diagnostics, project edits and imports against the production CLI. The test checks byte equality across targets and exercises conflicts between CLI saves and between browser and CLI saves.
 
 An optional MCP adapter could expose the validated operations and JSON diagnostics to clients that require tool discovery. The CLI already supports deterministic editing, review and conflict handling, so an adapter adds another permission and distribution surface without adding authoring capability to this workflow. Studio uses no model API, AI backend or MCP dependency.
 
