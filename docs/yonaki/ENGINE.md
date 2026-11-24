@@ -7,7 +7,8 @@ build (`tools/yonaki/`) and the tests (`tests/yonaki/`).
 
 ```
 make yonaki          # build/yonaki/yonaki.sfc from data/yonaki/scenario + endings.txt + pictures + sound
-make yonaki-test     # fixture tests + every ending of the real scenario on Snes9x, then the traces on bsnes
+make yonaki-test     # Snes9x fixture and real routes, then bsnes fixture replay
+python3 -I tests/yonaki/bsnes.py --real  # replay fixture and real routes on bsnes
 make yonaki-clean
 YONAKI_FLAGS="--allow-missing-art --strict" make yonaki
 ```
@@ -38,7 +39,8 @@ Review tools:
 | `tools/yonaki/font.py`, `logo.py` | Shinonome 12-dot glyphs; the title logo |
 | `tools/yonaki/romfix.py` | header checks and checksum |
 | `tools/yonaki/audio.py` (+ music, songs, sfx, spc) | the sound driver and music (music agent) |
-| `src/yonaki/yonaki.s` | header, reset, NMI, frame loop, DMA queue, pad, PPU setup |
+| `src/yonaki/yonaki.s` | header, reset, NMI, DMA queue, PPU setup |
+| `src/yonaki/frame.inc` | frame scheduler, wait conditions, pad sampling and carry |
 | `src/yonaki/text.inc` | 2bpp text bitmap: glyphs with shadow, strings, highlight |
 | `src/yonaki/pic.inc` | colour math / effects (Tick), fades, picture loads, silhouette compositing |
 | `src/yonaki/vm.inc` | the script VM (all ops), typewriter, waits, choices |
@@ -138,19 +140,47 @@ was read, but lose visit order, repeated visits and branch decisions. A future b
 visit log. Chapter navigation would need separately defined entry checkpoints with the appropriate flags and
 scene state. The previous journal copy exists for recovery and has no user-facing navigation.
 
-## Frame protocol and timing
+## Frame scheduling
 
-The game is one thread that calls `WaitFrame` once a frame.  `WaitFrame` runs `Tick` (effects → register
-shadows), `PumpUploads` (palette, BG2 map, dirty photo spans, dirty text rows → DMA jobs within 3072 bytes),
-one sound command, then waits for the NMI.  The NMI runs the jobs only when the thread is parked in `WaitFrame`,
-writes the shadows, and records its end line (`nmi_end_line_max`, `vblank_overrun_count`).
+The VM runs opcodes in order until one needs a frame boundary or a blocking wait. Its call stack retains the
+continuation while `WaitEvent` advances frames and checks one named condition. The VM resumes on the frame
+that satisfies the condition. Immediate opcodes can publish several requests during the same frame. Register
+effects use state fields, uploads use dirty flags and a DMA list, and sound uses a FIFO. Each channel keeps
+its existing capacity and ordering.
 
-Long work is cut into frames so no frame overruns and the game takes the same frames on every core: at most
-5 glyphs (`GLYPHS_PER_FRAME`) and 12 silhouette tiles a frame, page clears and ROM→WRAM picture rows (≤ 8 KiB)
-right after a frame starts, the menu's bitmap copy in 8 slices, the boot a fixed 150 frames (the SPC upload
-takes about 103).  Presses made during that paced work are kept for the next input check, except that a
-cursor or a wait mark never takes a press made before it appeared.  The test traces replay frame-identically
-on bsnes 115 (same battery images, same screenshots).
+Every `WaitFrame`, including frames used by menus and long drawing routines, follows the same sequence.
+
+1. Reset the glyph and silhouette work counters, then run `Tick` to advance effects and prepare PPU shadows.
+2. Build DMA jobs from the UI palette, photo palette, tint override, BG2 map, dirty photo spans, and dirty
+   text rows, in that order. Spans and rows are scheduled from top to bottom within each bitmap. Jobs that
+   do not fit the 3072-byte budget remain pending for a later frame.
+3. Pump one command in request order when the SPC is ready. The eight-entry FIFO keeps earlier commands
+   when full. Repeated song or ambience requests for the current selection are coalesced at the producer.
+4. Publish the DMA list and park for NMI. NMI consumes the published jobs, applies the PPU shadows, and
+   records its end line in `nmi_end_line_max` and any overrun in `vblank_overrun_count`.
+5. Sample the pad after auto-joypad read completes, then evaluate the active condition in the main thread.
+
+Long work is paced at 5 glyphs and 12 silhouette tiles per frame. Page clears and ROM-to-WRAM picture loads
+run at the start of a frame, with at most 8 KiB per picture-load slice. The menu bitmap copy runs in eight
+slices. Boot remains fixed at 150 frames, including the SPC upload. `PacedWait` carries newly pressed
+buttons across drawing slices and preserves the input snapshot of its caller. The paragraph wait and choice
+entry flush those carried presses before accepting input. Held buttons and the direction repeat timer
+continue to follow the sampled pad.
+
+### Blocking operations
+
+| Operation | Completion and input |
+|---|---|
+| `TEXT` typewriter | Waits one frame per typing step. An A edge reveals the rest of the text. Held B sets fast-forward for read text. |
+| Paragraph and page-chunk advance | Checks A, held B over read text, then START. The mark blinks while waiting. If fast-forward is active and B is held on entry, the page gets two full frames before advance. |
+| `CHOICE` | Draws the options and flushes drawing input. Checks Up then Down with repeat when there are multiple options, followed by an A edge and a START edge. Menu return resumes the wait. |
+| `PAGE`, `BG`, and silhouette batches | Page clears, forced-blank DMA, and picture compositing use paced frame boundaries. Fades and mosaic use fixed frame steps. Silhouette batches wait for full dim. Streaming waits for dirty flags and the DMA list to drain, with the existing 600-frame watchdog. A white transition waits for colour addition to decay after uploading. |
+| `FX` | Shake waits 24 frames, flash waits for colour addition to reach zero, dark waits for full dim, light waits 40 frames, and ripple changes state immediately. `@fx wait N` completes after N frames or on the first sampled frame with fast-forward active and B held. |
+| `CHAPTER`, `END`, `HALT` | Chapter cards drain uploads and fade in before waiting up to 150 frames for A. Endings keep their 40-frame dim and 90-frame display delay, then wait for A or START before fading out. HALT fades out and returns to the title. |
+
+The bytecode and compiler are shared with the previous runtime. The sound FIFO advances during every wait,
+including two-frame text fast-forward and timed waits. Fast-forward stops on unread text and at choices.
+Entering a menu happens after the active input wait returns, so the menu can run its own frame waits.
 
 Picture changes: `fade` = brightness down (2 frames a step), forced blank, ROM → WRAM rows, composite,
 WRAM → VRAM 16 KiB a frame, brightness up; `cut` = the same without the fades; `white` = colour addition to
@@ -160,6 +190,8 @@ appears. Consecutive `@sil` and `@silclear` ops are batched. A batch dims BG1 to
 figures' tile spans from ROM, composites the new slots in order, and uploads the union of the old and new
 spans before restoring brightness. The engine keeps two 24-entry span tables in WRAM. Each entry is a
 first column and exclusive end column, or zero for an empty row. Full picture loads use full-width spans.
+The upload wait checks the one-word photo flag and the DMA queue. The span cursor can stay at the end of
+the table after the final transfer.
 
 Silhouettes are staged per scene: for each background / character / position the scenario uses, the background
 photo was edited by image generation to hold the person in a fitting pose (sitting in a bus seat behind the seat
@@ -249,6 +281,15 @@ animation could transfer as little as a few CGRAM words, provided it reserves pa
 other uses should animate together. Large moving figures would need measured overlap and DMA budgets
 before choosing a frame rate.
 
+### Future scheduling capabilities
+
+A future concurrent cue could carry a target frame and a script-order sequence number, with waits for a
+specific upload or sound dispatch. DMA admission would still honor the byte budget. The SPC command handoff
+could serve as a dispatch signal, with separate acknowledgement for playback completion. An additional skip
+policy would need to define which cues are delivered, which can be coalesced, and how to reach the same final
+text, graphics and audio state at the next wait. The current scheduler uses one continuation and the existing
+per-channel requests to preserve the timing of the current bytecode.
+
 ## Script VM
 
 Ops (byte code, `tools/yonaki/build.py`): `TEXT id16 lines8 <string>`, `BLANK`, `PAGE`, `BG pic mode`,
@@ -313,24 +354,49 @@ and the effects (screenshots of every page). The save tests compare the resumed 
 visible choices. Recovery cases boot from battery images captured before and after real overwrites, with cuts
 after invalidation, during the payload and immediately before commit. They also cover a bad CRC, an invalid
 field with a valid CRC, two unusable copies, a wrapped generation and a read bit stored in only one bitmap.
+The scheduler fixture drives overlapping sound, text DMA and graphics requests, checks palette, map and row
+ordering, and tests simultaneous input, input flushes and skip timing.
 With `--real`, `run.py` also plays every ending of the real scenario and opens the ending list's second page.
 Every session must end with no V-blank overrun, no deferred DMA job and no clipped glyph.
 `bsnes.py` replays the traces on bsnes 115 and compares the battery and screenshots. Pass `--real` to include
 the real scenario traces.
-Results: `build/yonaki-test/tests.json`, `build/yonaki-test/bsnes/RESULTS.json`, screenshots in
-`build/yonaki-test/shots/` and `build/yonaki/shots/` (real endings).
+`run.py` writes `build/yonaki-test/tests.json` and `bsnes.py` writes `build/yonaki-test/bsnes/RESULTS.json`.
+The drivers save screenshots under `build/yonaki-test/shots/`, `build/yonaki-test/scheduler/shots/`, and
+`build/yonaki/shots/` (real endings).
+
+### Scheduler regression results for issue #4
+
+The scheduler was tested on top of main at `4dbf917`. Snes9x ran with `run.py --real` and
+`bsnes.py` replayed all generated traces.
+
+- **Snes9x 1.63** passed all 12 tests, including all 20 real endings and both pages of the real ending list.
+  The reported maximums were 3072 DMA bytes and NMI end line 257. V-blank overruns, deferred DMA jobs and
+  clipped glyphs were all zero.
+- **bsnes 115** passed all 45 replays, including 24 fixture and 21 real scenario traces. Across 273,127
+  frames, final battery images matched in every replay. The largest RGB channel difference across
+  82 captures was 2 on the 0–255 scale.
+- **Comparison with main** matched all 41 existing Snes9x traces across 271,467 frames, including controller
+  masks, capture frames, all 73 screenshot files, and initial and final battery images. The 75 generated
+  production data banks and 20 fixture data banks matched byte for byte.
+- **Scheduler fixture** sent commands `$41`, `$01` and `$70` on consecutive frames with text DMA and ripple
+  active. The white transition held through all 24 photo row transfers and started clearing as soon as the
+  final DMA job drained, with the span cursor still at the end of the table. Both skip runs reached unread
+  text 120 frames after the fixture driver's new-game setup. Releasing B at the timed wait restored its
+  12-frame duration.
 
 ### Issue #5 validation
 
-Snes9x 1.63 passed all 12 checks on the integrated revision. The 11 fixture checks covered save and recovery,
-and the real-scenario run reached all 20 endings and opened the second page of the ending list. There were
-zero V-blank overruns, deferred DMA jobs or clipped glyphs in the checked sessions.
+Snes9x 1.63 passed all 13 checks, including the save-recovery and scheduler fixtures, all 20 story endings,
+and the second page of the ending list. Across the 54 sessions with timing counters, the maximum queued
+DMA payload was 3,072 bytes and the latest NMI completion was on scanline 257. V-blank overruns, deferred
+DMA jobs and clipped glyphs were all zero.
 
 | bsnes 115 replay | Sessions passed | Frames | Screenshots | Battery images matched | Maximum RGB difference |
 |---|---:|---:|---:|---:|---:|
-| Fixture, including save recovery | 30 / 30 | 21,897 | 60 | 30 / 30 | 2 |
+| Fixture, including save recovery and scheduler | 34 / 34 | 23,549 | 69 | 34 / 34 | 2 |
 | Real scenario | 21 / 21 | 253,765 | 22 | 21 / 21 | 2 |
 
-The 4 MiB release combines the save changes with `main` at `4dbf917`, including its packed silhouette masks
-and span-based DMA. Its SHA-256 is `b58662fb52e0d8dc518a0af811322e4801845278ec8b114ffabb364708e20268`.
-Compared with the ROM previously packaged for PR #12, LoROM banks 0 and 70–77 differ.
+The 4 MiB release combines the save changes with the scheduler from `main` at `2c2fb53`. A clean build
+with a fresh picture cache matched `dist/yonaki.sfc` byte for byte. Its SHA-256 is
+`7dbe3ca4083d141baf13b6404cd5b6035366915527a7f21d1e01f65261e3243b`. Only LoROM bank 0 changed
+from the ROM packaged at PR #12 revision `a486af0`.
