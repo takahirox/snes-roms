@@ -87,9 +87,10 @@ fn has_single_zip_entry(directory: &[u8]) -> bool {
     let Some(lengths) = directory.get(28..34) else {
         return false;
     };
-    let variable_length: usize = lengths
-        .chunks_exact(2)
-        .map(|length| usize::from(u16::from_le_bytes([length[0], length[1]])))
+    let (length_fields, _) = lengths.as_chunks();
+    let variable_length: usize = length_fields
+        .iter()
+        .map(|&length| usize::from(u16::from_le_bytes(length)))
         .sum();
     directory
         .get(CENTRAL_HEADER_BYTES + variable_length..)

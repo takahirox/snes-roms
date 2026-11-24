@@ -684,6 +684,12 @@
     equal(await downloadManifest(), withLayer, "Undo restored the empty layer and its existing metadata");
     byId("undo").click();
     equal(await downloadManifest(), beforeAdd, "Undo restored the original map manifest");
+    byId("redo").click();
+    equal(await downloadManifest(), withLayer, "Redo restored the added layer byte for byte");
+    byId("redo").click();
+    equal(await downloadManifest(), withPaste, "Redo restored the pasted cell and its metadata byte for byte");
+    byId("undo").click();
+    byId("undo").click();
 
     const selectLayer = (layer) => {
       const menu = doc.querySelector('#toolbar select:has(option[value="overlay"])');
@@ -787,6 +793,10 @@
     if (!byId("dialog-error").textContent.includes("number out of range")) {
       throw new Error(`Expected the shared JSON parser's diagnostic, got ${byId("dialog-error").textContent}`);
     }
+    edits.value = '[{"op":"name","name":"Renamed by invalid batch"}]{}';
+    await submitDialog();
+    equal(dialog.open, true, "Trailing JSON kept the edit dialog open");
+    equal(byId("dialog-error").textContent.includes("trailing characters"), true, "The shared parser rejected trailing edit JSON");
     equal(byId("project-title").textContent, "Map metadata", "The invalid batch left the project clean");
     equal(byId("undo").disabled, true, "The invalid batch created no undo entry");
     cancelButton().click();
@@ -868,8 +878,42 @@
     equal(byId("coordinates").textContent, "4, 1  ·  5×2 cells  ·  Selection 2×2", "Extended the selection after expanding the map");
     byId("undo").click();
     equal(byId("coordinates").textContent, "3, 1  ·  4×2 cells  ·  Selection 1×2", "Undo of an expansion clamped the cursor and clipped the selection");
+    byId("undo").click();
 
-    report("passed", "Studio project, file tool, audio, and map workflow regressions passed.");
+    const noteCount = 140_001;
+    await openFile("long-sequence.json", project("Long sequence", {
+      music: { kind: "sequence", data: { usage: "music", bpm: 600, ticks_per_beat: 960, tracks: [{
+        id: "lead", voice: { type: "triangle" },
+        notes: Array.from({ length: noteCount }, (_, tick) => ({ tick, length: 1, pitch: 60, velocity: 96 })),
+      }] } },
+    }));
+    equal(byId("status").textContent, "Project ready", "Opened the large valid sequence");
+    const noteButtons = () => Array.from(byId("inspector").querySelectorAll("fieldset button"))
+      .filter((node) => node.textContent.includes(" · tick "));
+    const pageInput = () => doc.querySelector('#inspector fieldset input[type="number"]');
+    equal(noteButtons().length, 100, "Rendered a bounded first page");
+    clickButton("inspector", "Next page");
+    equal(noteButtons()[0].textContent, "60 · tick 100 · 1 ticks", "Next page started at the next note");
+    pageInput().value = pageInput().max;
+    pageInput().form.requestSubmit();
+    equal(noteButtons().length, 1, "Jumped to the partial last page");
+    noteButtons()[0].click();
+    const noteInput = (label) => Array.from(dialog.querySelectorAll("label"))
+      .find((node) => node.firstElementChild.textContent === label).control;
+    equal(noteInput("Start tick").valueAsNumber, noteCount - 1, "Opened the last note for editing");
+    noteInput("Pitch").value = 72;
+    await submitDialog();
+    equal(byId("status").textContent, "Edit applied", "Applied the edit to the long sequence");
+    equal(noteButtons().length, 1, "Kept the last page after editing");
+    equal(noteButtons()[0].textContent, `72 · tick ${noteCount - 1} · 1 ticks`, "Displayed the edited last note");
+    clickButton("inspector", "Previous page");
+    equal(noteButtons().length, 100, "Returned to the previous full page");
+    const savedNotes = JSON.parse(await downloadManifest()).assets.music.data.tracks[0].notes;
+    equal(savedNotes.length, noteCount, "Exported the full track");
+    equal(savedNotes[0].pitch, 60, "Preserved the first note");
+    equal(savedNotes.at(-1).pitch, 72, "Exported the edited last note");
+
+    report("passed", "Studio project, file tool, audio, map, and large sequence workflow regressions passed.");
   } catch (error) {
     report("failed", error.stack);
   } finally {

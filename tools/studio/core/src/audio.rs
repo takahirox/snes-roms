@@ -61,10 +61,12 @@ pub fn read_wav(bytes: &[u8]) -> Result<Sample> {
                 if pcm.is_some() || !length.is_multiple_of(2) || length / 2 > MAX_SAMPLES {
                     return Err(invalid("Invalid WAV data length"));
                 }
+                let (samples, _) = payload.as_chunks();
                 pcm = Some(
-                    payload
-                        .chunks_exact(2)
-                        .map(|sample| le16(sample) as i16)
+                    samples
+                        .iter()
+                        .copied()
+                        .map(i16::from_le_bytes)
                         .collect::<Vec<_>>(),
                 );
             }
@@ -222,9 +224,10 @@ pub fn read_brr(bytes: &[u8], rate: u32, loop_offset: Option<u32>) -> Result<Sam
             "A looping BRR stream needs an in-range loop byte offset divisible by 9",
         ));
     }
-    let mut pcm = Vec::with_capacity(audio.len() / 9 * 16);
+    let (blocks, _) = audio.as_chunks::<9>();
+    let mut pcm = Vec::with_capacity(blocks.len() * 16);
     let mut history = History::default();
-    for (index, block) in audio.chunks_exact(9).enumerate() {
+    for (index, block) in blocks.iter().enumerate() {
         let header = block[0];
         if (header & 1 != 0) != (index + 1 == bytes.len() / 9) {
             return Err(invalid("BRR end flag must appear on the final block only"));

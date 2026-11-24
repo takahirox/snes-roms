@@ -657,13 +657,8 @@ pub fn import_png(project: &Project, bytes: &[u8], options: &ImageImport) -> Res
                 "Preserving indices needs an indexed PNG and a new palette ID",
             ));
         }
-        let colors: Vec<_> = info
-            .palette
-            .as_deref()
-            .unwrap_or_default()
-            .chunks_exact(3)
-            .map(|entry| bgr555([entry[0], entry[1], entry[2]]))
-            .collect();
+        let (entries, _) = info.palette.as_deref().unwrap_or_default().as_chunks();
+        let colors: Vec<_> = entries.iter().copied().map(bgr555).collect();
         if colors.is_empty() || colors.len() > count {
             return Err(invalid(
                 "PNG palette size does not fit the requested bit depth",

@@ -324,10 +324,31 @@ export function inspector(app, asset) {
     root.append(form(() => update((d) => Object.assign(d, {
       usage: usage.value, bpm: bpm.valueAsNumber, ticks_per_beat: ticks.valueAsNumber,
     })), field("Usage", usage), field("Tempo (BPM)", bpm), field("Ticks per beat", ticks), apply()));
+    const notesPerPage = 100;
+    state.notePages ??= new Map();
     for (const [index, track] of data.tracks.entries()) {
+      const pageCount = Math.max(1, Math.ceil(track.notes.length / notesPerPage));
+      const notes = el("div");
+      const pageInput = number(1, 1, pageCount);
+      const previous = button("Previous page", () => showPage(state.notePages.get(track.id) - 1));
+      const next = button("Next page", () => showPage(state.notePages.get(track.id) + 1));
+      const pager = pageCount > 1 ? form(() => showPage(pageInput.valueAsNumber),
+        field(`Note page (1–${pageCount})`, pageInput),
+        row(previous, button("Go to page", null, { type: "submit" }), next)) : null;
+      showPage(Math.min(state.notePages.get(track.id) ?? 1, pageCount));
       root.append(details(track.id, el("p", `${track.notes.length} notes · ${track.voice.type}`),
         row(button("Edit track", () => trackDialog(track, index)), button("Add note", () => noteDialog(index, null))),
-        ...track.notes.map((note, i) => button(`${note.pitch} · tick ${note.tick} · ${note.length} ticks`, () => noteDialog(index, i)))));
+        pager, notes));
+
+      function showPage(page) {
+        state.notePages.set(track.id, page);
+        pageInput.value = page;
+        previous.disabled = page === 1;
+        next.disabled = page === pageCount;
+        const start = (page - 1) * notesPerPage;
+        notes.replaceChildren(...track.notes.slice(start, start + notesPerPage).map((note, offset) =>
+          button(`${note.pitch} · tick ${note.tick} · ${note.length} ticks`, () => noteDialog(index, start + offset))));
+      }
     }
     root.append(button("Add track", () => trackDialog(null, data.tracks.length)));
     function trackDialog(track, index) {
