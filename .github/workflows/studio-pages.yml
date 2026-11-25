@@ -145,4 +145,9 @@ jobs:
               sleep 30 # Allow the CDN to pick up the new deployment.
             fi
           done
+          printf '%s\n' '### SFC Studio Pages verification failed' '' \
+            "- [Attempted Studio URL]($STUDIO_URL)" \
+            "- [Actions run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)" \
+            '- The smoke checks failed after 10 attempts. See the job logs for details.' \
+            >> "$GITHUB_STEP_SUMMARY"
           exit 1

@@ -4,7 +4,7 @@ SFC Studio is a static browser workbench and native CLI for Super Famicom asset 
 
 ## GitHub Pages
 
-GitHub Pages is configured to publish Studio and its original Chromatic Lab demo at [https://takahirox.github.io/snes-roms/](https://takahirox.github.io/snes-roms/). Live verification is pending the first deployment from `main`.
+GitHub Pages is configured to publish Studio and its original Chromatic Lab demo at [https://takahirox.github.io/snes-roms/](https://takahirox.github.io/snes-roms/). Check the recorded live verification in [Actions run summaries](https://github.com/takahirox/snes-roms/actions/workflows/studio-pages.yml) and [Issue #15](https://github.com/takahirox/snes-roms/issues/15).
 
 The [Pages workflow](../../.github/workflows/studio-pages.yml) runs on changes to Studio or the workflow on `main`. It uses pinned Rust, wasm-pack and Binaryen releases and the Cargo lockfile. It runs `check.sh`, which builds the site with `web/build.sh` and verifies native/WASM parity. The upload contains the browser files from `_site/` and the bundled demo. Asset URLs are relative to the repository's Pages path.
 
@@ -14,13 +14,13 @@ Under **Settings → Pages**, the publishing source is **GitHub Actions**. To re
 gh workflow run studio-pages.yml --repo takahirox/snes-roms --ref main
 ```
 
-The workflow publishes the deployment URL to the `github-pages` environment. The `smoke` job fetches the deployed files over HTTPS, verifies their MIME types and SHA-256 checksums, and runs headless Chromium to load Chromatic Lab, paint a pixel and check the exported JSON. Once these checks pass, the Actions run summary records the verified URL and links to the run. [View workflow runs](https://github.com/takahirox/snes-roms/actions/workflows/studio-pages.yml).
+The workflow publishes the deployment URL to the `github-pages` environment. The `smoke` job fetches the deployed files over HTTPS, verifies their MIME types and SHA-256 checksums, and runs headless Chromium to load Chromatic Lab, paint a pixel and check the exported JSON. The Actions run summary records the verified URL on success or the attempted URL if all verification attempts fail.
 
 ### Initial verification
 
 On 2026-11-25, GitHub's Pages API reported the configured URL and HTTPS enforcement. The public endpoint returned HTTP 404 before the first deployment. The Studio checks, browser/CLI regressions and Pages smoke test passed locally. The smoke test used the exact upload allowlist and verified the artifact under a local `/snes-roms/` URL.
 
-Keep [Issue #15](https://github.com/takahirox/snes-roms/issues/15) open through the first successful `deploy` and `smoke` jobs on `main`. Record the verified public URL and successful Actions run from its summary on the issue before closing it. If a job fails, use the logs to diagnose the failure and rerun the workflow on `main`.
+Close Issue #15 once the required pre-merge checks and review pass and the implementation PR merges. After the first successful `deploy` and `smoke` jobs on `main`, add the verified public URL and Actions run from the summary as a comment on [Issue #15](https://github.com/takahirox/snes-roms/issues/15). If a job fails, use the logs to diagnose the failure and rerun the workflow on `main` when appropriate. Track any needed remediation in a follow-up issue.
 
 To run the smoke test against an already served site, install the locked browser test dependencies and pass its URL. For a local server, substitute the loopback URL from the next section.
 
