@@ -1,5 +1,6 @@
 /target/
 /_site/
+/web/tests/node_modules/
 *.json.lock
 *.zip.lock
 studio.json.save-*.lock

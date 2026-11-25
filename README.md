@@ -11,6 +11,10 @@ Two original adventure games for the Super Famicom (SNES). The games are in Japa
 
 Both are headerless LoROM images with 8 KiB of battery SRAM and no special chips. The ROMs' SHA-256 hashes are in `dist/*.sha256`. They have been tested on emulators only (Snes9x 1.63 and bsnes 115), not on real hardware.
 
+## SFC Studio
+
+The SFC Studio browser workbench and its bundled Chromatic Lab demo are configured for GitHub Pages at [https://takahirox.github.io/snes-roms/](https://takahirox.github.io/snes-roms/). See the [Studio deployment instructions](tools/studio/README.md#github-pages). Live verification is recorded in [Actions run summaries](https://github.com/takahirox/snes-roms/actions/workflows/studio-pages.yml) and [Issue #15](https://github.com/takahirox/snes-roms/issues/15).
+
 ## Build
 
 ```

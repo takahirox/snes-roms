@@ -2,6 +2,35 @@
 
 SFC Studio is a static browser workbench and native CLI for Super Famicom asset authoring. Both use `studio-core` for the project model, edits, diagnostics, rendering and binary formats. A game can consume Studio assets from its own build tools and choose its own map schema, ROM layout, graphics allocation, compression and sound driver.
 
+## GitHub Pages
+
+GitHub Pages is configured to publish Studio and its original Chromatic Lab demo at [https://takahirox.github.io/snes-roms/](https://takahirox.github.io/snes-roms/). Check the recorded live verification in [Actions run summaries](https://github.com/takahirox/snes-roms/actions/workflows/studio-pages.yml) and [Issue #15](https://github.com/takahirox/snes-roms/issues/15).
+
+The [Pages workflow](../../.github/workflows/studio-pages.yml) runs on changes to Studio or the workflow on `main`. It uses pinned Rust, wasm-pack and Binaryen releases and the Cargo lockfile. It runs `check.sh`, which builds the site with `web/build.sh` and verifies native/WASM parity. The upload contains the browser files from `_site/` and the bundled demo. Asset URLs are relative to the repository's Pages path.
+
+Under **Settings → Pages**, the publishing source is **GitHub Actions**. To redeploy, select **Deploy SFC Studio to GitHub Pages** under **Actions**, then choose **Run workflow** on `main`. The CLI can dispatch the same workflow.
+
+```sh
+gh workflow run studio-pages.yml --repo takahirox/snes-roms --ref main
+```
+
+The workflow publishes the deployment URL to the `github-pages` environment. The `smoke` job fetches the deployed files over HTTPS, verifies their MIME types and SHA-256 checksums, and runs headless Chromium to load Chromatic Lab, paint a pixel and check the exported JSON. The Actions run summary records the verified URL on success or the attempted URL if all verification attempts fail.
+
+### Initial verification
+
+On 2026-11-25, GitHub's Pages API reported the configured URL and HTTPS enforcement. The public endpoint returned HTTP 404 before the first deployment. The Studio checks, browser/CLI regressions and Pages smoke test passed locally. The smoke test used the exact upload allowlist and verified the artifact under a local `/snes-roms/` URL.
+
+Close Issue #15 once the required pre-merge checks and review pass and the implementation PR merges. After the first successful `deploy` and `smoke` jobs on `main`, add the verified public URL and Actions run from the summary as a comment on [Issue #15](https://github.com/takahirox/snes-roms/issues/15). If a job fails, use the logs to diagnose the failure and rerun the workflow on `main` when appropriate. Track any needed remediation in a follow-up issue.
+
+To run the smoke test against an already served site, install the locked browser test dependencies and pass its URL. For a local server, substitute the loopback URL from the next section.
+
+```sh
+cd tools/studio/web/tests
+npm ci --ignore-scripts
+npx --no-install playwright install --only-shell chromium
+node pages-smoke.mjs https://takahirox.github.io/snes-roms/
+```
+
 ## Run locally
 
 From `tools/studio`, build the CLI with a recent stable Rust toolchain.

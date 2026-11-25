@@ -1,0 +1,153 @@
+name: Deploy SFC Studio to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/studio/**'
+      - '.github/workflows/studio-pages.yml'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: studio-pages-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    env:
+      RUSTUP_TOOLCHAIN: '1.99.0'
+    outputs:
+      checksums: ${{ steps.site.outputs.checksums }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.22.3'
+          package-manager-cache: false
+      - name: Install the pinned Rust and WASM tools
+        working-directory: ${{ runner.temp }}
+        run: |
+          rustup toolchain install "$RUSTUP_TOOLCHAIN" --profile minimal \
+            --component rustfmt --component clippy --target wasm32-unknown-unknown
+          pack=wasm-pack-v0.14.0-x86_64-unknown-linux-musl
+          binaryen=binaryen-version_127
+          curl -fsSL --retry 3 -o "$pack.tar.gz" \
+            "https://github.com/wasm-bindgen/wasm-pack/releases/download/v0.14.0/$pack.tar.gz"
+          curl -fsSL --retry 3 -o "$binaryen.tar.gz" \
+            "https://github.com/WebAssembly/binaryen/releases/download/version_127/$binaryen-x86_64-linux.tar.gz"
+          sha256sum -c <<EOF
+          278a8d668085821f4d1a637bd864f1713f872b0ae3a118c77562a308c0abfe8d  $pack.tar.gz
+          c8ebe5d00c978601086bcad33b2c80fcfe33d6a8b87b754ba4ea86a9a16cc316  $binaryen.tar.gz
+          EOF
+          mkdir studio-bin
+          tar -xzf "$pack.tar.gz" -C studio-bin --strip-components=1 "$pack/wasm-pack"
+          tar -xzf "$binaryen.tar.gz" -C studio-bin --strip-components=2 "$binaryen/bin/wasm-opt"
+          echo "$RUNNER_TEMP/studio-bin" >> "$GITHUB_PATH"
+      - name: Run Studio checks and build the static site
+        run: tools/studio/check.sh
+      - name: Verify the public artifact
+        id: site
+        working-directory: tools/studio/_site
+        shell: bash
+        run: |
+          # wasm-pack generates these files for developers. The browser uses JS and WASM.
+          rm -f pkg/.gitignore pkg/studio_web.d.ts pkg/studio_web_bg.wasm.d.ts
+          find . -mindepth 1 -printf '%y %p\n' | LC_ALL=C sort | diff -u /dev/stdin <(cat <<'EOF'
+          d ./demo
+          d ./pkg
+          f ./.nojekyll
+          f ./demo/studio.json
+          f ./folder-save.js
+          f ./index.html
+          f ./inspector.js
+          f ./pkg/studio_web.js
+          f ./pkg/studio_web_bg.wasm
+          f ./studio.css
+          f ./studio.js
+          f ./ui.js
+          EOF
+          )
+          cmp demo/studio.json ../fixtures/demo/studio.json
+          {
+            echo 'checksums<<EOF'
+            find . -type f ! -name .nojekyll -printf '%P\0' | LC_ALL=C sort -z | xargs -0 sha256sum
+            echo EOF
+          } >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: tools/studio/_site
+          include-hidden-files: true
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    outputs:
+      page-url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
+        id: deployment
+
+  smoke:
+    needs: [build, deploy]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: tools/studio/web/tests
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: '24.22.3'
+          package-manager-cache: false
+      - name: Install headless Chromium
+        run: |
+          npm ci --ignore-scripts
+          npx --no-install playwright install --with-deps --only-shell chromium
+      - name: Verify the deployed artifact and Studio workflow over HTTPS
+        env:
+          STUDIO_URL: ${{ needs.deploy.outputs.page-url }}
+          STUDIO_SITE_CHECKSUMS: ${{ needs.build.outputs.checksums }}
+        run: |
+          [[ "$STUDIO_URL" == https://* ]]
+          test -n "$STUDIO_SITE_CHECKSUMS"
+          for attempt in {1..10}; do
+            if node pages-smoke.mjs "$STUDIO_URL"; then
+              printf '%s\n' '### SFC Studio Pages verification' '' \
+                "- [Verified Studio URL]($STUDIO_URL)" \
+                "- [Actions run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)" \
+                '- HTTPS checks passed for the application and demo, including MIME types and SHA-256 checksums.' \
+                '- Headless Chromium loaded Chromatic Lab, painted a pixel and verified the exported JSON.' \
+                >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+            fi
+            if [[ "$attempt" -lt 10 ]]; then
+              sleep 30 # Allow the CDN to pick up the new deployment.
+            fi
+          done
+          printf '%s\n' '### SFC Studio Pages verification failed' '' \
+            "- [Attempted Studio URL]($STUDIO_URL)" \
+            "- [Actions run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)" \
+            '- The smoke checks failed after 10 attempts. See the job logs for details.' \
+            >> "$GITHUB_STEP_SUMMARY"
+          exit 1
