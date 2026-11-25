@@ -13,7 +13,7 @@ Both are headerless LoROM images with 8 KiB of battery SRAM and no special chips
 
 ## SFC Studio
 
-The [SFC Studio browser workbench](https://takahirox.github.io/snes-roms/) is configured on GitHub Pages and becomes available after the first deployment from `main`. It includes the original Chromatic Lab demo. See the [Studio deployment instructions and checks](tools/studio/README.md#github-pages).
+The SFC Studio browser workbench and its bundled Chromatic Lab demo are configured for GitHub Pages at [https://takahirox.github.io/snes-roms/](https://takahirox.github.io/snes-roms/). Public availability is pending the first verified deployment from `main`. See the [Studio deployment instructions and verification status](tools/studio/README.md#github-pages).
 
 ## Build
 

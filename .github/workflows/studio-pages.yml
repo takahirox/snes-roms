@@ -133,6 +133,12 @@ jobs:
           test -n "$STUDIO_SITE_CHECKSUMS"
           for attempt in {1..10}; do
             if node pages-smoke.mjs "$STUDIO_URL"; then
+              printf '%s\n' '### SFC Studio Pages verification' '' \
+                "- [Verified Studio URL]($STUDIO_URL)" \
+                "- [Actions run]($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID)" \
+                '- HTTPS checks passed for the application and demo, including MIME types and SHA-256 checksums.' \
+                '- Headless Chromium loaded Chromatic Lab, painted a pixel and verified the exported JSON.' \
+                >> "$GITHUB_STEP_SUMMARY"
               exit 0
             fi
             if [[ "$attempt" -lt 10 ]]; then
