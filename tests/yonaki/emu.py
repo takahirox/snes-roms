@@ -16,7 +16,7 @@ from harness import Emulator           # noqa: E402
 IDS = {'B': 0, 'Y': 1, 'SELECT': 2, 'START': 3, 'UP': 4, 'DOWN': 5, 'LEFT': 6, 'RIGHT': 7, 'A': 8, 'X': 9, 'L': 10,
        'R': 11}
 ST = dict(BOOT=0, TITLE=1, TYPE=2, WAIT=3, CHOICE=4, MENU=5, SLOTS=6, ENDLIST=7, ENDING=8, CHAPTER=9, BUSY=10,
-          CONFIRM=11, NAME=12)
+          CONFIRM=11, NAME=12, WELCOME=13)
 STN = {v: k for k, v in ST.items()}
 
 

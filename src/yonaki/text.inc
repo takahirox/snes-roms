@@ -43,6 +43,62 @@ ClearPage:
     sta last_text
     rts
 
+; A = page line: the bitmap from that line down zeroed (the text above stays), page_line = A, no highlight
+ClearFrom:
+    sta page_line
+    jsr PacedWait               ; a WRAM DMA of up to 11.5 KiB: at the top of a frame (the frame uses t0-t2)
+    lda page_line
+    asl a                       ; tile row of the line (each line is two tile rows)
+    sta t0
+    xba                         ; * 256
+    asl a                       ; * 512
+    sta t1
+    lda t0
+    asl a
+    asl a
+    asl a
+    asl a
+    asl a                       ; * 32
+    eor #$FFFF
+    sec
+    adc t1                      ; row * 480 = row * 512 - row * 32
+    sta t1                      ; byte offset in the bitmap
+    lda #BMP_SIZE
+    sec
+    sbc t1
+    beq @done
+    sta t2                      ; bytes to clear
+    lda #.loword(BMP)
+    clc
+    adc t1
+    sta WMADDL
+    sep #$20
+    .a8
+    lda #^BMP & 1
+    sta WMADDH
+    lda #$08
+    sta DMAP1
+    lda #<WMDATA
+    sta BBAD1
+    ldx #.loword(ZeroWord)
+    stx A1T1L
+    lda #^ZeroWord
+    sta A1B1
+    ldx t2
+    stx DAS1L
+    lda #$02
+    sta MDMAEN
+    rep #$20
+    .a16
+    lda #$FFFF                  ; every row up again (the rows above are unchanged)
+    sta text_dirty
+    lda #$00FF
+    sta text_dirty+2
+@done:
+    jsr ClearHighlight
+    stz mark_on
+    rts
+
 ; A = page line -> g_y
 LineY:
     asl a

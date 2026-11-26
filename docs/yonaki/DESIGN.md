@@ -89,8 +89,8 @@ Rig the bell to ring at a time when he himself is elsewhere.
 | Time | Event |
 |---|---|
 | 15:00 | Sayo cleans the old bathhouse and leaves the bathtub **empty** (for tomorrow's "farewell bath") |
-| 16:30 | I and Chihiro arrive. We see Gondō placing white chrysanthemums in front of the old bathhouse |
-| 18:00–19:45 | Dinner. Shiga tells the legend (including the bell). Kugayama, very drunk, says "あの風呂には昔一度入った" ("I bathed in that bath once, long ago") and "壊して露天にする" ("I'll tear it down and make an open-air bath"). He goes pale on seeing Emi. Gondō, saying "お疲れでしょう" ("you must be tired"), sends a bottle of local sake to Kugayama alone (**laced with sleeping pills**; Sayo carries it) |
+| 16:30 | I and Chihiro arrive. White chrysanthemums have just been left in front of the old bathhouse; whoever left them is already gone (Gondō, unseen). Sumiko is later found looking at them |
+| 18:00–19:45 | Dinner. Shiga tells the legend (including the bell). Kugayama, very drunk, says "あの風呂には昔一度入った" ("I bathed in that bath once, long ago") and "壊して露天にする" ("I'll tear it down and make an open-air bath"). He goes pale on seeing Emi. Gondō has Sayo carry a bottle of local sake to Kugayama alone, "宿から" ("from the inn") (**laced with sleeping pills**). Sayo admits who gave it to her only if she is questioned in chapter 3 |
 | 19:30 | The phone goes dead |
 | 20:00 | Everyone disperses. On the back of a **proof print** of the menu (with its misprint), Gondō writes "千鶴のことで話がある。八時半、旧湯殿" ("I need to talk about Chizuru. Half past eight, the old bathhouse") and slips it under the door of 松の間 |
 | 20:15–21:10 | I interview Shiga in the lounge. Around 20:45, at Shiga's request, I go to the kitchen for tea. **The kitchen is empty. Only enka plays on the radio, and a pot is boiling over**. I turn off the flame |
@@ -101,7 +101,7 @@ Rig the bell to ring at a time when he himself is elsewhere.
 | about 22:30 | The water reaches Kugayama's face and he drowns, still asleep from the drug. His wristwatch stops at 22:41 |
 | 23:02 | The tub fills, the bucket floats up, the string is pulled and **the bell rings**. Everyone was in the lounge or at the front desk |
 | 23:10 | I, Keisuke and Gondō go to the old bathhouse. Water is overflowing; in the steam Kugayama lies face down. Chihiro takes a Polaroid |
-| 23:40–00:40 | Everyone in the lounge. Each tells what they did around 21:00. Gondō says "八時半から十時まで板場にいた。誰も来なかった" ("I was in the kitchen from half past eight to ten. Nobody came") (**a lie**) |
+| 23:40–00:40 | Everyone in the lounge. Gondō asks who turned off the flame under the pot. If I say it was me, Gondō knows I was in the empty kitchen: his account becomes "I stepped out to the toilet then", the lie never happens, and that night someone tries my door. If I stay silent, he later says "八時半から十時まで板場にいた。誰も来なかった" ("I was in the kitchen from half past eight to ten. Nobody came") (**a lie**) |
 | 00:50 | Sumiko reveals that she is Chizuru's sister (when suspicion falls on her, or as the conversation goes) |
 | 01:20 | Shiga notices the string in the Polaroid, calls Gondō down to the sake cellar and urges him to turn himself in. Gondō pushes Shiga down the steps and tears the pages with the diary notes out of his notebook |
 | 02:00 | **The second bell**. It is rung by Sumiko (thinking of her sister, she went to the old bathhouse and pulled what was left of the bell rope). I see Sumiko, in a white yukata and holding a candle, at the end of the corridor (she looks like Oyura-sama) |
@@ -111,27 +111,29 @@ Rig the bell to ring at a time when he himself is elsewhere.
 | 07:00 | The volunteer fire brigade gets past the landslide |
 
 ### Deduction (conditions for the true ending)
-In the final deduction the player answers the following in order. A wrong answer leads to a different ending at
-that point.
-1. **Who rang the bell?** → Nobody. A device of a floating bath bucket and a string
-   (clues: the thin line running from the bell down to the water in Chihiro's Polaroid; the bathtub, empty in the
-   afternoon, was overflowing; the bath bucket tied to the end of the string; kite string from the kitchen)
-2. **When was the valve opened?** → Around 21:00
-   (clues: "あの湯船は満たすのに二時間かかる" ("that tub takes two hours to fill"), as Gondō and Sayo said; the bell
-   rang at 23:02)
-3. **Who was alone around 21:00?** → Kuroi, the Morishitas (Emi had left the room), Gondō
-   (clues: the proprietress was doing a photo shoot with Chihiro, Keisuke was on the radio while Sayo brought him tea,
-   Shiga was being interviewed by me)
-4. **Who is the killer?** → Gondō
-   (clues: the empty kitchen I saw at 20:45 and Gondō's lie that "誰も来なかった" ("nobody came"). The summons was
-   written on a proof print with the misprint still in it (found only in the kitchen). Sake sent to Kugayama alone)
-5. **Why?** → Because he is Chizuru's father
-   (clues: the white chrysanthemums; 22 October is her death anniversary; the photo of a girl on the altar in
-   Gondō's room; Sumiko's "父は板前だった" ("my father was a chef"))
+In the final deduction the player answers the following in order. Every option is always shown: picking the right
+one without the clue that backs it up fails just as a wrong one does (the hero cannot explain it). A wrong answer
+leads to a different ending at that point.
+1. **Who rang the bell?** → Nobody. A device of a floating bath bucket and a string. Needs `clue_float` (the
+   Polaroid in chapter 3, or the pencil rubbing of Shiga's notebook in chapter 4); without it → E02
+2. **When was the valve opened?** → Around 21:00. Nobody says "two hours": Sayo (prologue) and Keisuke (chapter 1)
+   only say the tub is opened at six and full at eight; the bell rang at 23:02. 20:30 (the summons) gives a bell at
+   22:30; the later times fall inside the lounge alibi
+3. **Who is the killer?** → The player **types the name** (`@ask`) on the name entry grid: 権藤 / ごんどう /
+   益男 … The other suspects lead to their bad endings (黒井 E03, 森下 E04, 圭介 E11, おゆら E05); people with an alibi
+   (女将, 小夜, 千尋, 志賀, 久我山, 結城) or unknown names are answered and asked again. The alibis around 21:00 are
+   then laid out as the reasoning, not offered as a list to pick from
+4. **The proof.** Gondō asks "なんで、俺だ". Decisive: his lie (`gondo_lied`: I stayed silent about the flame and asked
+   him in chapter 3), or both the proof print (`found_note`) and the sake (`know_sake_gondo`, from Sayo). Evidence
+   the hero does not have is rebutted; running out → E12
+5. **Why?** → Because he is Chizuru's father. Needs `clue_father` (the altar with 権藤千鶴's mortuary tablet and a
+   white chrysanthemum, or Sumiko at the bell); a guess → E02
 
 ### Red herrings
-- Kuroi Sumiko: alone in the women's bath around 21:00. Knew where the old bathhouse was. Chizuru's sister (motive). The
-  "Oyura-sama" in a white yukata.
+- Kuroi Sumiko: alone in the women's bath around 21:00. Knew where the old bathhouse was. Found looking at the white
+  chrysanthemums nobody saw being left. Chizuru's sister (motive). The "Oyura-sama" in a white yukata.
+- Chizuru's family name 権藤 is kept back until the altar in chapter 4 (Shiga and Sumiko only call her 千鶴), and
+  Gondō denies knowing who leaves the flowers.
 - The Morishitas: being threatened by Kugayama. Around 21:00 Emi left the room and was crying in the garden arbour
   (muddy sandals).
 - Keisuke: debts from the sale. Quarrelled with Kugayama.
@@ -146,7 +148,7 @@ Chapters break automatically (a chapter heading is shown).
 
 | Chapter | Time | Contents | Main choices |
 |---|---|---|---|
-| 序章 霧見沢 (Prologue: Kirimizawa) | 16:00 | By bus into the valley. The driver tells the legend half-jokingly. 霧見橋. Arrival; Gondō placing chrysanthemums | What to talk about with Chihiro |
+| 序章 霧見沢 (Prologue: Kirimizawa) | 16:00 | A cold open on black with the bell ("あの夜、鐘は二度鳴った"). By bus into the valley. The driver tells the legend half-jokingly (not the 1969 death). 霧見橋. Arrival; chrysanthemums left by someone unseen | What to talk about with Chihiro |
 | 第一章 最後の客 (Chapter 1: The last guests) | 17:00–19:45 | The people of the inn, a look at the old bathhouse, dinner. Shiga's legend, Kugayama drunk | Whom to talk to, how far to look around the old bathhouse |
 | 第二章 取材 (Chapter 2: The interview) | 20:00–21:40 | Interviewing Shiga, tea from the kitchen (always passed), the power failure | What to do in the kitchen, where to go after the power fails |
 | 第三章 鐘 (Chapter 3: The bell) | 23:02–00:40 | The bell, the body in the old bathhouse, questioning in the lounge | Whose story to hear, whether to look at the Polaroid |
@@ -211,13 +213,15 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 ## 6. Screen and controls
 
 - Background: a 256×192 photo (16-dot black bands above and below). Fades on every scene change.
-- Characters: translucent blue silhouettes without an outline (composited onto the background by the CPU). Ghosts are white; horror scenes can also
+- Characters: translucent indigo silhouettes without an outline (composited onto the background by the CPU). Ghosts are white; horror scenes can also
   use red.
-- Text: 12-dot characters across the whole screen, 18 characters a line, at most 12 lines. The background stays at
-  full brightness under text; the white glyphs have a one-pixel dark outline. Waits for A after each paragraph. When the page is full,
-  goes to the next page.
-- Choices: listed under the text. Select with up/down, confirm with A.
-- Hold R to dim the photo and L to hide the text. Holding both combines the two effects.
+- Text: 12-dot characters across the whole screen, 18 characters a line, at most 10 lines (the bottom of the photo
+  stays clear). A new picture is shown at full brightness; when its first text appears the photo dims a little under
+  the page so the white glyphs (one-pixel dark outline) read. Waits for A after each paragraph. When the page is full,
+  goes to the next page; `@page` breaks it by hand before a beat (a body, a confession, a name on a tablet).
+- Choices: listed under the text. Select with up/down, confirm with A. Most choices are inline: the options finish the
+  sentence of the text above them, and the one chosen stays on the page as the next sentence.
+- Hold L to hide the text and see the photo at full brightness; hold R to dim it further for reading.
 - Chapter markers label bookmarks and let the story continue.
 - A: advance / confirm. B (held): fast-forward through text already read (stops at unread text). START: menu
   (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
@@ -241,9 +245,12 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 @set flag / @clr flag
 @if flag label / @ifnot flag label / @ifg gflag label   (gflag: a global flag kept in SRAM)
 @goto label
-@choice
+@choice [inline]       inline: the options continue the text; the one chosen stays as a paragraph
 > option text -> label
 > {gflag} option shown only after the unlock -> label
+@ask question          the player types a name (name entry grid, up to 4 characters)
+> 権藤 ごんどう 益男 -> label   spellings that lead to label (each on the grid)
+> * -> label                    anything else
 @end E01               ending (recorded in 結末の一覧, shows 「終」 and returns to the title)
 @page                  page break
 body text              one line is one paragraph; wrapped automatically, waits for A at the end of the paragraph

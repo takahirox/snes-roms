@@ -59,17 +59,20 @@ bit (above BG1).  The BG3 map pointer (offset-per-tile in mode 4) points at zero
 CGRAM 0–15: 0 black (backdrop), BG2 palette 0 = 1 text white, 2 shadow, 3 grey; palette 1 (highlighted line) =
 5 yellow-white, 6 shadow, 7; silhouettes 8/9 white (ghost) body/rim, 10/11 red, 12/13 blue.  CGRAM 16–255: the
 photo's 240 colours.  A photo that silhouettes appear on has 112 colours (CGRAM 16–127) and, at CGRAM 144–255, the
-same colours seen through a translucent blue figure (`pictures.TINTS`: 60% of (36, 52, 176)); the white (45% of
+same colours seen through a translucent blue figure (`pictures.TINTS`: 50% of (52, 48, 132), a dark indigo); the white (45% of
 (232, 236, 255)) and red versions are in a second block (PicTable+75) and replace them while such a figure is on
 screen.
 
-Text: 18 full-width characters (216 px) per line from screen x 20, 12 lines, line n at screen y 18 + 16n
+Text: 18 full-width characters (216 px) per line from screen x 20, 10 lines a story page (`PAGE_LINES`; the menus and
+the name entry use all 12 lines of the bitmap), line n at screen y 18 + 16n
 (each line is exactly two tile rows, so a choice is highlighted by switching those map rows to palette 1).
 Story text and choices use a one-pixel dark outline around the glyphs; menus use the existing drop shadow.
 
-Colour math: story scenes open at full brightness. Holding R dims BG1 by `DIM_TEXT` (2 of 31 levels);
-holding L masks BG2 in the main-screen register shadow. The buttons act independently, including during
-scene fades and bookmark resume. Scripted darkness and menu dimming use their own levels.
+Colour math: a new picture opens at full brightness (`text_on` is cleared by `@bg`). Once a story text page is
+drawn, BG1 is dimmed by `DIM_TEXT` (7 of 31 levels) so the text reads over the photo; the dim ramps one level a
+frame. Holding L masks BG2 in the main-screen register shadow and takes the dim off (the photo alone); holding R
+dims by `DIM_READ` (13). The buttons apply during scene fades and bookmark resume. Scripted darkness and menu
+dimming use their own levels.
 The silhouette colours 8–13 are raised by about half
 the dim (table `SilComp`) so solid figures keep their brightness under text and still go black in
 the dark; a translucent figure is part of the photo and dims with it.
@@ -139,11 +142,8 @@ the header's first magic byte committed only after the clear completes.
 
 Paragraph and choice IDs are sequential indices assigned by the scenario compiler. They resolve through ROM
 tables to VM instructions. The build ID is a truncated SHA-256 over the compiled script, font and saved-index
-mappings. It guards the meaning of indices and glyphs across builds. Version 1 had in-place records with
-additive checksums and no rollback copy. The new format starts with defaults, empty slots and no read marks
-when given an image from that version. Migration would require both a reader for each supported schema and
-stable authored IDs or a mapping for each supported scenario revision. This work covers saves written by the
-new format for the same scenario build. [Issue #5 clarification](https://github.com/takahirox/snes-roms/issues/5#issuecomment-7127624406)
+mappings. A battery written by any other build (another scenario, font or save version) is not read: the game
+starts with defaults, empty slots and no read marks. Saves are never carried across builds.
 
 The bookmark payload captures the VM at a paragraph or choice boundary, including local flags and scene state.
 Resumed choices use the current global unlocks. The payload can serve as the starting point for a future
@@ -304,10 +304,25 @@ per-channel requests to preserve the timing of the current bytecode.
 
 ## Script VM
 
-Ops (byte code, `tools/yonaki/build.py`): `TEXT id16 lines8 <string>`, `BLANK`, `PAGE`, `BG pic mode`,
+Ops (byte code, `tools/yonaki/build.py`): `TEXT id16 lines8 <string>` (lines bit 7: shown at once and no wait —
+the echo of an inline choice), `BLANK`, `PAGE`, `BG pic mode`,
 `SIL key sil x colour` (sil `$FF` = remove the key), `SILCLEAR`, `BGM n` (`$FE` stop, `$FF` fade),
 `SE n`, `AMB k` (`$FF` off), `FX kind arg16`, `SET/CLR flag16`, `SETG/CLRG g`, `IF cond16 addr24`,
-`GOTO addr24`, `CHOICE id16 n {nconds conds… addr24 lines8 <string>}`, `END ending`, `CHAPTER ch`, `HALT`.
+`GOTO addr24`, `CHOICE id16 n {nconds conds… addr24 lines8 <string>}` (n bit 7: inline), `END ending`,
+`CHAPTER ch`, `HALT`, `ASK n {len8 glyph16… addr24}… default24 <question>`.
+
+Inline choices (`@choice inline`): the parser sends each option to an echo paragraph after the program (its text,
+re-wrapped, `nowait`) that goes on to the option's target. After the choice the VM erases the options and the blank
+line before them (`ClearFrom`) instead of the page, so the chosen sentence follows the text above it. When the
+options do not fit under the text, `ChoicePage` starts a new page with the paragraph before the choice drawn again
+(the bookmark redraw), so the options never lose the sentence they finish.
+
+`@ask` (`OpAsk`): the name entry grid in answer mode (`AskEntry`, `ne_ask`): the question on line 0, a grey hint
+and the answer (field 2, `names+20`) under it, over the darkened scene (`dark_on`, restored after). START or 決定
+with something typed ends it (B on an empty answer does nothing). The answer is compared with each spelling of the
+op (glyph indices of the grid); the first equal one is taken, else the default. The test driver types answers on
+the grid (`drive.type_answer`); `routes.py` treats an `@ask` as a choice whose options are the first spelling of
+each answer and `*` (the default).
 A condition word: bit 15 negated, bit 14 global (index < 32 a global flag, 32 + e ending e seen), else a local flag.
 Strings: `$00` end, `$01` new line, `$02` next page chunk (+ line count), `$03` / `$04` the player's names (主人公の
 名字 "the protagonist's family name" / ヒロインの名前 "the heroine's given name": the script writes the default names 結城 / 千尋, `script.NAME_VARS`; lines are laid out as if
@@ -325,7 +340,10 @@ clears.  START at a paragraph wait or a choice: しおりをはさむ (insert a 
 A bookmark resumes at the paragraph (shown again on a fresh page) or at the choice (the paragraph before it
 is redrawn first).
 
-Name entry (`NameEntry`, ui.inc, state `ST_NAME`): はじめから asks for 主人公の名字 and ヒロインの名前 (1-4 glyphs each,
+Guest register (`NameConfirm`, state `ST_WELCOME`): はじめから first shows the names in the inn's register over the
+darkened title (このまま始める / 名前を書きなおす; B back to the title).
+
+Name entry (`NameEntry`, ui.inc, state `ST_NAME`): 名前を書きなおす asks for 主人公の名字 and ヒロインの名前 (1-4 glyphs each,
 shown with ＿ for the free places, the fixed family name 早瀬 grey before the heroine's name and （名字） ("family name") /
 （名前） ("given name") after them) on a dark screen: 8 rows of 10 characters a page (かな, カナ, 3 pages of name
 kanji, `NameGrid` from build.py `NAME_PAGES` / `NAME_KANJI`) and the commands かな カナ 漢字 けす 決定 (hiragana, katakana, kanji, erase, confirm).  Arrows move
@@ -395,114 +413,6 @@ padding includes 605 bytes to align the first photo row. An audit of both linked
 byte-identical photos, palettes, masks, font, script, resume pointers and SPC image. Mask placements and
 the production save build ID (`2CCE7228`) also matched. The linked packed ROM's SHA-256 is
 `87f7d70d9deafdf3d0881088de6f9466d5a7ac5f31640af24be466d278c9faba`.
-
-### Timing with the scheduler
-
-The timing comparison uses `main` at `ff5fe48` and the packed build with the same save journal and scheduler.
-Snes9x passed all 13 checks on both builds. All 55 traces matched in controller masks and initial and final
-SRAM. All 91 captures matched byte for byte at the same frames. The effects trace took 1,254 frames on each
-build. The packed fixture also loaded the paragraph and choice bookmarks written by the baseline fixture
-after opening a fresh Snes9x session.
-
-Separate copies of the pinned Snes9x 1.63 and bsnes 115 cores logged the beam position on return from NMI.
-The Snes9x probe ran at the end of `Op40Slow`, using the vertical counter and the PPU latch's
-cycle-to-dot conversion. The bsnes probe ran at the end of the S-CPU's `instructionReturnInterrupt`,
-using `vcounter()` and `hdot()` with the accuracy PPU enabled. The probes logged writes that changed
-`INIDISP` bit 7 in `S9xSetPPU` and `PPU::writeIO`. For master-clock timestamps, Snes9x added completed
-scanline lengths to `CPU.Cycles` and bsnes read the S-CPU's clock counter.
-
-Each replay pair used identical recorded pads and initial SRAM, and the final SRAM was checked at the
-replay boundary. The table shows the latest NMI completion while the display was enabled, measured as
-scanline and dot. Every sampled completion was in VBlank.
-
-| Matched trace | Snes9x 1.63 main → packed | bsnes 115 main → packed |
-|---|---:|---:|
-| `effects` | 249:72 → 249:72 | 249:69 → 249:69 |
-| `ending_G02` | 249:72 → 249:72 | 249:69 → 249:69 |
-| `real_C01` | 257:258 → 257:258 | 257:256 → 257:256 |
-| `real_C02` | 257:258 → 257:257 | 257:256 → 257:256 |
-| `real_E06` | 256:326 → 256:326 | 256:322 → 256:321 |
-| `real_list` | 249:72 → 249:72 | 249:69 → 249:69 |
-
-The scene measurements use 1-based frontend frame numbers. First response is the first callback showing
-a change from the frame before the A press. Settled photo is the first callback matching the photo after
-the transition. Both use the sampled photo margins at x 4–17 and 238–251, y 24–199, outside the text.
-The settled reference frames are 1,098 for Old Bath, 879 for Genkan and 1,042 for Lobby. Visible-frame
-results were identical across both cores and revisions. Blanking duration is the number of emulated master
-clocks between the bit 7 set and clear, with NTSC short lines included.
-
-| Scene and trace | A press | First response / settled photo, frames after A | Forced blank, Snes9x main → packed, clocks | Forced blank, bsnes main → packed, clocks |
-|---|---:|---:|---:|---:|
-| Old Bath cut, `ending_G02` | 1,083 | 3 / 15 | 3,543,124 → 3,543,122 | 3,543,126 → 3,543,126 |
-| Bus fade after the timed chapter card, `effects` | — | — | 5,717,858 → 5,717,858 | 5,717,854 → 5,717,854 |
-| Genkan white, `effects` | 808 | 2 / 66 | 0 → 0 | 0 → 0 |
-| Lobby mosaic, `effects` | 954 | 2 / 85 | 3,573,658 → 3,573,656 | 3,573,660 → 3,573,660 |
-
-The Bus photo first appeared on frame 570 and reached full brightness on frame 598 in all four runs.
-
-Run `make yonaki-test` for mask round trips, Snes9x fixture and production tests, and bsnes fixture
-replays. Run `python3 -I tests/yonaki/bsnes.py --real` to include the 21 production replays. On the
-packed build all 55 bsnes replays matched Snes9x's final SRAM and stayed within two RGB levels per
-channel across all 91 captures. Both cores recorded zero VBlank overruns or deferred DMA jobs. Peak
-queued payload was 3,008 bytes for fixture traces and 3,072 bytes for production traces.
-`bsnes.py` unloads after the last recorded pad frame to compare final SRAM and collects the VBlank
-counters from serialized WRAM in a separate replay.
-
-### Automated baseline comparison for issue #1
-
-The asset-packing comparison at commit `d7b1d2e` used identical scenes and pad timings on both formats.
-To reproduce that historical comparison, run `make yonaki-test` from that revision. Current releases
-change the presentation and frame timing, so `make yonaki-test` runs `tests/yonaki/compare.py --upgrade-only`
-after the stock-core replay. It builds pre-packing commit `ff5fe48380161e4235ceb41856662f5afc47018e`
-to write real paragraph and choice bookmarks, then cold-boots the current ROM on both pinned cores to
-verify the recovered state, save data, and transfer limits. Results are in `build/yonaki-comparison/UPGRADE.json`.
-
-The JSON report at `build/yonaki-comparison/RESULTS.json` contains the ROM, SRAM, capture and PCM hashes,
-scene frame numbers and transfer measurements for each core and revision.
-
-All 33 recorded captures per core matched across revisions, as did the photo margins at every
-sampled frame. Old Bath cut first responded and settled at
-3 and 15 frames after A, Genkan white at 2 and 66, and Lobby mosaic at 2 and 85. The Bus fade first
-appeared at frame 570 and reached full brightness at frame 598. The test asserts those milestones.
-
-The probes time general PPU DMA channels through completion and check that the whole transfer stays
-in VBlank or forced blank. They measure channel 7 BG1 scroll HDMA payload through completion and check
-that it stays in the same scanline's HBlank. These measurements use the cores' beam counters and
-exclude HDMA table fetches and CPU register writes. Both builds hit a 3,072-byte visible DMA frame
-in `real_E06` and a 450-byte ripple HDMA frame in `effects` and `real_E06`.
-
-| Trace and core | Visible DMA peak, bytes | Last completion at the peak, baseline → packed (scanline / clock) | Ripple payload window, master clocks |
-| --- | ---: | --- | --- |
-| `effects`, Snes9x | 3,008 | 246 / 54 → 246 / 54 | 1124–1168 |
-| `effects`, bsnes | 3,008 | 246 / 48 → 246 / 48 | 1120–1148 |
-| `real_E06`, Snes9x | 3,072 | 245 / 804 → 245 / 806 | 1124–1170 |
-| `real_E06`, bsnes | 3,072 | 245 / 804 → 245 / 804 | 1112–1148 |
-
-The latest visible DMA completion across these traces was on line 255, at clock 758 on Snes9x and
-748 on bsnes, on both revisions. Both cores recorded zero VBlank overruns, deferred DMA jobs and
-out-of-window transfers in the comparison.
-
-Native stereo PCM matched byte for byte within each core, including the fixture bell, rain and music
-in `effects` and the production routes E06 and E13. The table gives the equal sample-frame counts
-and SHA-256 prefixes for the baseline and packed recordings. Snes9x delivered 32,040 Hz and bsnes
-delivered 48,000 Hz.
-
-| Trace | Snes9x sample frames | Snes9x hash prefix | bsnes sample frames | bsnes hash prefix |
-| --- | ---: | --- | ---: | --- |
-| `effects` | 668,993 | `cb746060d982` | 1,000,800 | `3d004736b788` |
-| `ending_G02` | 766,554 | `9fab73b26b3c` | 1,147,200 | `2cd67c83e16c` |
-| `real_E06` | 7,258,380 | `2fbc34ae6bd8` | 10,872,800 | `9297ff828520` |
-| `real_E13` | 1,010,724 | `18dd9e36e5c6` | 1,512,800 | `1435080e7a12` |
-
-For save compatibility, the baseline starts with empty SRAM, records the production E01 ending and
-its unlock flag, and writes paragraph 58 and choice 1 in separate slots using the game's menu.
-The cold boots carry only that 8 KiB image. Both cores check the restored custom names, speed 2,
-ending and unlock bits, scene state and local flags. Paragraph 58 comes back marked read. Choice 1
-has two options and redraws paragraph 78. The resume captures match and the battery stays byte-identical
-through both loads.
-
-These runs cover the selected replay paths on emulators. Physical cartridge timing and power-off
-persistence were outside the measurements.
 
 ## Build checks
 

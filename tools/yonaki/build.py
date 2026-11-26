@@ -39,7 +39,7 @@ SPEEDS = ['遅い', '普通', '速い', '瞬間']
 OMAKE_ENDINGS = 10              # the title's おまけ needs this many endings seen
 TITLE_BGS = ['oldbath_ext', 'bell']
 OP = dict(HALT=0, TEXT=1, BLANK=2, PAGE=3, BG=4, SIL=5, SILCLEAR=6, BGM=7, SE=8, FX=9, SET=10, CLR=11, SETG=12,
-          CLRG=13, IF=14, GOTO=15, CHOICE=16, END=17, CHAPTER=18, AMB=19)
+          CLRG=13, IF=14, GOTO=15, CHOICE=16, END=17, CHAPTER=18, AMB=19, ASK=20)
 BGMODE = dict(cut=0, fade=1, white=2, mosaic=3)
 FXK = dict(shake=0, flash=1, redflash=2, ripple_on=3, ripple_off=4, dark=5, light=6, wait=7)
 SILCOL = dict(blue=0, white=1, red=2)
@@ -56,8 +56,9 @@ NAME_PAGES = [                       # '　' = an empty cell
     'アイウエオカキクケコ' 'サシスセソタチツテト' 'ナニヌネノハヒフヘホ' 'マミムメモヤ　ユ　ヨ'
     'ラリルレロワ　　　ン' 'ガギグゲゴザジズゼゾ' 'ダヂヅデドバビブベボ' 'パピプペポャュョッー',
 ]
-NAME_KANJI = (                       # surnames first, then given names; the first 3 pages' worth are used
-    '結城千尋早瀬佐藤鈴木高橋田中伊渡辺山本小林加吉松井上村清水斎森池野川口阪石原内岡前長谷部近坂遠青西東北南'
+NAME_KANJI = (                       # surnames first, then given names; the first 3 pages' worth are used.  The
+                                     # kanji of the people of the story come early (the culprit is typed at @ask)
+    '結城千尋早瀬佐藤鈴木権益男澄遼嶋圭我達宗夜鶴源航高橋田中伊渡辺山本小林加吉松井上村清水斎森池野川口阪石原内岡前長谷部近坂遠青西東北南'
     '大竹宮崎浦島平福太葉菅沢秋桜岩丸今永安堀杉横矢市菊須賀浅倉関根桑柴有馬広星下河合久保望月白鳥黒澤神片桐志'
     '江尾塚岸丘峰岬渚湊颯樹慎仁純恭章京'
     '一二三子美香奈恵真理優花彩愛菜由紀明光健郎次翔輔介悠斗蓮陽向葵衣凛咲希智也雄誠実直人正浩隆司拓海空遥春夏冬'
@@ -86,6 +87,9 @@ UI = dict(
     empty='', kind0='真の結末', kind1='結末', kind2='悪い結末',
     name_hero='主人公', name_heroine='ヒロイン', name_hero_note='（名字）', name_heroine_note='（名前）',
     name_heroine_family='早瀬', name_hint='Ｂ　けす　　ＳＴＡＲＴ　決定',
+    register_head='霧見沢温泉　水明館　御宿帳', register_hero='\x03　様', register_heroine='早瀬\x04　様',
+    register_ask='このお名前で、よろしいですか。', register_go='このまま始める', register_change='名前を書きなおす',
+    ask_hint='名字か名前を　ＳＴＡＲＴ　決定', ask_label='その名は',
     name_cmd0='かな', name_cmd1='カナ', name_cmd2='漢字', name_cmd3='けす', name_cmd4='決定',
     **{f'speed{i}': s for i, s in enumerate(SPEEDS)},
 )
@@ -311,6 +315,17 @@ class Builder:
         for n, p in zip(self.pic_names, self.pics):
             pictures.preview_png(p['preview'], prev / f'bg_{n.strip("@")}.png')
         self.pic_index = {n: i for i, n in enumerate(self.pic_names)}
+        self.text_dim = [self.picture_text_dim(p['preview']) for p in self.pics]
+
+    def picture_text_dim(self, preview):
+        """How far the photo is dimmed under a text page (src/yonaki/pic.inc Tick, 0..DIM_TEXT of 31): from its
+        highlights (the 90th percentile of luminance over the part under the text), so a bright daytime photo
+        is dimmed enough for the white text and a night photo is hardly touched."""
+        dt = int(re.search(r'^DIM_TEXT\s*=\s*(\d+)', (ROOT / 'src/yonaki/yonaki.s').read_text(), re.M)[1])
+        a = np.asarray(preview, float)
+        a = a[:int(a.shape[0] * 0.85)]
+        lum = 0.299 * a[..., 0] + 0.587 * a[..., 1] + 0.114 * a[..., 2]
+        return int(min(dt, max(0, round((np.percentile(lum, 90) - 50) / 18))))
 
     def make_sils(self):
         """A @sil shows the staged silhouette of its background, character and position
@@ -364,6 +379,9 @@ class Builder:
             return min(32 - w, 23 - w // 2)
         return int(key[2:])
 
+    def name_glyph(self, c, word):
+        return self.enc.index[c]
+
     # -- encoding
     def encode(self):
         prog = self.prog
@@ -377,6 +395,11 @@ class Builder:
                 for _, t, _ in op[2]:
                     for ln in t:
                         enc.feed(ln)
+            elif op[0] == 'ask':
+                enc.feed(op[2])
+                for words, _ in op[3]:
+                    for w in words:
+                        enc.feed(w)
         for t in prog.chapters:
             enc.feed(t)
         for e in self.endings:
@@ -394,6 +417,15 @@ class Builder:
             enc.feed(pg.replace('　', ''))
         enc.feed(GLYPH_BLANK_NAME + ''.join(sc.NAME_VARS))
         enc.freeze()
+        on_grid = set(''.join(self.name_pages))
+        for op, where in prog.ops:
+            if op[0] == 'ask':
+                for words, _ in op[3]:
+                    for w in words:
+                        bad = sorted(set(w) - on_grid)
+                        if bad:
+                            raise BuildError(f'{where}: answer "{w}": {" ".join(bad)} not on the name entry grid '
+                                             '(NAME_PAGES / NAME_KANJI)')
         self.enc = enc
         self.lflag = {n: i for i, n in enumerate(prog.local_flags)}
         self.gflag = {n: i for i, n in enumerate(prog.gnames)}
@@ -412,7 +444,9 @@ class Builder:
         def op_bytes(op, i):
             k = op[0]
             if k == 'text':
-                return bytes([OP['TEXT']]) + struct.pack('<H', op[1]) + bytes([len(op[2][0])]) + enc.lines(op[2])
+                nowait = 0x80 if len(op) > 3 and op[3] else 0
+                return (bytes([OP['TEXT']]) + struct.pack('<H', op[1]) + bytes([len(op[2][0]) | nowait])
+                        + enc.lines(op[2]))
             if k == 'blank':
                 return bytes([OP['BLANK']])
             if k == 'page':
@@ -447,7 +481,7 @@ class Builder:
             if k == 'goto':
                 return bytes([OP['GOTO']]) + A(op[1])
             if k == 'choice':
-                out = bytearray([OP['CHOICE']]) + struct.pack('<H', op[1]) + bytes([len(op[2])])
+                out = bytearray([OP['CHOICE']]) + struct.pack('<H', op[1]) + bytes([len(op[2]) | (0x80 if op[3] else 0)])
                 ofs = []
                 for cs, t, lab in op[2]:
                     out += bytes([len(cs)]) + b''.join(struct.pack('<H', cond(c)) for c in cs) + A(lab)
@@ -456,6 +490,13 @@ class Builder:
                     out += enc.lines([t])
                 self.opt_ofs[op[1]] = ofs
                 return bytes(out)
+            if k == 'ask':
+                out = bytearray([OP['ASK'], sum(len(words) for words, _ in op[3])])
+                for words, lab in op[3]:
+                    for w in words:
+                        out += bytes([len(w)]) + b''.join(struct.pack('<H', self.name_glyph(c, w)) for c in w)
+                        out += A(lab)
+                return bytes(out + A(op[4]) + enc.string(op[2]))
             if k == 'end':
                 return bytes([OP['END'], self.eindex[op[1]]])
             if k == 'chapter':
@@ -632,12 +673,14 @@ class Builder:
 
         d = ['; generated by tools/yonaki/build.py -- do not edit', '.segment "RODATA"']
         # pictures: palette long address, 24 row addresses (3 bytes each), the long address of the white and red
-        # translucent-figure colours (0: the picture has no translucent figures), 80 bytes per picture
+        # translucent-figure colours (0: the picture has no translucent figures), the dim under text (+78),
+        # 80 bytes per picture
         d.append('PicTable:')
         for i, rows in enumerate(self.pic_rows):
             ent = struct.pack('<I', self.pic_pal[i])[:3]
             ent += b''.join(struct.pack('<I', a)[:3] for a in rows) if rows else bytes(72)
             ent += struct.pack('<I', self.pic_tint[i])[:3]
+            ent += bytes([self.text_dim[i]])           # +78: the dim under a text page
             ent += bytes(80 - len(ent))
             d.append('    .byte ' + ', '.join(f'${x:02X}' for x in ent) + f'   ; {self.pic_names[i]}')
         d.append('SilTable:   ; height, top row, packed mask address, bank, width, dictionary (0 = raw spans)')
@@ -713,6 +756,7 @@ class Builder:
         # layout for the tests and tools
         text_ops = {}
         choice_ops = {}
+        ask_ops = {}
         label_of = {}
         cur = None
         for i, (op, where) in enumerate(prog.ops):
@@ -722,6 +766,9 @@ class Builder:
             label_of[i] = cur
             if op[0] == 'text':
                 text_ops[op[1]] = dict(addr=self.op_addr[i], op=i, label=cur, where=where, pages=op[2])
+            elif op[0] == 'ask':
+                ask_ops[op[1]] = dict(addr=self.op_addr[i], op=i, label=cur, where=where, question=op[2],
+                                      answers=[dict(words=w, target=lab) for w, lab in op[3]], default=op[4])
             elif op[0] == 'choice':
                 choice_ops[op[1]] = dict(addr=self.op_addr[i], op=i, label=cur, where=where,
                                          options=[dict(text=''.join(t), lines=t, target=lab, conds=[list(c) for c in cs],
@@ -730,13 +777,13 @@ class Builder:
         layout = dict(
             build_id=self.build_id, scenario=str(self.scn), files=prog.files,
             labels={n: A[n] for n in prog.labels}, label_op=prog.labels,
-            texts=text_ops, choices=choice_ops,
+            texts=text_ops, choices=choice_ops, asks=ask_ops, name_pages=self.name_pages,
             ops=[list(op) if op[0] != 'text' else ['text', op[1]] for op, _ in prog.ops],
             op_addr=self.op_addr, op_where=[w for _, w in prog.ops],
             endings=[dict(id=e['id'], kind=e['kind'], scenario=e['scenario'], title=e['title'],
                           sets=sets[e['id']]) for e in self.endings],
             gflags=prog.gnames, lflags=prog.local_flags, chapters=prog.chapters,
-            pictures=self.pic_names, silhouettes=self.sil_names,
+            pictures=self.pic_names, text_dim=self.text_dim, silhouettes=self.sil_names,
             sil_size={n: [s['w'], s['h']] for n, s in zip(self.sil_names, self.sils)},
             songs=songs, sfx=sfx, audio=self.audio['info'], ui=strings, speeds=SPEEDS,
             glyphs=enc.glyphs, omake_endings=self.args.omake_endings, title_bg=self.title_bg,

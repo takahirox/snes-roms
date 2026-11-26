@@ -11,15 +11,25 @@ Tick:
     bne @menu_dim
     ldx story_active
     beq @plain
+    ; story: the photo is dimmed under a text page (up to DIM_TEXT, by picture) so the text reads; a new picture is shown at full
+    ; brightness until its first text.  L held: the text hidden and the photo at full brightness (look at it);
+    ; R held: dimmed further (DIM_READ) for reading.
     lda pad
     bit #PAD_L
     beq @dim_r
     ldx #1
     stx reg_tm
+    bra @plain
 @dim_r:
     bit #PAD_R
+    beq :+
+    lda #DIM_READ
+    bra @dark
+:   lda text_on
     beq @plain
-    lda #DIM_TEXT
+    ldx pic_entry               ; the picture's own dim under text (build.py picture_text_dim: 0 for a night photo)
+    lda PicTable+78,x
+    and #$00FF
     bra @dark
 @menu_dim:
     lda #DIM_MENU

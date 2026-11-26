@@ -127,10 +127,11 @@ JOB_MAX   = 24
 ; text layout (bitmap coordinates: x 0-239 = screen 8-247, y 0-191 = screen 16-207)
 TX0       = 12                  ; screen x 20
 TY0       = 2                   ; line n at TY0 + 16 n (screen 18 + 16 n)
-PAGE_LINES = 12
+PAGE_LINES = 10                 ; lines a page (tools/yonaki/script.py PAGE_LINES): the photo shows below
 CHOICE_X  = 26                  ; option letter (cursor at TX0)
 OPT_TEXT_X = CHOICE_X + 16      ; option text (tools/yonaki/script.py CHOICE_PX)
-DIM_TEXT  = 2                   ; BG1 dim while R is held (of 31; tools/yonaki/build.py reads it)
+DIM_TEXT  = 7                   ; most BG1 dim under a story text page (of 31; per picture, tools/yonaki/build.py reads it)
+DIM_READ  = 13                  ; BG1 dim while R is held
 DIM_MENU  = 15
 
 ; ui_state (for the tests)
@@ -146,6 +147,8 @@ ST_ENDING = 8
 ST_BUSY = 10
 ST_CONFIRM = 11
 ST_NAME = 12
+ST_WELCOME = 13                 ; the guest register before a new game (NameConfirm)
+ST_ASK = 14                     ; (reserved)
 
 ; ---------------------------------------------------------------- variables
 .segment "ZEROPAGE"
@@ -385,7 +388,7 @@ saves_done: .res 2
 sram_resets: .res 2            ; bit 0 global, bit 1 read marks were reset at boot
 save_buf:  .res 256
 ; the names the player set (NameEntry): the hero's family name at +0, the heroine's given name at +10, each a length word and NAME_MAX glyphs
-names:     .res 20
+names:     .res 30             ; +20: the answer typed at an @ask (length word and NAME_MAX glyphs)
 name_left: .res 2              ; glyphs of a name still to come from ReadCode
 name_pos:  .res 2              ; offset in names of the next one
 ne_field:  .res 2              ; name entry: 0 主人公, 1 ヒロイン
@@ -394,6 +397,14 @@ ne_row:    .res 2              ; 0..NAME_ROWS-1 the characters, NAME_ROWS the co
 ne_col:    .res 2
 ne_i:      .res 2              ; name entry: position in a name
 ne_g:      .res 2              ; glyph being typed
+ne_ask:    .res 2              ; 1: the entry is the answer of an @ask (one field at +20, ask_prompt above it)
+ask_prompt: .res 4             ; long address of the @ask question (an encoded string)
+ask_tbl:   .res 4              ; long address of the @ask answers
+ask_n:     .res 2
+ask_dark:  .res 2              ; dark_on before the @ask
+choice_inline: .res 2          ; the choice on screen is inline (its options become the paragraph chosen)
+opt_sum:   .res 2              ; lines of the options on screen
+text_nowait: .res 2            ; the paragraph being typed is shown at once and goes on without a wait
 
 ; ---------------------------------------------------------------- header
 .segment "HEADER"

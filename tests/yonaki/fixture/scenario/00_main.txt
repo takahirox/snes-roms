@@ -95,16 +95,21 @@
 
 *deduce
 @bgm deduce
-犯人は誰か。
-@choice
-> 権藤さん -> d_gondo
-> 黒井さん -> d_kuroi
+犯人は誰か。名前を入れる。
+@ask 鐘を鳴らしたのは――
+> 権藤 ごんどう ゴンドウ -> d_gondo
+> 黒井 くろい -> d_kuroi
+> * -> d_nobody
+
+*d_nobody
+そんな人は、この宿にはいない。
+@goto deduce
 
 *d_gondo
-動機は。
-@choice
-> 千鶴の父だから -> end_true
-> わからない -> end_normal
+動機は。僕は、権藤さんの顔を見て言った。
+@choice inline
+> 「あなたが、千鶴さんのお父さんだからです」 -> end_true
+> 「……わかりません」 -> end_normal
 
 *d_kuroi
 @bg oldbath_night fade

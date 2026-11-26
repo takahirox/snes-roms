@@ -6,7 +6,7 @@ into page-sized chunks here; pagination across paragraphs happens at run time (a
 the rest of the page starts a new page).
 
 Ops (the VM of src/yonaki/vm.inc runs the same list, encoded by tools/yonaki/build.py):
-  ('text', tid, chunks)         chunks: list of pages, each a list of lines (str)
+  ('text', tid, chunks[, nowait])   chunks: list of pages, each a list of lines (str); nowait: shown at once
   ('blank',) ('page',)
   ('bg', name, mode)            mode: cut fade white mosaic
   ('sil', key, name|None, colour)   key: 'l' 'c' 'r' or 'x=NN'; name None removes
@@ -16,7 +16,12 @@ Ops (the VM of src/yonaki/vm.inc runs the same list, encoded by tools/yonaki/bui
   ('set', flag) ('clr', flag) ('setg', g) ('clrg', g)
   ('if', cond, label)           cond = (name, negated, is_global); jumps when the condition holds
   ('goto', label)
-  ('choice', cid, [(conds, lines, label), ...])   lines: the option text wrapped (1 or 2 lines)
+  ('choice', cid, [(conds, lines, label), ...], inline)   lines: the option text wrapped (1 or 2 lines);
+                                inline: the options are the next sentence of the text, and the one chosen
+                                stays on the page as a paragraph (an echo paragraph the parser adds before
+                                the target, shown at once without a wait)
+  ('ask', aid, question, [(answers, label), ...], default)   the player types a name (name entry grid);
+                                answers: spellings (lists of up to NAME_MAX characters) that lead to label
   ('end', ending_id)
   ('chapter', chid, title)
 """
@@ -27,7 +32,7 @@ NO_START = set('、。，．・：；？！ー…‥」』）］｝〕〉》】�
 NO_END = set('「『（［｛〔〈《【([{')
 NO_SPLIT = set('…‥―')          # never break between two of these
 LINE_PX = 216                    # 18 full-width characters
-PAGE_LINES = 12
+PAGE_LINES = 10                  # src/yonaki/yonaki.s PAGE_LINES
 CHOICE_PX = 188                  # after the cursor and the option letter (src/yonaki/vm.inc OPT_TEXT_X)
 MAX_CHOICES = 8
 # the names the player sets (はじめから): in the script they are written as the default names, which become
@@ -44,6 +49,17 @@ COLOURS = ('blue', 'white', 'red')
 
 class ScriptError(Exception):
     pass
+
+
+ASK_DEFAULT = '*'
+
+
+def options(op):
+    """The ways on from a choice or an @ask: [(conds, lines, label)].  For an @ask, lines[0] is the first
+    spelling of each answer, and the last option is the default (lines ['*'])."""
+    if op[0] == 'choice':
+        return op[2]
+    return [([], [a[0]], lab) for a, lab in op[3]] + [([], [ASK_DEFAULT], op[4])]
 
 
 class Diag:
@@ -183,6 +199,7 @@ class Program:
         self.files = []
         self.text_count = 0
         self.choice_count = 0
+        self.ask_count = 0
         self.chapters = []       # titles
         self.gnames = []
 
@@ -210,12 +227,25 @@ def parse(scn_dir, endings, font, diag):
     def emit(op, where):
         prog.ops.append((op, where))
 
+    echoes = []                  # (label, text, target, where): the echo paragraphs of inline choices
+
     def close_choice():
         nonlocal pending_choice
         if pending_choice is not None:
             op, where = pending_choice
-            if not op[2]:
+            if op[0] == 'ask':
+                if not op[3]:
+                    diag.err(where, '@ask without "> answer ... -> label" lines')
+                if op[4] is None:
+                    diag.err(where, '@ask without a default ("> * -> label")')
+                    op[4] = op[3][0][1] if op[3] else 'start'
+            elif not op[2]:
                 diag.err(where, '@choice without "> text -> label" lines')
+            elif op[3]:
+                for k, (cs, cl, lab) in enumerate(op[2]):
+                    echo = f'_echo{op[1]}_{k}'
+                    echoes.append((echo, ''.join(cl), lab, where))
+                    op[2][k] = (cs, cl, echo)
             emit(op, where)
             pending_choice = None
 
@@ -230,6 +260,21 @@ def parse(scn_dir, endings, font, diag):
             if s.startswith('>'):
                 if pending_choice is None:
                     diag.err(where, '"> ..." outside a @choice')
+                    continue
+                if pending_choice[0][0] == 'ask':
+                    m = re.fullmatch(r'>\s*(.*?)\s*->\s*([A-Za-z0-9_]+)\s*', s)
+                    if not m or not m.group(1):
+                        diag.err(where, f'bad answer line (expected "> answer answer ... -> label"): {s}')
+                        continue
+                    words = m.group(1).split()
+                    if words == [ASK_DEFAULT]:
+                        pending_choice[0][4] = m.group(2)
+                        continue
+                    words = [normalize(w, font) for w in words]
+                    for w in words:
+                        if len(w) > NAME_MAX:
+                            diag.err(where, f'answer "{w}" is longer than {NAME_MAX} characters')
+                    pending_choice[0][3].append((words, m.group(2)))
                     continue
                 m = re.fullmatch(r'>\s*((?:\{[^}]*\}\s*)*)(.*?)\s*->\s*([A-Za-z0-9_]+)\s*', s)
                 if not m:
@@ -274,10 +319,19 @@ def parse(scn_dir, endings, font, diag):
                 parts = s[1:].split()
                 cmd, args = parts[0], parts[1:]
                 if cmd == 'choice':
-                    if args:
-                        diag.err(where, '@choice takes no arguments')
-                    pending_choice = (['choice', prog.choice_count, []], where)
+                    if args not in ([], ['inline']):
+                        diag.err(where, '@choice takes no argument but "inline"')
+                    pending_choice = (['choice', prog.choice_count, [], args == ['inline']], where)
                     prog.choice_count += 1
+                elif cmd == 'ask':
+                    q = normalize(s[len('@ask'):].strip(), font)
+                    q = name_vars(q)
+                    if not q:
+                        diag.err(where, '@ask without a question')
+                    elif width(q) > LINE_PX:
+                        diag.err(where, f'@ask question too wide ({width(q)} px; one line of 18 characters)')
+                    pending_choice = (['ask', prog.ask_count, q, [], None], where)
+                    prog.ask_count += 1
                 elif cmd == 'chapter':
                     title = normalize(s[len('@chapter'):].strip(), font)
                     if not title:
@@ -408,6 +462,13 @@ def parse(scn_dir, endings, font, diag):
             emit(('text', prog.text_count, chunks), where)
             prog.text_count += 1
         close_choice()
+    # the echo paragraphs of inline choices, after the program (each goes on to the option's target)
+    for echo, text, lab, where in echoes:
+        prog.labels[echo] = len(prog.ops)
+        prog.label_where[echo] = where
+        emit(('text', prog.text_count, [wrap(text)], True), where)
+        prog.text_count += 1
+        emit(('goto', lab), where)
     # choice ops were built as lists
     prog.ops = [(tuple(op) if isinstance(op, list) else op, w) for op, w in prog.ops]
     prog.gnames = gnames
@@ -428,8 +489,8 @@ def successors(prog, i):
         return [lab(op[1])]
     if k == 'if':
         return [lab(op[2])] + nxt
-    if k == 'choice':
-        return [lab(t) for _, _, t in op[2]]
+    if k in ('choice', 'ask'):
+        return [lab(t) for _, _, t in options(op)]
     if k == 'end':
         return []
     return nxt
@@ -470,6 +531,8 @@ def check(prog, endings, diag, assets):
             targets = [op[1]]
         elif op[0] == 'if':
             targets = [op[2]]
+        elif op[0] == 'ask':
+            targets = [t for _, _, t in options(op)]
         elif op[0] == 'choice':
             targets = [t for _, _, t in op[2]]
             if len(op[2]) > MAX_CHOICES:
@@ -594,6 +657,14 @@ def simulate(ops, labels, start, flags, gflags, choose, limit=200000):
             path.append((i, c, vis[c][1][2], vis[c][1][1]))
             i = labels[vis[c][1][2]]
             continue
+        elif k == 'ask':
+            vis = list(enumerate(options(op)))
+            c = choose(i, vis, flags)
+            if c is None:
+                return ('stop', i, path, flags)
+            path.append((i, c, vis[c][1][2], vis[c][1][1]))
+            i = labels[vis[c][1][2]]
+            continue
         i += 1
     raise ScriptError('simulation did not finish (a loop without choices?)')
 
@@ -635,18 +706,61 @@ def _advance(ops, labels, i, flags, gflags, tested, limit=100000):
         elif k == 'choice':
             vis = [o for o in op[2] if all(((c[0] in gflags) if c[2] else (c[0] in flags)) != c[1] for c in o[0])]
             return ('choice', i, frozenset(flags), vis)
+        elif k == 'ask':
+            return ('choice', i, frozenset(flags), options(op))
         elif k == 'halt':
             return ('stop', i, frozenset(flags), None)
         i += 1
     raise ScriptError('simulation did not finish (a loop without choices?)')
 
 
+def _live_flags(ops, labels):
+    """For every op, the local flags that an op reachable from it (itself included) may test: a flag outside
+    this set cannot change anything after that op, so the route search can forget it there."""
+    n = len(ops)
+    names = sorted(_tested_flags(ops))
+    bit = {f: 1 << k for k, f in enumerate(names)}
+    own = [0] * n
+    succ = [[] for _ in range(n)]
+    for i, op in enumerate(ops):
+        k = op[0]
+        if k == 'if' and not op[1][2]:
+            own[i] = bit[op[1][0]]
+        elif k == 'choice':
+            for o in op[2]:
+                for c in o[0]:
+                    if not c[2]:
+                        own[i] |= bit[c[0]]
+        if k == 'goto':
+            succ[i] = [labels[op[1]]]
+        elif k == 'if':
+            succ[i] = [labels[op[2]], i + 1]
+        elif k in ('choice', 'ask'):
+            succ[i] = [labels[t] for _, _, t in options(op)]
+        elif k not in ('end', 'halt'):
+            succ[i] = [i + 1]
+        succ[i] = [j for j in succ[i] if j < n]
+    live = own[:]
+    changed = True
+    while changed:
+        changed = False
+        for i in range(n - 1, -1, -1):
+            v = live[i]
+            for j in succ[i]:
+                v |= live[j]
+            if v != live[i]:
+                live[i] = v
+                changed = True
+    return [frozenset(f for f in names if m & bit[f]) for m in live]
+
+
 def routes(ops, labels, gflags, start='start', max_states=500000):
-    """Breadth-first search over (choice op, tested local flags): the shortest choice path to every ending
-    reachable with the given global flags (names and seen ending ids).
+    """Breadth-first search over (choice op, local flags still tested later): the shortest choice path to every
+    ending reachable with the given global flags (names and seen ending ids).
     Returns {ending_id: [(choice op index, visible index, target label, text lines)]}."""
     from collections import deque
     tested = _tested_flags(ops)
+    live = _live_flags(ops, labels)
     found = {}
     seen = set()
     q = deque([(labels[start], frozenset(), ())])
@@ -658,6 +772,7 @@ def routes(ops, labels, gflags, start='start', max_states=500000):
             continue
         if r[0] != 'choice':
             continue
+        r = (r[0], r[1], r[2] & live[r[1]], r[3])
         key = (r[1], r[2])
         if key in seen:
             continue

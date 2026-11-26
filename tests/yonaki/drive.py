@@ -85,10 +85,19 @@ class Driver(Game):
         return [self.w('names', field * 10 + 2 + 2 * i) for i in range(n)]
 
     def names(self, limit=600):
-        """The name entry after はじめから: keep the names shown (START on each name)."""
-        for _ in range(2):
-            self.until(lambda: self.state() == 'NAME', limit, 'name entry')
-            self.tap('START', 2, 4)
+        """The guest register after はじめから: このまま始める (the names shown)."""
+        self.until(lambda: self.state() == 'WELCOME', limit, 'guest register')
+        self.run(2)
+        self.menu_to(0)
+        self.tap('A', 2, 4)
+
+    def rename(self, limit=600):
+        """The guest register after はじめから: 名前を書きなおす (to the name entry)."""
+        self.until(lambda: self.state() == 'WELCOME', limit, 'guest register')
+        self.run(2)
+        self.menu_to(1)
+        self.tap('A', 2, 4)
+        self.until(lambda: self.state() == 'NAME', limit, 'name entry')
 
     def menu_to(self, want):
         for _ in range(16):
@@ -150,10 +159,38 @@ class Driver(Game):
         self.title()
         self.title_pick(0)
 
+    def type_answer(self, text):
+        """An @ask: type text on the name entry grid (switching pages with R) and decide with START.
+        '*' (the default way) types a character no answer uses."""
+        assert self.state() == 'NAME', self.state()
+        pages = self.layout['name_pages']
+        if text == '*':
+            used = {c for a in self.layout['asks'].values() for e in a['answers'] for w in e['words'] for c in w}
+            text = next(c for c in pages[0] if c != '　' and c not in used)
+        cols = 10
+        for c in text:
+            pg = next(i for i, p in enumerate(pages) if c in p)
+            for _ in range(len(pages) + 1):
+                if self.w('ne_page') == pg:
+                    break
+                was = self.w('ne_page')
+                self.tap('R', 2, 2)
+                self.until(lambda: self.state() == 'NAME' and self.w('ne_page') != was, 600, 'name page')
+                self.run(4)
+            assert self.w('ne_page') == pg, 'name page'
+            idx = pages[pg].index(c)
+            self.name_pick(idx // cols, idx % cols)
+        self.tap('START', 2, 4)
+
     def play(self, path, final='ENDING'):
         """Follow a route (routes.plan path) to its end."""
         for cid, k, lab, text in path:
             st = self.advance()
+            if isinstance(cid, str):
+                if st != 'NAME':
+                    raise Stuck(f'expected the answer "{text}" to be asked, state {st}')
+                self.type_answer(text)
+                continue
             if st != 'CHOICE':
                 raise Stuck(f'expected a choice before "{text}", state {st}')
             assert self.w('choice_id') == cid, (self.w('choice_id'), cid)

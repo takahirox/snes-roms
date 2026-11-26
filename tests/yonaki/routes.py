@@ -15,7 +15,10 @@ import script as sc          # noqa: E402
 
 
 def _choice_ids(layout):
-    return {v['op']: int(k) for k, v in layout['choices'].items()}
+    """op index -> choice id, or 'askN' for an @ask (its path text is the answer typed)."""
+    out = {v['op']: int(k) for k, v in layout['choices'].items()}
+    out.update({v['op']: f'ask{k}' for k, v in layout.get('asks', {}).items()})
+    return out
 
 
 def plan(layout):

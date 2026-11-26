@@ -9,7 +9,7 @@ build/yonaki-test/traces/<test>.json.
 usage: python3 -I tests/yonaki/run.py [--real] [test ...]
   --real   also build the real scenario (data/yonaki/scenario -> build/yonaki) and play every ending of it
 """
-import sys, json, pathlib, traceback, struct, random, time
+import sys, json, pathlib, traceback, struct, random, time, re
 from binascii import crc_hqx
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 import buildrom                       # noqa: E402
@@ -420,7 +420,7 @@ def test_recovery():
 
 
 def test_names():
-    """はじめから asks for the two names: B deletes, the pages and the cursor type new ones, START decides; the
+    """はじめから shows the names in the guest register; 名前を書きなおす asks for the two names: B deletes, the pages and the cursor type new ones, START decides; the
     names are kept in the battery RAM and drawn in the story in place of 結城 / 千尋."""
     rec = {}
     lay = json.loads((B / 'layout.json').read_text())
@@ -430,7 +430,9 @@ def test_names():
     items = g.title_items()
     g.menu_to(items.index(0))
     g.tap('A', 2, 4)
-    g.until(lambda: g.state() == 'NAME', 600, 'name entry')
+    g.until(lambda: g.state() == 'WELCOME', 600, 'guest register')
+    shot(g, 'register')
+    g.rename()
     assert g.name_glyphs(0) == [gi['結'], gi['城']] and g.name_glyphs(1) == [gi['千'], gi['尋']], 'default names'
     shot(g, 'entry')
     g.tap('B', 2, 6)
@@ -473,7 +475,7 @@ def test_names():
     g.title()
     g.menu_to(g.title_items().index(0))
     g.tap('A', 2, 4)
-    g.until(lambda: g.state() == 'NAME', 600, 'name entry')
+    g.rename()
     assert g.name_glyphs(0) == [gi['佐'], gi['藤']] and g.name_glyphs(1) == [gi['ま'], gi['り']]
     g.tap('B', 2, 6)
     g.tap('B', 2, 6)
@@ -615,8 +617,11 @@ def test_scheduler():
         assert (g.w('snd_sent'), g.w('snd_last'), g.w('snd_count')) == (sent + i + 1, command, 2 * (2 - i))
         assert g.w('reg_hdma') == 1 and g.w('add_level') == 3 * i
         queued = jobs()
-        assert queued and all(dest >= 0x6020 and kind == 0 and length == 480 for dest, kind, length in queued)
-        assert [job[0] for job in queued] == sorted({job[0] for job in queued})
+        # text rows, and the UI colours as the photo dims under the first text (the silhouette compensation)
+        rows = [job for job in queued if job[1] == 0]
+        assert rows and all(dest >= 0x6020 and length == 480 for dest, _, length in rows), queued
+        assert all(job[1] == 1 and job[0] == 0 and job[2] <= 32 for job in queued if job[1] != 0), queued
+        assert [job[0] for job in rows] == sorted({job[0] for job in rows})
         shot(g, f'requests_{i}', settle=False)
     g.run(1)
     assert g.w('snd_sent') == sent + len(commands), 'a command was repeated'
@@ -726,8 +731,13 @@ def test_scheduler():
     return rec
 
 
+DIM_TEXT, DIM_READ = (int(re.search(rf'^{n}\s*=\s*(\d+)', (ROOT / 'src/yonaki/yonaki.s').read_text(), re.M)[1])
+                      for n in ('DIM_TEXT', 'DIM_READ'))
+
+
 def test_reading_controls():
-    """Scene fades keep the default brightness, and held shoulder buttons only change the view."""
+    """A new picture shows at full brightness until its first text, the photo dims under a text page, and held
+    shoulder buttons only change the view (L: the photo alone, R: darker for reading)."""
     import numpy as np
     from vramview import text_indices
 
@@ -737,16 +747,18 @@ def test_reading_controls():
 
     def observe(game):
         assert game.w('reg_tm') != 2, 'a chapter card interrupted the opening'
-        if game.w('pic_cur') == bus and not game.w('blanked'):
+        if game.w('pic_cur') == bus and not game.w('blanked') and not game.w('text_on'):
             fade_levels.append(game.w('bright'))
-            assert game.w('dim_cur') == 0, 'the scene dimmed without R'
+            assert game.w('dim_cur') == 0, 'the picture dimmed before its text'
 
     g.observers.append(observe)
     g.new_game()
     g.until(lambda: g.state() == 'WAIT', 3000, 'first paragraph')
-    g.run(4)
+    g.run(12)
     g.observers.remove(observe)
     assert min(fade_levels) < 15 and max(fade_levels) == 15, fade_levels
+    text_dim = g.layout['text_dim'][bus]
+    assert 0 < text_dim <= DIM_TEXT and g.w('dim_cur') == text_dim, 'the photo is not dimmed under the text'
     assert g.w('chapter_cur') == 0, 'the prologue must still label bookmarks'
     g.until(lambda: g.w('blink') & 32 and not g.w('mark_on'), 80, 'blank wait mark')
     g.run(4)
@@ -776,28 +788,26 @@ def test_reading_controls():
     sample = lambda: g.screen()[16:32].copy()
     normal = sample()
     shot(g, 'normal', settle=False)
-    g.run(6, ('R',))
+    assert g.w('dim_cur') == text_dim
+    g.run(12, ('R',))
     reading = sample()
-    assert g.w('dim_cur') == 2
+    assert g.w('dim_cur') == DIM_READ
     assert reading[:, :8].mean() < normal[:, :8].mean(), 'R did not dim the photo'
     shot(g, 'hold_r', settle=False)
-    g.run(6)
-    assert g.w('dim_cur') == 0 and np.array_equal(sample(), normal)
+    g.run(12)
+    assert g.w('dim_cur') == text_dim and np.array_equal(sample(), normal)
 
-    g.run(6, ('L',))
+    g.run(12, ('L',))
     scenic = g.screen().copy()
     assert g.w('reg_tm') == 1 and g.w('dim_cur') == 0
     assert not np.array_equal(scenic[16:32], normal), 'L did not remove the text'
-    assert np.array_equal(scenic[16:32, :8], normal[:, :8]), 'L changed the photo'
+    assert scenic[16:32, :8].mean() > normal[:, :8].mean(), 'L did not show the photo at full brightness'
     shot(g, 'hold_l', settle=False)
-    g.run(6, ('L', 'R'))
-    assert g.w('reg_tm') == 1 and g.w('dim_cur') == 2, 'both shoulder effects should apply'
-    assert np.array_equal(sample()[:, :8], reading[:, :8]), 'R dim differs when L is also held'
-    assert not np.array_equal(sample(), reading), 'holding R brought the text back'
+    g.run(12, ('L', 'R'))
+    assert g.w('reg_tm') == 1 and g.w('dim_cur') == 0, 'L (the photo alone) wins over R'
+    assert np.array_equal(g.screen(), scenic), 'R changed the view while L is held'
     shot(g, 'hold_both', settle=False)
-    g.run(6, ('L',))
-    assert np.array_equal(g.screen(), scenic), 'releasing R should restore the bright scenery'
-    g.run(6)
+    g.run(12)
     assert np.array_equal(sample(), normal) and g.w('cur_text') == text_id and g.state() == 'WAIT'
     shot(g, 'released', settle=False)
 
@@ -814,7 +824,7 @@ def test_reading_controls():
     g.run(20, ('L', 'R'))
     assert g.w('reg_tm') == 3 and g.w('dim_cur') == 15, 'shoulder buttons affected the menu'
     shot(g, 'menu_with_shoulders_held', settle=False)
-    rec = dict(default_dim=0, held_r_dim=2, held_l_layers=1)
+    rec = dict(default_dim=text_dim, held_r_dim=DIM_READ, held_l_layers=1)
     finish(g, rec)
     return rec
 
@@ -964,7 +974,7 @@ def test_coverage():
     ops = lay['ops']
     kinds = {o[0] for o in ops}
     want = {'text', 'blank', 'page', 'bg', 'sil', 'silclear', 'bgm', 'se', 'amb', 'fx', 'set', 'clr', 'setg', 'clrg',
-            'if', 'goto', 'choice', 'end', 'chapter'}
+            'if', 'goto', 'choice', 'end', 'chapter', 'ask'}
     assert want <= kinds, want - kinds
     assert {o[2] for o in ops if o[0] == 'bg'} >= {'cut', 'fade', 'white', 'mosaic'}
     assert {o[1] for o in ops if o[0] == 'fx'} >= {'shake', 'flash', 'redflash', 'ripple_on', 'ripple_off', 'dark',
@@ -977,6 +987,8 @@ def test_coverage():
     assert any(o[0] == 'if' and o[1][1] for o in ops) and any(o[0] == 'if' and o[1][2] for o in ops)
     assert any(len(o[2][k][1]) == 2 for o in ops if o[0] == 'choice' for k in range(len(o[2])))
     assert any(len(t['pages']) > 1 for t in lay['texts'].values()), 'no paragraph longer than a page'
+    assert any(o[0] == 'choice' and o[3] for o in ops), 'no inline choice'
+    assert any(o[0] == 'ask' and o[4] for o in ops), 'no @ask with a default'
     return dict(ops=sorted(kinds))
 
 

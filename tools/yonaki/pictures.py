@@ -32,7 +32,7 @@ W, H = 256, 192
 COLORS = 240
 TINT_COLORS = 112                                   # photos under translucent silhouettes
 # figure colour, opacity: the colours under a blue / white (ghost) / red figure
-TINTS = dict(blue=((36, 52, 176), 0.6), white=((232, 236, 255), 0.45), red=((190, 24, 24), 0.6))
+TINTS = dict(blue=((52, 48, 132), 0.5), white=((232, 236, 255), 0.45), red=((190, 24, 24), 0.6))
 SIL_HEIGHT = 160
 CACHE = ROOT / 'build/yonaki/cache'
 WEIGHT = np.array([0.299, 0.587, 0.114]) * 3        # distance weights (gamma-encoded RGB)

@@ -54,7 +54,7 @@ RunVM:
     and #$00FF
 @go:
     inc vp
-    cmp #OP_AMB+1
+    cmp #OP_ASK+1
     bcc :+
     lda #OP_HALT
 :   asl a
@@ -70,7 +70,7 @@ VmExit:
 
 OpTable:
     .word OpHalt, OpText, OpBlank, OpPage, OpBg, OpSil, OpSilClear, OpBgm, OpSe, OpFx, OpSet, OpClr
-    .word OpSetG, OpClrG, OpIf, OpGoto, OpChoice, OpEnd, OpChapter, OpAmb
+    .word OpSetG, OpClrG, OpIf, OpGoto, OpChoice, OpEnd, OpChapter, OpAmb, OpAsk
 
 OpHalt:
     lda #2
@@ -91,7 +91,12 @@ OpText:
     jsr ReadW
     sta cur_text
     jsr ReadB
-    sta t0
+    stz text_nowait
+    bit #$80
+    beq :+
+    and #$7F
+    inc text_nowait
+:   sta t0
     inc paragraphs
     lda page_line
     beq :+
@@ -115,6 +120,8 @@ OpText:
     stz instant
     stz ff
     lda redraw
+    bne @inst
+    lda text_nowait
     bne @inst
     lda speed
     cmp #3
@@ -216,11 +223,13 @@ OpText:
     lda redraw
     beq :+
     rts
-:   jsr SetMark
+:   lda text_nowait
+    bne :+
+    jsr SetMark
     jsr NextMark
     sta mark_glyph
     jsr WaitAdvance
-    lda cur_text
+:   lda cur_text
     jmp MarkRead
 
 SpeedGlyphs: .byte 0, 1, 2, 0
@@ -268,7 +277,7 @@ NextMark:
     bne @other
     ldy #3
     lda [p2],y
-    and #$00FF
+    and #$007F
     clc
     adc t3
     cmp #PAGE_LINES+1
@@ -312,7 +321,7 @@ NextMark:
 
 ; size of the ops NextMark may step over (0: stop there)
 OpSize:
-    .byte 0, 0, 1, 0, 0, 5, 1, 2, 2, 4, 3, 3, 2, 2, 0, 0, 0, 0, 0, 2
+    .byte 0, 0, 1, 0, 0, 5, 1, 2, 2, 4, 3, 3, 2, 2, 0, 0, 0, 0, 0, 2, 0
 
 ; Wait for A with the blinking mark (mark_x, mark_y, mark_glyph).  B held over read text goes on by itself;
 ; START opens the menu.
@@ -398,7 +407,12 @@ OpChoice:
     jsr ReadW
     sta choice_id
     jsr ReadB
-    sta t7                      ; options in the op
+    stz choice_inline
+    bit #$80
+    beq :+
+    and #$7F
+    inc choice_inline           ; inline: the options are the next sentence; the one chosen stays as text
+:   sta t7                      ; options in the op
     stz opt_count
 @opt:
     lda t7
@@ -465,17 +479,23 @@ OpChoice:
     inx
     cpx t1
     bne :-
-    sta t0
+    sta opt_sum
     lda page_line
-    beq :+
-    inc t0
-:   lda page_line
-    clc
-    adc t0
+    beq @fits                   ; (the build checks that the options fit an empty page)
+    sec                         ; + the blank line
+    adc opt_sum
     cmp #PAGE_LINES+1
-    bcc :+
+    bcc @fits
+    jsr ChoicePage
+    lda page_line
+    beq @fits
+    sec
+    adc opt_sum
+    cmp #PAGE_LINES+1
+    bcc @fits
     jsr ClearPage
-:   lda page_line
+@fits:
+    lda page_line
     beq :+
     inc page_line
 :   ; draw the options
@@ -567,7 +587,41 @@ OpChoice:
     lda opt_bank,x
     sta vp+2
     jsr HideSel
+    lda choice_inline
+    bne :+
     jmp ClearPage
+:   lda opt_line                ; inline: the options (and the blank line before them) go, the text above stays
+    beq :+
+    dec a
+:   sta page_line
+    jmp ClearFrom
+
+; The options do not fit under the text: a new page.  Inline options are the next sentence of the paragraph
+; before them, so that paragraph is drawn again at the top (as a bookmark resume does).
+ChoicePage:
+    lda last_text
+    pha
+    jsr ClearPage
+    pla
+    ldx choice_inline
+    beq @r
+    cmp #$FFFF
+    beq @r
+    ldx vp
+    phx
+    ldx vp+2
+    phx
+    jsr TextAddr
+    inc vp                      ; past the opcode
+    lda #1
+    sta redraw
+    jsr OpText
+    stz redraw
+    plx
+    stx vp+2
+    plx
+    stx vp
+@r: rts
 
 ShowSel:
     lda opt_sel
@@ -598,6 +652,99 @@ SelCursor:
     lda #1
     sta g_col
     rts
+
+; ---------------------------------------------------------------- the name of someone, typed (@ask)
+; ASK n8 { len8 glyph16*len addr24 }*n default_addr24 <question string>
+; The player types a name on the name entry grid (AskEntry); the first answer spelled exactly so is taken,
+; else the default.
+OpAsk:
+    jsr ReadB
+    sta ask_n
+    sta t7
+    lda vp
+    sta ask_tbl
+    lda vp+2
+    sta ask_tbl+2
+@skip:
+    lda t7
+    beq @def
+    dec t7
+    jsr ReadB                   ; glyphs in the answer
+    asl a
+    clc
+    adc #3
+    adc vp
+    sta vp
+    bra @skip
+@def:
+    jsr ReadAddr
+    lda t0
+    pha
+    lda t1
+    pha
+    lda vp
+    sta ask_prompt
+    lda vp+2
+    sta ask_prompt+2
+    jsr EnsureVisible
+    jsr AskEntry
+    lda ask_tbl
+    sta p2
+    lda ask_tbl+2
+    sta p2+2
+    lda ask_n
+    sta t7
+@cmp:
+    lda t7
+    beq @nomatch
+    dec t7
+    lda [p2]
+    and #$00FF
+    sta t3                      ; glyphs
+    inc p2
+    cmp names+20
+    bne @next
+    ldy #0
+@g:
+    tya
+    lsr a
+    cmp t3
+    beq @match
+    tyx
+    lda [p2],y
+    cmp names+22,x
+    bne @next
+    iny
+    iny
+    bra @g
+@next:
+    lda t3
+    asl a
+    clc
+    adc #3
+    adc p2
+    sta p2
+    bra @cmp
+@match:
+    lda t3
+    asl a
+    tay
+    lda [p2],y
+    sta t0
+    iny
+    iny
+    lda [p2],y
+    and #$00FF
+    sta t1
+    pla
+    pla
+    jmp JumpT0
+@nomatch:
+    pla
+    sta t1
+    pla
+    sta t0
+    jmp JumpT0
 
 ; ---------------------------------------------------------------- flags
 ; A = condition word (bit 15 negated, bit 14 global: index < 32 global flag, 32.. ending seen) -> A = 0/1, Z

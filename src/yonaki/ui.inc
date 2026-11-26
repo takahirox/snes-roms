@@ -156,10 +156,17 @@ TitleScreen:
     jsr RunVM
     jmp TitleScreen
 @new:
+    jsr NameConfirm
+    cmp #0
+    beq @go                     ; このまま始める
+    cmp #1
+    bne @cancel
     jsr NameEntry
-    bcc :+
+    bcc @go
+@cancel:
     jmp @back                   ; cancelled
-:   jsr StartGame
+@go:
+    jsr StartGame
     lda #.loword(START_ADDR)
     sta vp
     lda #^START_ADDR
@@ -197,6 +204,75 @@ TitleScreen:
     jsr TitleMenuDraw
     jmp @menu
 
+; ---------------------------------------------------------------- the guest register (はじめから)
+; The names kept from the last time (or the defaults), written in the inn's register over the darkened title
+; picture: このまま始める (A = 0) / 名前を書きなおす (A = 1, the name entry) / B: back (A = $FFFF).
+NC_LINE = 8                     ; the first option
+NameConfirm:
+    lda #ST_BUSY
+    sta ui_state
+    lda #1
+    sta dark_on                 ; the title picture (and its lettering) out of the way, as in the name entry
+    jsr ClearPage
+    lda #1
+    sta g_col
+    stz g_space
+    lda #1
+    jsr LineY
+    lda #TX0+14
+    sta g_x
+    lda #.loword(Str_register_head)
+    jsr PrintRom
+    lda #3
+    jsr LineY
+    lda #TX0+42
+    sta g_x
+    lda #.loword(Str_register_hero)
+    jsr PrintRom
+    lda #4
+    jsr LineY
+    lda #TX0+42
+    sta g_x
+    lda #.loword(Str_register_heroine)
+    jsr PrintRom
+    lda #6
+    jsr LineY
+    lda #TX0+14
+    sta g_x
+    lda #.loword(Str_register_ask)
+    jsr PrintRom
+    lda #TITLE_CX
+    sta menu_cx
+    lda #2
+    sta menu_count
+    lda #NC_LINE
+    sta menu_item
+    inc a
+    sta menu_item+2
+    lda #.loword(Str_register_go)
+    ldx #NC_LINE
+    jsr MenuText
+    lda #.loword(Str_register_change)
+    ldx #NC_LINE+1
+    jsr MenuText
+    jsr WaitUploads
+    stz menu_sel
+    lda #1
+    sta menu_hlc
+    sta menu_cancel
+    lda #ST_WELCOME
+    sta ui_state
+    jsr MenuLoop
+    pha
+    lda #ST_BUSY
+    sta ui_state
+    stz menu_cancel
+    pla
+    cmp #1
+    beq :+                      ; to the name entry: it stays dark
+    stz dark_on
+:   rts
+
 ; ---------------------------------------------------------------- name entry (はじめから)
 ; The hero's family name (主人公) and the heroine's given name (ヒロイン) (1..NAME_MAX glyphs each) typed from
 ; pages of characters (かな, カナ, 漢字 1-3, NameGrid) over the dimmed title picture (the heroine's family name
@@ -212,9 +288,11 @@ NE_CELL    = 21                         ; px per character cell (cursor, then th
 NE_CMD_W   = 44                         ; px per command
 
 NameEntry:
+    stz ne_ask
+    stz ne_field
+NeRun:
     lda #ST_BUSY
     sta ui_state
-    stz ne_field
     stz ne_page
     stz ne_row
     stz ne_col
@@ -272,6 +350,22 @@ NameEntry:
     cmp #1                      ; carry set: cancelled
     rts
 
+; the answer of an @ask (src/yonaki/vm.inc OpAsk): one field (names+20) under the question, on the grid of
+; the name entry over the darkened scene.  START or 決定 with something typed ends it; it cannot be left empty.
+AskEntry:
+    lda dark_on
+    sta ask_dark
+    stz names+20
+    lda #1
+    sta ne_ask
+    lda #2
+    sta ne_field
+    jsr NeRun
+    stz ne_ask
+    lda ask_dark
+    sta dark_on
+    jmp ClearPage
+
 ; carry clear: go on; carry set and A = 0: done (names saved), A = 1: cancelled
 NeDecide:
     jsr NeLenX
@@ -281,7 +375,12 @@ NeDecide:
     clc
     rts
 :   jsr SndOk
-    lda ne_field
+    lda ne_ask
+    beq :+
+    lda #0                      ; an answer: nothing to save
+    sec
+    rts
+:   lda ne_field
     bne :+
     lda #1
     sta ne_field
@@ -303,7 +402,11 @@ NeBack:
     clc
     rts
 :   jsr SndCancel
-    lda ne_field
+    lda ne_ask
+    beq :+
+    clc                         ; an answer cannot be left
+    rts
+:   lda ne_field
     beq :+
     stz ne_field
     jsr NeFieldMark
@@ -366,10 +469,12 @@ NePress:
 
 ; X = offset of the current name in names
 NeLenX:
-    lda ne_field
-    beq :+
-    lda #10
-:   tax
+    lda ne_field                ; * 10: 0 主人公, 10 ヒロイン, 20 the answer of an @ask
+    asl a
+    asl a
+    adc ne_field
+    asl a
+    tax
     rts
 
 ; glyph ne_g at the end of the current name
@@ -607,7 +712,10 @@ NePage:
     sta ui_state
 NeDrawAll:
     jsr ClearPage
-    lda #1
+    lda ne_ask
+    beq :+
+    jmp NeDrawAsk
+:   lda #1
     sta g_col
     stz g_space
     lda #0
@@ -648,10 +756,10 @@ NeDrawAll:
     lda ne_field
     pha
     stz ne_field
-    jsr @name
+    jsr NeDrawName
     lda #1
     sta ne_field
-    jsr @name
+    jsr NeDrawName
     pla
     sta ne_field
     lda #2
@@ -664,7 +772,7 @@ NeDrawAll:
     jsr PrintRom
     lda #1
     sta g_col
-    ; the characters
+NeDrawGrid:                     ; the characters
     lda ne_row
     pha
     lda ne_col
@@ -718,7 +826,42 @@ NeDrawAll:
     bne @cmd
     jsr NeFieldMark
     jmp NeCursorOn
-@name:
+
+; the question of an @ask (line 0), a hint (1) and the answer typed so far (2), then the grid
+NeDrawAsk:
+    lda #1
+    sta g_col
+    stz g_space
+    lda #0
+    jsr LineY
+    lda #TX0
+    sta g_x
+    lda ask_prompt
+    sta p0
+    lda ask_prompt+2
+    sta p0+2
+    jsr PrintStr
+    lda #3
+    sta g_col
+    lda #1
+    jsr LineY
+    lda #TX0+14
+    sta g_x
+    lda #.loword(Str_ask_hint)
+    jsr PrintRom
+    lda #1
+    sta g_col
+    lda #2
+    jsr LineY
+    lda #TX0+14
+    sta g_x
+    lda #.loword(Str_ask_label)
+    jsr PrintRom
+    jsr NeDrawName
+    jmp NeDrawGrid
+
+; the name of field ne_field (its glyphs, ＿ for the free places)
+NeDrawName:
     jsr NeLenX
     stz ne_i
 :   lda ne_i
