@@ -100,10 +100,12 @@ CheckFlash:
     bra EventPending
 
 CheckTyping:
+    lda demo_quit               ; the demo is ending: finish the paragraph at once
+    bne :+
     lda pad_new
     and #PAD_A
-    beq :+
-    lda #1
+    beq :++
+:   lda #1
     sta instant
 :   jsr ReadSkipHeld
     beq EventReady
@@ -121,6 +123,8 @@ ReadSkipHeld:
 :   rts
 
 CheckAdvance:
+    lda demo_quit
+    bne DemoExit
     lda pad_new
     and #PAD_A
     bne @done
@@ -135,6 +139,8 @@ CheckAdvance:
     rts
 
 CheckChoice:
+    lda demo_quit
+    bne DemoExit
     lda opt_count
     cmp #2
     bcc @buttons
@@ -157,6 +163,14 @@ CheckEnding:
     lda pad_new
     and #PAD_A|PAD_START
     rts
+
+; the demo leaves the story at a wait (no drawing or upload in progress) for the title
+DemoExit:
+    stz wait_event
+    stz wait_remaining
+    stz demo_on
+    stz demo_quit
+    jmp VmExit
 
 ; Run one frame for the active wait or a paced producer. All producers share this order.
 ; The main thread owns effects, upload preparation and the SPC FIFO. NMI owns the published DMA
@@ -261,4 +275,38 @@ ReadPad:
     ora pad_rep
     sta pad_rep
     stz pad_carry
+:   lda demo_on
+    bne DemoPad
+    rts
+
+; The title's demo: a press of the player ends it.  The story sees only the A the demo presses after
+; DEMO_WAIT frames at a paragraph's wait or a choice (the first option); nothing is held.
+DemoPad:
+    lda pad_new
+    bne @quit
+    inc demo_frames
+    lda demo_frames
+    cmp #DEMO_FRAMES
+    bcc :+
+@quit:
+    lda #1
+    sta demo_quit
+:   stz pad
+    stz pad_new
+    stz pad_rep
+    lda ui_state
+    cmp #ST_WAIT
+    beq @wait
+    cmp #ST_CHOICE
+    beq @wait
+    stz demo_timer
+    rts
+@wait:
+    inc demo_timer
+    lda demo_timer
+    cmp #DEMO_WAIT
+    bcc :+
+    stz demo_timer
+    lda #PAD_A
+    sta pad_new
 :   rts

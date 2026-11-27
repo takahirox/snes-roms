@@ -106,6 +106,10 @@ def is_read(sram, tid):
     return bool(sram[0x808 + i] & sram[0x1400 + i] & (1 << bit))
 
 
+def asm_const(name):
+    return int(re.search(rf'^{name}\s*=\s*(\d+)', (ROOT / 'src/yonaki/yonaki.s').read_text(), re.M)[1])
+
+
 # ------------------------------------------------------------------ tests
 def test_boot():
     """Empty battery: both blocks are reset; the title has はじめから / しおりから (grey) / 結末の一覧."""
@@ -137,6 +141,33 @@ def test_corrupt():
     sram = finish(g, rec)
     assert global_block(sram)['valid'] and read_header(sram, g.layout['build_id'])
     assert not any(sram[0x808:0x13F8]) and not any(sram[0x1400:0x1FF0])
+    return rec
+
+
+def test_demo():
+    """Left on the title, the story plays itself from *demo: it reads and chooses with no button pressed, keeps no
+    read mark, flag or ending, and a button (or the end of its time) brings the title back."""
+    idle, frames = asm_const('DEMO_IDLE'), asm_const('DEMO_FRAMES')
+    g = new('demo', sram=bytes(8192))
+    rec = {}
+    g.title()
+    start = g.frame
+    g.until(lambda: g.w('demo_on'), idle + 60, 'demo')
+    rec['idle_frames'] = g.frame - start
+    assert rec['idle_frames'] >= idle - 10, rec
+    g.until(lambda: g.state() == 'CHOICE', 4000, 'a choice in the demo')
+    p = g.w('paragraphs')
+    g.until(lambda: g.state() != 'CHOICE', 400, 'the demo chooses')
+    g.until(lambda: g.w('paragraphs') > p and g.state() == 'WAIT', 3000, 'the demo reads on')
+    shot(g, 'demo')
+    g.tap('B', 2, 2)
+    g.until(lambda: g.state() == 'TITLE' and not g.w('demo_on'), 1500, 'a button: back to the title')
+    g.until(lambda: g.w('demo_on'), idle + 400, 'the demo again')
+    g.until(lambda: g.state() == 'TITLE' and not g.w('demo_on'), frames + 1500, 'the demo ends by itself')
+    sram = finish(g, rec)
+    assert not any(sram[0x808:0x13F8]) and not any(sram[0x1400:0x1FF0]), 'the demo marked text as read'
+    gb = global_block(sram)
+    assert gb['endings'] == 0 and gb['gflags'] == 0, gb
     return rec
 
 
@@ -733,7 +764,7 @@ def test_scheduler():
     return rec
 
 
-DIM_READ = int(re.search(r'^DIM_READ\s*=\s*(\d+)', (ROOT / 'src/yonaki/yonaki.s').read_text(), re.M)[1])
+DIM_READ = asm_const('DIM_READ')
 
 
 def test_reading_controls():
@@ -990,7 +1021,7 @@ def test_coverage():
     return dict(ops=sorted(kinds))
 
 
-TESTS = [test_coverage, test_boot, test_corrupt, test_endings, test_endings_list, test_save_load, test_recovery,
+TESTS = [test_coverage, test_boot, test_demo, test_corrupt, test_endings, test_endings_list, test_save_load, test_recovery,
          test_names, test_fastforward, test_speed, test_effects, test_scheduler,
          test_reading_controls, test_silhouette_updates]
 

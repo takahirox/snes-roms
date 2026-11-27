@@ -2,27 +2,17 @@
 # The way into the main story (the 水明館 arc).  The way into the 千鶴 arc ({cleared_oyura}) and E13 are here too.
 
 *start
-@bgm stop
-@bg black cut
-@fx wait 40
-@se bell_far
-@fx wait 50
-雨の夜になると、いまでも、あの鐘の音を思いだす。
-嵐の晩、誰もいない湯殿で鳴る鐘。鳴れば、誰かがひとり、湯に呼ばれる。
-@fx wait 20
-あの夜、鐘は二度鳴った。
-@page
-@fx wait 40
 @chapter 序章　霧見沢
 @bgm journey
 @bg bus fade
-
 窓の外を、赤い葉がいくつも流れていった。
 バスは、もう三十分も同じような山道を登りつづけている。カーブのたびに体が窓へ押しつけられ、そのたびに谷の底がのぞいた。
+@bg valley keep
 谷は白かった。霧が、川のあるあたりをすっぽりと埋めている。
+@bg bus keep
+@sil chihiro c
 「結城くん、さっきから同じページを見てるけど」
 隣の席から声がした。
-@sil chihiro c
 早瀬千尋さんは、カメラバッグを膝に抱いたまま、僕の手もとの手帳をあごで指した。
 「読んでるふりをしてるだけなら、景色を見たほうがいいよ。どうせ記事には書くんだから」
 「……ふりじゃないですよ。取材の段取りを確認してたんです」

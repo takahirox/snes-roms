@@ -9,7 +9,7 @@ An original sound novel for the Super Famicom. On the last night of 水明館 (S
 
 ## How to play
 - A: advance text / select. Up/down: choices (each is prefixed with a letter A, B, C…; most of them finish the sentence above them). Hold B: fast-forward through text already read (stops at unread text). Hold L: hide the text and see the photo; hold R: darken the photo for reading (both: both). START: menu (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
-- Title: はじめから (new game) / しおりから (continue from a bookmark) / 結末の一覧 (list of endings) / おまけ (bonus; after it is unlocked).
+- Title: はじめから (new game) / しおりから (continue from a bookmark) / 結末の一覧 (list of endings) / おまけ (bonus; after it is unlocked). Left alone for 20 seconds, the title plays a demo; any button returns to the title.
 - はじめから: the inn's guest register shows the names (このまま始める "start as they are" / 名前を書きなおす "write them again"). To write them again: choose the protagonist's family name (initially 結城 (Yūki); his given name never appears in the story) and the given name of the heroine 早瀬○○ (initially 千尋 (Chihiro); the family name 早瀬 is fixed), up to 4 characters each. Pick a character with the D-pad and enter it with A; B erases one character; L / R or the かな / カナ / 漢字 (hiragana / katakana / kanji) buttons below switch the character set; START or 決定 (confirm) decides. The chosen names are pre-filled from then on and are also stored in bookmarks.
 - The story branches on your choices; guide it badly and you reach a bad ending without getting to the truth. At the end you name the killer yourself, typing the name on the same grid as the name entry.
 - After you see the true ending of the main story, new options appear among the main story's choices and lead into other scenarios.

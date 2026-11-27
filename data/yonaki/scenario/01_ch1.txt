@@ -1,5 +1,7 @@
 # 夜鳴き鐘 — chapter 1 (第一章) 最後の客 "the last guest" (17:00–19:45)
 
+# the title's demo (after a while on the title) plays from here: the lounge and its first guests
+*demo
 *ch1_start
 @bg black fade
 @chapter 第一章　最後の客

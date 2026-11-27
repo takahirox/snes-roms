@@ -9,12 +9,14 @@ MENU_LINE = 3
 
 ; ---------------------------------------------------------------- generic list menu
 ; menu_count items at page lines menu_item[i], menu_hlc lines highlighted each, cursor at menu_cx.
-; -> A = the chosen item, or $FFFF (B / START: cancel)
+; -> A = the chosen item, or $FFFF (B / START: cancel), or MENU_IDLE (menu_idle: no button for DEMO_IDLE frames)
 MenuLoop:
     jsr MenuShow
     jsr FlushPad
+    stz idle_frames
 @l:
     jsr WaitFrame
+    jsr MenuIdle
     lda pad_rep
     and #PAD_UP
     beq @dn
@@ -63,6 +65,23 @@ MenuLoop:
     jsr MenuHide
     jsr SndCancel
     lda #$FFFF
+    rts
+
+; on the title (menu_idle), DEMO_IDLE frames without a button return MENU_IDLE from MenuLoop
+MenuIdle:
+    lda menu_idle
+    beq @r
+    lda pad
+    beq :+
+    stz idle_frames
+:   inc idle_frames
+    lda idle_frames
+    cmp #DEMO_IDLE
+    bcc @r
+    pla                         ; (MenuLoop's return address is next)
+    jsr MenuHide
+    lda #MENU_IDLE
+@r:
     rts
 
 MenuShow:
@@ -124,10 +143,10 @@ TitleScreen:
     lda #$FFFF
     sta amb_cur
     stz menu_sel
-    jsr TitleMenuDraw
     jsr WaitUploads
-    lda #2
+    lda #TITLE_FADE             ; the picture comes up, then the menu
     jsr FadeIn
+    jsr TitleMenuDraw
 @menu:
     lda #ST_TITLE
     sta ui_state
@@ -135,9 +154,16 @@ TitleScreen:
     sta menu_cx
     lda #1
     sta menu_hlc
+.if DEMO_ADDR
+    sta menu_idle               ; the demo after a while without a button
+.endif
     stz menu_cancel
     jsr MenuLoop
-    asl a
+    stz menu_idle
+    cmp #MENU_IDLE
+    bne :+
+    jmp @demo
+:   asl a
     tax
     lda #ST_BUSY
     sta ui_state
@@ -164,7 +190,7 @@ TitleScreen:
     jsr NameEntry
     bcc @go
 @cancel:
-    jmp @back                   ; cancelled
+    jmp TitleScreen             ; cancelled: the title picture again
 @go:
     jsr StartGame
     lda #.loword(START_ADDR)
@@ -203,18 +229,38 @@ TitleScreen:
     jsr ClearPage
     jsr TitleMenuDraw
     jmp @menu
+@demo:
+    jsr StartGame
+    lda #1
+    sta demo_on
+    stz demo_quit
+    stz demo_timer
+    stz demo_frames
+    lda #.loword(DEMO_ADDR)
+    sta vp
+    lda #^DEMO_ADDR
+    sta vp+2
+    jsr RunVM                   ; until a button (DemoExit) or the script stops
+    stz demo_on
+    lda #SND_FADE
+    jsr SndQueue
+    lda #$FFFF
+    sta music_cur
+    jmp TitleScreen
 
 ; ---------------------------------------------------------------- the guest register (はじめから)
-; The names kept from the last time (or the defaults), written in the inn's register over the darkened title
-; picture: このまま始める (A = 0) / 名前を書きなおす (A = 1, the name entry) / B: back (A = $FFFF).
+; The names kept from the last time (or the defaults), written in the inn's register over the inn at dusk
+; (REGISTER_BG): このまま始める (A = 0) / 名前を書きなおす (A = 1, the name entry) / B: back (A = $FFFF).
 NC_LINE = 8                     ; the first option
 NameConfirm:
     lda #ST_BUSY
     sta ui_state
-    lda #1
-    sta dark_on                 ; the title picture (and its lettering) out of the way, as in the name entry
+    lda #2
+    jsr FadeOut
     jsr ClearPage
-    lda #1
+    lda #PIC_REGISTER
+    jsr LoadPic
+    lda #2                      ; outlined over the photo
     sta g_col
     stz g_space
     lda #1
@@ -256,6 +302,8 @@ NameConfirm:
     ldx #NC_LINE+1
     jsr MenuText
     jsr WaitUploads
+    lda #2
+    jsr FadeIn
     stz menu_sel
     lda #1
     sta menu_hlc
@@ -268,10 +316,7 @@ NameConfirm:
     sta ui_state
     stz menu_cancel
     pla
-    cmp #1
-    beq :+                      ; to the name entry: it stays dark
-    stz dark_on
-:   rts
+    rts
 
 ; ---------------------------------------------------------------- name entry (はじめから)
 ; The hero's family name (主人公) and the heroine's given name (ヒロイン) (1..NAME_MAX glyphs each) typed from

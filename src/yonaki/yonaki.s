@@ -138,6 +138,12 @@ CHOICE_X  = 26                  ; option letter (cursor at TX0)
 OPT_TEXT_X = CHOICE_X + 16      ; option text (tools/yonaki/script.py CHOICE_PX)
 DIM_READ  = 13                  ; BG1 dim while R is held
 DIM_MENU  = 15
+TITLE_BELL = 60                 ; frames of the far bell on black before the first title
+TITLE_FADE = 4                  ; frames a brightness step while the title picture comes up (the menu after it)
+DEMO_IDLE = 1200                ; frames on the title without a button before the demo plays
+DEMO_WAIT = 90                  ; frames the demo reads a paragraph or looks at a choice before it presses A
+DEMO_FRAMES = 3600              ; the demo ends at the first wait after this many frames
+MENU_IDLE = $FFFE               ; MenuLoop: nothing pressed for DEMO_IDLE frames (menu_idle set)
 
 ; ui_state (for the tests)
 ST_BOOT = 0
@@ -361,6 +367,13 @@ menu_kind: .res 16
 menu_cx:   .res 2
 menu_hlc:  .res 2
 menu_cancel: .res 2
+menu_idle: .res 2              ; 1: MenuLoop returns MENU_IDLE after DEMO_IDLE frames without a button (the title)
+idle_frames: .res 2
+; the title's demo: the story plays itself (ReadPad presses A) until a button or DEMO_FRAMES
+demo_on:   .res 2
+demo_quit: .res 2              ; 1: back to the title at the next wait
+demo_timer: .res 2             ; frames in the current wait
+demo_frames: .res 2
 list_first: .res 2
 list_k:    .res 2
 list_i:    .res 2
@@ -372,7 +385,7 @@ menu_last_text: .res 2
 debug_vp:  .res 4              ; (review builds) start address of はじめから
 glyph_count: .res 2            ; glyphs drawn in this frame (DrawGlyph paces itself)
 work_count: .res 2             ; silhouette tiles composited in this frame
-boot_frames: .res 2            ; frames the sound driver upload took              ; brightness added to the silhouette colours (8-13) against the dim
+boot_frames: .res 2            ; frames the sound driver upload took
 slot_valid: .res 6
 list_page: .res 2
 saved_line: .res 2
@@ -537,6 +550,12 @@ Reset:
     sta NMITIMEN                ; NMI + auto joypad read
     rep #$20
     .a16
+.if SE_TITLE <> $FF
+    lda #SE_TITLE               ; the bell, far away, on black before the first title
+    jsr SndQueue
+    lda #TITLE_BELL
+    jsr WaitFrames
+.endif
 Main:
     jsr TitleScreen             ; never returns (the VM returns to it)
     bra Main

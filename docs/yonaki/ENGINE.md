@@ -256,8 +256,15 @@ clears.  START at a paragraph wait or a choice: しおりをはさむ (insert a 
 A bookmark resumes at the paragraph (shown again on a fresh page) or at the choice (the paragraph before it
 is redrawn first).
 
+Title: after the boot the far bell (`bell_far`) rings on black for `TITLE_BELL` frames; the title picture fades
+in (`TITLE_FADE` frames a step) and the menu is drawn after it.  `DEMO_IDLE` frames (20 s) on the title without a
+button start the demo: the VM runs from `*demo` (a scenario without it has no demo) and `ReadPad` plays it,
+pressing A `DEMO_WAIT` frames into each paragraph wait and choice (the first option) while nothing else is held.
+A button, or the first wait after `DEMO_FRAMES` (60 s), returns to the title (`DemoExit`, only at a wait); an
+`@end` or `@ask` ends it at once.  The demo marks nothing read and skips `@setg` / `@clrg`.
+
 Guest register (`NameConfirm`, state `ST_WELCOME`): はじめから first shows the names in the inn's register over the
-darkened title (このまま始める / 名前を書きなおす; B back to the title).
+inn at dusk (`REGISTER_BG` in build.py; このまま始める / 名前を書きなおす; B back to the title).
 
 Name entry (`NameEntry`, ui.inc, state `ST_NAME`): 名前を書きなおす asks for 主人公の名字 and ヒロインの名前 (1-4 glyphs each,
 shown with ＿ for the free places, the fixed family name 早瀬 grey before the heroine's name and （名字） ("family name") /
@@ -337,7 +344,7 @@ over 2 lines (17 full-width characters each, the cursor takes the 18th), more th
 options, more than 4 conditions on an option, characters not in the font (JIS X 0208 + ASCII), a chapter title
 over 18 characters, an ending title over 14, the program running off its end, a background / silhouette without
 a picture (unless `--allow-missing-art`), more than 32 endings / global flags, 512 local flags.
-Warnings: labels unreachable from `*start` / `*omake`, endings not reachable (global-flag branches count as both
+Warnings: labels unreachable from `*start` / `*omake` / `*demo`, endings not reachable (global-flag branches count as both
 ways), flags tested but never set, kinsoku that could not be kept, unknown bg / sil names (not in
 `assets/yonaki/prompts.json`), unknown song / effect / ambience names (`--unknown-sound-error` makes them errors).
 Notes (report.txt): labels only reached by falling through, flags set but never tested.
@@ -350,7 +357,8 @@ after them a full-width space; other ASCII stays half width (6 px).  Kinsoku: no
 ## Tests (`tests/yonaki/`)
 
 `run.py` (Snes9x 1.63 libretro, pad input only; WRAM read by label; the battery carried like a `.srm`):
-coverage of the fixture, boot with an empty and a random battery, every fixture ending in route order with the
+coverage of the fixture, boot with an empty and a random battery, the title's demo (it plays itself, keeps nothing and
+returns on a button or its time), every fixture ending in route order with the
 gated option checked before / after the unlock and おまけ after 3 endings, 結末の一覧, bookmarks at a paragraph
 and at a choice across a power cycle, B fast-forward stopping at unread text, text speed kept in the battery,
 and the effects (screenshots of every page). The save tests compare the resumed scene, local flags, names and

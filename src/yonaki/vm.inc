@@ -694,7 +694,10 @@ SelCursor:
 ; The player types a name on the name entry grid (AskEntry); the first answer spelled exactly so is taken,
 ; else the default.
 OpAsk:
-    jsr ReadB
+    lda demo_on                 ; the demo stops before anything the player answers or keeps
+    beq :+
+    jmp DemoExit
+:   jsr ReadB
     sta ask_n
     sta t7
     lda vp
@@ -883,14 +886,22 @@ OpClr:
     jmp BitClr
 OpSetG:
     jsr ReadB
+    ldx demo_on                 ; (the demo keeps no global flag)
+    bne @r
     ldx #gflags
     jsr BitSet
     jmp SaveGlobal
+@r:
+    rts
 OpClrG:
     jsr ReadB
+    ldx demo_on
+    bne @r
     ldx #gflags
     jsr BitClr
     jmp SaveGlobal
+@r:
+    rts
 
 OpIf:
     jsr ReadW
@@ -1185,7 +1196,10 @@ FxWait:
     jmp WaitTimedEvent
 
 OpEnd:
-    jsr ReadB
+    lda demo_on
+    beq :+
+    jmp DemoExit
+:   jsr ReadB
     jsr EndingScreen
     jmp VmExit
 

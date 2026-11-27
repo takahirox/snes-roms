@@ -497,8 +497,11 @@ def successors(prog, i):
     return nxt
 
 
+ENTRIES = ('start', 'omake', 'demo')     # the title starts the VM at these (demo: the idle demo)
+
+
 def entries(prog):
-    return [n for n in ('start', 'omake') if n in prog.labels]
+    return [n for n in ENTRIES if n in prog.labels]
 
 
 def bg_flow(prog):
@@ -547,7 +550,7 @@ def check(prog, endings, diag, assets):
             if t not in prog.labels:
                 diag.err(where, f'undefined label *{t}')
     for name, where in prog.label_where.items():
-        if name not in refs and name not in ('start', 'omake'):
+        if name not in refs and name not in ENTRIES:
             diag.note(where, f'label *{name} is never jumped to (only falls through)')
     # reachability
     seen = set()

@@ -3,6 +3,7 @@
 @bgm stop
 @bg black cut
 @fx wait 20
+*demo
 @chapter 序章　テスト
 @bgm journey
 @bg bus fade

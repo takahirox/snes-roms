@@ -531,6 +531,8 @@ IsRead:
 ; A = text id. Preserve the common bits and publish the new bit in both copies.
 ; An interrupted update can lose this mark, but leaves the common bits intact.
 MarkRead:
+    ldx demo_on                 ; the title's demo reads nothing for the player
+    bne @done
     cmp #TEXT_COUNT
     bcs @done
     jsr ReadPos

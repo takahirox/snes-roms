@@ -148,7 +148,7 @@ Chapters break automatically (a chapter heading is shown).
 
 | Chapter | Time | Contents | Main choices |
 |---|---|---|---|
-| 序章 霧見沢 (Prologue: Kirimizawa) | 16:00 | A cold open on black with the bell ("あの夜、鐘は二度鳴った"). By bus into the valley. The driver tells the legend half-jokingly (not the 1969 death). 霧見橋. Arrival; chrysanthemums left by someone unseen | What to talk about with Chihiro |
+| 序章 霧見沢 (Prologue: Kirimizawa) | 16:00 | By bus into the valley. The driver tells the legend half-jokingly (not the 1969 death). 霧見橋. Arrival; chrysanthemums left by someone unseen | What to talk about with Chihiro |
 | 第一章 最後の客 (Chapter 1: The last guests) | 17:00–19:45 | The people of the inn, a look at the old bathhouse, dinner. Shiga's legend, Kugayama drunk | Whom to talk to, how far to look around the old bathhouse |
 | 第二章 取材 (Chapter 2: The interview) | 20:00–21:40 | Interviewing Shiga, tea from the kitchen (always passed), the power failure | What to do in the kitchen, where to go after the power fails |
 | 第三章 鐘 (Chapter 3: The bell) | 23:02–00:40 | The bell, the body in the old bathhouse, questioning in the lounge | Whose story to hear, whether to look at the Polaroid |
@@ -228,7 +228,11 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 - Chapter markers label bookmarks and let the story continue.
 - A: advance / confirm. B (held): fast-forward through text already read (stops at unread text). START: menu
   (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
-- Title: はじめから (new game) / しおりから (continue from a bookmark) / 結末の一覧 (list of endings) / (after unlocking) おまけ (bonus).
+- Title: the far bell rings on black, the title picture comes up, then the menu: はじめから (new game) / しおりから
+  (continue from a bookmark) / 結末の一覧 (list of endings) / (after unlocking) おまけ (bonus). Left alone for 20
+  seconds, the title plays a demo: the lounge in chapter 1 reads and chooses by itself until a button is pressed.
+- はじめから: the guest register of 水明館 over the inn at dusk in the rain; the story then opens on the bus, with no
+  narration before it.
 
 ---
 
@@ -236,7 +240,7 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 
 ```
 # comment
-*label                 label (unique across the whole script)
+*label                 label (unique across the whole script; *start begins the game, *demo the title's demo)
 @chapter 第一章　最後の客
 @bg lobby [cut|fade|white|mosaic|keep]   background (default fade; keep: under the text, the page goes on)
 @sil chihiro l|c|r|x=NN [blue|white|red]   place a silhouette (x is a tile column)
