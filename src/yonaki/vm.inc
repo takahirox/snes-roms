@@ -88,6 +88,8 @@ EnsureVisible:
 ; ---------------------------------------------------------------- text
 ; TEXT id16 lines8 <string>: page break if it does not fit, typewriter, wait mark, read mark.
 OpText:
+    lda #ST_BUSY                ; (not the wait of the paragraph before while the page clears)
+    sta ui_state
     jsr ReadW
     sta cur_text
     jsr ReadB
@@ -97,12 +99,15 @@ OpText:
     and #$7F
     inc text_nowait
 :   sta t0
+    asl a
+    adc t0                      ; tile rows (lines < 128: the shift leaves C clear)
+    sta t0
     inc paragraphs
     lda page_line
     beq :+
     clc
     adc t0
-    cmp #PAGE_LINES+1
+    cmp #PAGE_ROWS+1
     bcc :+
     jsr ClearPage
 :   lda redraw
@@ -136,7 +141,7 @@ OpText:
 @pos:
     lda page_line
     sta cur_line
-    jsr LineY
+    jsr RowY
     lda #TX0
     sta g_x
     lda #TEXT_OUTLINE
@@ -183,9 +188,11 @@ OpText:
 @ctl:
     cmp #1
     bne @chunk
-    inc cur_line
     lda cur_line
-    jsr LineY
+    clc
+    adc #LINE_ROWS
+    sta cur_line
+    jsr RowY
     lda #TX0
     sta g_x
     bra @glyph
@@ -204,7 +211,7 @@ OpText:
     sta text_on
     stz cur_line
     lda #0
-    jsr LineY
+    jsr RowY
     lda #TX0
     sta g_x
     lda #TEXT_OUTLINE
@@ -216,7 +223,8 @@ OpText:
     lda p0+2
     sta vp+2
     lda cur_line
-    inc a
+    clc
+    adc #LINE_ROWS
     sta page_line
     lda cur_text
     sta last_text
@@ -278,9 +286,12 @@ NextMark:
     ldy #3
     lda [p2],y
     and #$007F
+    sta t0
+    asl a
+    adc t0                      ; tile rows
     clc
     adc t3
-    cmp #PAGE_LINES+1
+    cmp #PAGE_ROWS+1
     bcs @page
     bra @para
 @other:
@@ -288,12 +299,14 @@ NextMark:
     bne :+
     lda t3
     beq @skip1
-    inc t3
+    clc
+    adc #GAP_ROWS
+    sta t3
     bra @skip1
 :   cmp #OP_PAGE
     beq @page
     cmp #OP_BG
-    beq @page
+    beq @bg
     cmp #OP_CHAPTER
     beq @page
     cmp #OP_END
@@ -318,6 +331,17 @@ NextMark:
 @page:
     lda #GLYPH_PAGE
     rts
+@bg:
+    ldy #2
+    lda [p2],y
+    and #$00FF
+    cmp #BG_KEEP                ; the picture changes under the text: the page goes on
+    bne @page
+    lda p2
+    clc
+    adc #3
+    sta p2
+    jmp @op
 
 ; size of the ops NextMark may step over (0: stop there)
 OpSize:
@@ -390,9 +414,11 @@ DrawMark:
 OpBlank:
     lda page_line
     beq :+
-    cmp #PAGE_LINES
+    cmp #PAGE_ROWS
     bcs :+
-    inc page_line
+    clc
+    adc #GAP_ROWS
+    sta page_line
 :   rts
 
 OpPage:
@@ -467,7 +493,7 @@ OpChoice:
 :   jsr EnsureVisible
     lda #1
     sta text_on
-    ; lines needed: every option + a blank line after text
+    ; tile rows needed: every option + the gap after text
     lda opt_count
     asl a
     sta t1
@@ -480,31 +506,38 @@ OpChoice:
     cpx t1
     bne :-
     sta opt_sum
+    asl a
+    adc opt_sum                 ; lines * LINE_ROWS
+    sta opt_sum
     lda page_line
     beq @fits                   ; (the build checks that the options fit an empty page)
-    sec                         ; + the blank line
+    clc
+    adc #GAP_ROWS
     adc opt_sum
-    cmp #PAGE_LINES+1
+    cmp #CHOICE_ROWS+1
     bcc @fits
     jsr ChoicePage
     lda page_line
     beq @fits
-    sec
+    clc
+    adc #GAP_ROWS
     adc opt_sum
-    cmp #PAGE_LINES+1
+    cmp #CHOICE_ROWS+1
     bcc @fits
     jsr ClearPage
 @fits:
     lda page_line
     beq :+
-    inc page_line
+    clc
+    adc #GAP_ROWS
+    sta page_line
 :   ; draw the options
     ldx #0
 @draw:
     phx
     lda page_line
     sta opt_line,x
-    jsr LineY
+    jsr RowY
     lda #CHOICE_X               ; the letter: A, B, ... in the order shown
     sta g_x
     lda #TEXT_OUTLINE
@@ -524,11 +557,16 @@ OpChoice:
     lda opt_tbank,x
     sta p0+2
     stz g_space
-    jsr PrintStr
+    lda #LINE_PX
+    sta str_lh
+    jsr PrintStrLH
     plx
-    lda page_line
+    lda opt_lines,x
+    sta t0
+    asl a
+    adc t0                      ; tile rows
     clc
-    adc opt_lines,x
+    adc page_line
     sta page_line
     inx
     inx
@@ -590,9 +628,10 @@ OpChoice:
     lda choice_inline
     bne :+
     jmp ClearPage
-:   lda opt_line                ; inline: the options (and the blank line before them) go, the text above stays
+:   lda opt_line                ; inline: the options (and the gap before them) go, the text above stays
     beq :+
-    dec a
+    sec
+    sbc #GAP_ROWS
 :   sta page_line
     jmp ClearFrom
 
@@ -628,10 +667,13 @@ ShowSel:
     asl a
     tax
     lda opt_lines,x
+    sta t0
+    asl a
+    adc t0                      ; tile rows
     pha
     lda opt_line,x
     plx
-    jsr Highlight
+    jsr HighlightRows
     lda #1
     bra SelCursor
 HideSel:
@@ -643,7 +685,7 @@ SelCursor:
     asl a
     tax
     lda opt_line,x
-    jsr LineY
+    jsr RowY
     lda #TX0
     sta g_x
     lda #GLYPH_CURSOR
@@ -871,7 +913,8 @@ OpGoto:
     jmp JumpT0
 
 ; ---------------------------------------------------------------- pictures, silhouettes, effects
-; BG pic8 mode8.  The page is cleared; the silhouettes go; SIL ops right after it are taken into the new
+; BG pic8 mode8.  The page is cleared (but by BG_KEEP: the picture changes under the text); the darkness of
+; @fx dark ends (the new scene is seen); the silhouettes go; SIL ops right after it are taken into the new
 ; picture before it is shown.
 OpBg:
     jsr ReadB
@@ -880,9 +923,13 @@ OpBg:
     pha
     lda #ST_BUSY
     sta ui_state
+    stz dark_on
+    lda 1,s
+    cmp #BG_KEEP
+    beq :+
     jsr ClearPage
     stz text_on
-    jsr ClearSlots
+:   jsr ClearSlots
 @peek:
     lda [vp]
     and #$00FF
@@ -903,7 +950,23 @@ OpBg:
     pla
     jmp (BgModes,x)
 
-BgModes: .word BgCut, BgFade, BgWhite, BgMosaic
+BgModes: .word BgCut, BgFade, BgWhite, BgMosaic, BgKeep
+
+; a cut of the camera inside the scene: the photo goes dark under the text, the new one comes up under it
+BgKeep:
+    pha
+    lda blanked                 ; from black: a plain fade
+    beq :+
+    pla
+    bra BgFade
+:   lda #1
+    sta dark_on
+    ldx #WAIT_DIM
+    jsr WaitEvent
+    pla
+    jsr LoadPic
+    stz dark_on
+    rts
 
 BgFade:
     pha

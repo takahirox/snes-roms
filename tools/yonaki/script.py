@@ -8,7 +8,7 @@ the rest of the page starts a new page).
 Ops (the VM of src/yonaki/vm.inc runs the same list, encoded by tools/yonaki/build.py):
   ('text', tid, chunks[, nowait])   chunks: list of pages, each a list of lines (str); nowait: shown at once
   ('blank',) ('page',)
-  ('bg', name, mode)            mode: cut fade white mosaic
+  ('bg', name, mode)            mode: cut fade white mosaic keep (the picture changes under the text)
   ('sil', key, name|None, colour)   key: 'l' 'c' 'r' or 'x=NN'; name None removes
   ('silclear',)
   ('bgm', name|'stop'|'fade') ('se', name) ('amb', name|'off')
@@ -32,7 +32,8 @@ NO_START = set('、。，．・：；？！ー…‥」』）］｝〕〉》】�
 NO_END = set('「『（［｛〔〈《【([{')
 NO_SPLIT = set('…‥―')          # never break between two of these
 LINE_PX = 216                    # 18 full-width characters
-PAGE_LINES = 10                  # src/yonaki/yonaki.s PAGE_LINES
+PAGE_LINES = 7                   # src/yonaki/yonaki.s PAGE_LINES (lines 24 px apart)
+CHOICE_LINES = 8                 # the options of a choice on an empty page (yonaki.s CHOICE_ROWS)
 CHOICE_PX = 188                  # after the cursor and the option letter (src/yonaki/vm.inc OPT_TEXT_X)
 MAX_CHOICES = 8
 # the names the player sets (はじめから): in the script they are written as the default names, which become
@@ -41,7 +42,7 @@ NAME_VARS = {'結城': '\x03', '千尋': '\x04'}     # the hero's family name, t
 NAME_MAX = 4
 MAX_CONDS = 4
 SIL_KEYS = ('l', 'c', 'r')
-BG_MODES = ('cut', 'fade', 'white', 'mosaic')
+BG_MODES = ('cut', 'fade', 'white', 'mosaic', 'keep')
 FX = ('shake', 'flash', 'redflash', 'ripple', 'dark', 'light', 'wait')
 BUILTIN_BG = ('black', 'white')
 COLOURS = ('blue', 'white', 'red')
@@ -343,7 +344,7 @@ def parse(scn_dir, endings, font, diag):
                     emit(('chapter', prog.chapters.index(title), title), where)
                 elif cmd == 'bg':
                     if not args or len(args) > 2:
-                        diag.err(where, 'usage: @bg name [cut|fade|white|mosaic]')
+                        diag.err(where, 'usage: @bg name [cut|fade|white|mosaic|keep]')
                         continue
                     mode = args[1] if len(args) > 1 else 'fade'
                     if mode not in BG_MODES:
@@ -537,8 +538,8 @@ def check(prog, endings, diag, assets):
             targets = [t for _, _, t in op[2]]
             if len(op[2]) > MAX_CHOICES:
                 diag.err(where, f'{len(op[2])} choices (at most {MAX_CHOICES})')
-            if sum(len(t) for _, t, _ in op[2]) > PAGE_LINES - 1:
-                diag.err(where, f'the options of this choice take more than {PAGE_LINES - 1} lines')
+            if sum(len(t) for _, t, _ in op[2]) > CHOICE_LINES:
+                diag.err(where, f'the options of this choice take more than {CHOICE_LINES} lines')
             if all(any(c[2] for c in cs) for cs, _, _ in op[2]):
                 diag.warn(where, 'every option of this choice is gated by a global flag')
         for t in targets:

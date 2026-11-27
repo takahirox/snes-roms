@@ -126,8 +126,14 @@ JOB_MAX   = 24
 
 ; text layout (bitmap coordinates: x 0-239 = screen 8-247, y 0-191 = screen 16-207)
 TX0       = 12                  ; screen x 20
-TY0       = 2                   ; line n at TY0 + 16 n (screen 18 + 16 n)
-PAGE_LINES = 10                 ; lines a page (tools/yonaki/script.py PAGE_LINES): the photo shows below
+TY0       = 2                   ; tile row r at TY0 + 8 r; menu line n (LineY) at TY0 + 16 n (screen 18 + 16 n)
+LINE_ROWS = 3                   ; a story line is three tile rows (24 px apart, as in a paper novel page)
+LINE_PX   = LINE_ROWS * 8
+PAGE_LINES = 7                  ; story lines a page (tools/yonaki/script.py PAGE_LINES): the photo shows below
+PAGE_ROWS = PAGE_LINES * LINE_ROWS
+CHOICE_ROWS = 24                ; the options may go down to the last tile row (8 lines: script.py CHOICE_LINES)
+GAP_ROWS  = 1                   ; an empty script line, and the space between the text and the options
+BG_KEEP   = 4                   ; @bg mode: the picture changes under the text (tools/yonaki/build.py BGMODE)
 CHOICE_X  = 26                  ; option letter (cursor at TX0)
 OPT_TEXT_X = CHOICE_X + 16      ; option text (tools/yonaki/script.py CHOICE_PX)
 DIM_TEXT  = 7                   ; most BG1 dim under a story text page (of 31; per picture, tools/yonaki/build.py reads it)
@@ -257,9 +263,10 @@ ripple_phase: .res 2
 mosaic:    .res 2
 blink:     .res 2
 ; text page
-page_line: .res 2              ; lines used on the page
-cur_line:  .res 2
+page_line: .res 2              ; tile rows used on the story page
+cur_line:  .res 2              ; tile row of the line being typed
 str_x0:    .res 2
+str_lh:    .res 2              ; PrintStrLH: px between lines
 hl_line:   .res 2              ; highlighted line (palette 1) or $FFFF
 hl_count:  .res 2
 speed:     .res 2              ; 0 slow, 1 normal, 2 fast, 3 instant
@@ -293,7 +300,7 @@ opt_bank:  .res 16
 opt_text:  .res 16             ; text pointer low words (bank = opt_tbank)
 opt_tbank: .res 16
 opt_lines: .res 16
-opt_line:  .res 16             ; first page line of each option
+opt_line:  .res 16             ; first tile row of each option
 choice_id: .res 2
 ; pictures and silhouettes
 pic_cur:   .res 2
@@ -403,7 +410,7 @@ ask_tbl:   .res 4              ; long address of the @ask answers
 ask_n:     .res 2
 ask_dark:  .res 2              ; dark_on before the @ask
 choice_inline: .res 2          ; the choice on screen is inline (its options become the paragraph chosen)
-opt_sum:   .res 2              ; lines of the options on screen
+opt_sum:   .res 2              ; tile rows of the options on screen
 text_nowait: .res 2            ; the paragraph being typed is shown at once and goes on without a wait
 
 ; ---------------------------------------------------------------- header

@@ -573,7 +573,8 @@ def test_effects():
             t = g.w('cur_text')
             if t not in seen:
                 seen[t] = dict(cgadsub=g.w('reg_cgadsub'), hdma=g.w('reg_hdma'), dim=g.w('dim_cur'),
-                               sils=sum(1 for k in range(4) if g.w('sil_key', 2 * k) != 0xFFFF))
+                               sils=sum(1 for k in range(4) if g.w('sil_key', 2 * k) != 0xFFFF),
+                               dark=g.w('dark_on'), pic=g.w('pic_cur'), line=g.w('page_line'))
                 shot(g, f'text_{t:03d}')
             g.tap('A', 1, 1)
         elif st == 'TYPE':
@@ -587,6 +588,13 @@ def test_effects():
                 g.shot(g.shots / 'flash.png')
             g.run(1)
     rec['texts'] = seen
+    by_text = {''.join(p for page in t['pages'] for p in page): int(k) for k, t in g.layout['texts'].items()}
+    pics = g.layout['pictures']
+    cut, kept = seen[by_text['カメラが切り替わる。']], seen[by_text['文字は残ったまま、玄関が映った。']]
+    assert kept['pic'] == pics.index('genkan') and kept['line'] > cut['line'], '@bg keep cleared the text'
+    assert kept['sils'] == 1 and kept['dim'] < 31
+    lit = seen[by_text['新しい場面では、暗さが晴れている。']]
+    assert lit['pic'] == pics.index('lobby') and not lit['dark'] and lit['dim'] < 31, '@bg kept the darkness'
     assert any(v['hdma'] for v in seen.values()), 'ripple never on'
     assert any(v['dim'] == 31 for v in seen.values()), 'dark never reached'
     assert any(v['sils'] == 3 for v in seen.values()), 'three silhouettes never shown together'
@@ -976,7 +984,7 @@ def test_coverage():
     want = {'text', 'blank', 'page', 'bg', 'sil', 'silclear', 'bgm', 'se', 'amb', 'fx', 'set', 'clr', 'setg', 'clrg',
             'if', 'goto', 'choice', 'end', 'chapter', 'ask'}
     assert want <= kinds, want - kinds
-    assert {o[2] for o in ops if o[0] == 'bg'} >= {'cut', 'fade', 'white', 'mosaic'}
+    assert {o[2] for o in ops if o[0] == 'bg'} >= {'cut', 'fade', 'white', 'mosaic', 'keep'}
     assert {o[1] for o in ops if o[0] == 'fx'} >= {'shake', 'flash', 'redflash', 'ripple_on', 'ripple_off', 'dark',
                                                    'light', 'wait'}
     assert {o[1][:1] for o in ops if o[0] == 'sil'} >= {'l', 'c', 'r', 'x'}

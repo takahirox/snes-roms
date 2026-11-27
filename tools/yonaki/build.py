@@ -40,7 +40,7 @@ OMAKE_ENDINGS = 10              # the title's おまけ needs this many endings 
 TITLE_BGS = ['oldbath_ext', 'bell']
 OP = dict(HALT=0, TEXT=1, BLANK=2, PAGE=3, BG=4, SIL=5, SILCLEAR=6, BGM=7, SE=8, FX=9, SET=10, CLR=11, SETG=12,
           CLRG=13, IF=14, GOTO=15, CHOICE=16, END=17, CHAPTER=18, AMB=19, ASK=20)
-BGMODE = dict(cut=0, fade=1, white=2, mosaic=3)
+BGMODE = dict(cut=0, fade=1, white=2, mosaic=3, keep=4)
 FXK = dict(shake=0, flash=1, redflash=2, ripple_on=3, ripple_off=4, dark=5, light=6, wait=7)
 SILCOL = dict(blue=0, white=1, red=2)
 SILKEY = dict(l=0, c=1, r=2)

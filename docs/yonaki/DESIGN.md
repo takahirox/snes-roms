@@ -212,13 +212,16 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 
 ## 6. Screen and controls
 
-- Background: a 256×192 photo (16-dot black bands above and below). Fades on every scene change.
+- Background: a 256×192 photo (16-dot black bands above and below). Fades on every scene change; a cut inside a
+  scene (a close-up of a photo, a diary, looking up at the bell) changes the picture under the text (`@bg … keep`), so
+  the reading does not stop. The darkness of `@fx dark` (the bell in the dark) lasts until the next `@bg`.
 - Characters: translucent indigo silhouettes without an outline (composited onto the background by the CPU). Ghosts are white; horror scenes can also
   use red.
-- Text: 12-dot characters across the whole screen, 18 characters a line, at most 10 lines (the bottom of the photo
-  stays clear). A new picture is shown at full brightness; when its first text appears the photo dims a little under
+- Text: 12-dot characters across the whole screen, 18 characters a line, 24 dots apart (a novel's page, not a
+  form), at most 7 lines (the bottom of the photo stays clear). A new picture is shown at full brightness; when its first text appears the photo dims a little under
   the page so the white glyphs (one-pixel dark outline) read. Waits for A after each paragraph. When the page is full,
-  goes to the next page; `@page` breaks it by hand before a beat (a body, a confession, a name on a tablet).
+  goes to the next page; `@page` breaks it by hand before a beat (a body, a date, the bell, a cry), so the page turn
+  is the reveal.
 - Choices: listed under the text. Select with up/down, confirm with A. Most choices are inline: the options finish the
   sentence of the text above them, and the one chosen stays on the page as the next sentence.
 - Hold L to hide the text and see the photo at full brightness; hold R to dim it further for reading.
@@ -235,13 +238,13 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 # comment
 *label                 label (unique across the whole script)
 @chapter 第一章　最後の客
-@bg lobby [cut|fade|white|mosaic]   background (default fade)
+@bg lobby [cut|fade|white|mosaic|keep]   background (default fade; keep: under the text, the page goes on)
 @sil chihiro l|c|r|x=NN [blue|white|red]   place a silhouette (x is a tile column)
 @sil - l|c|r            remove the silhouette there
 @silclear               remove all
 @bgm name | @bgm stop | @bgm fade
 @se name
-@fx shake | flash | redflash | ripple on | ripple off | dark | light | wait N
+@fx shake | flash | redflash | ripple on | ripple off | dark | light | wait N   (dark: until light or the next @bg)
 @set flag / @clr flag
 @if flag label / @ifnot flag label / @ifg gflag label   (gflag: a global flag kept in SRAM)
 @goto label

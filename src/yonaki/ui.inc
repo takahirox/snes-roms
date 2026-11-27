@@ -1228,7 +1228,7 @@ OpenMenu:
     cmp #$FFFF
     beq :+
     ldx saved_hlc
-    jsr Highlight
+    jsr HighlightRows
 :   pla
     sta ui_state
     pla

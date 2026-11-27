@@ -43,12 +43,11 @@ ClearPage:
     sta last_text
     rts
 
-; A = page line: the bitmap from that line down zeroed (the text above stays), page_line = A, no highlight
+; A = tile row: the bitmap from that row down zeroed (the text above stays), page_line = A, no highlight
 ClearFrom:
     sta page_line
     jsr PacedWait               ; a WRAM DMA of up to 11.5 KiB: at the top of a frame (the frame uses t0-t2)
     lda page_line
-    asl a                       ; tile row of the line (each line is two tile rows)
     sta t0
     xba                         ; * 256
     asl a                       ; * 512
@@ -99,9 +98,11 @@ ClearFrom:
     stz mark_on
     rts
 
-; A = page line -> g_y
+; A = menu line (16 px apart) -> g_y
 LineY:
     asl a
+; A = tile row -> g_y
+RowY:
     asl a
     asl a
     asl a
@@ -111,8 +112,16 @@ LineY:
     rts
 
 ; ---------------------------------------------------------------- highlight (BG2 map palette 1)
-; A = first page line, X = number of lines
+; A = first menu line, X = number of lines (each two tile rows)
 Highlight:
+    asl a
+    pha
+    txa
+    asl a
+    tax
+    pla
+; A = first tile row, X = number of tile rows
+HighlightRows:
     sta hl_line
     stx hl_count
     lda #$0400
@@ -127,16 +136,14 @@ ClearHighlight:
     sta hl_line
 @r: rts
 
-; A = palette bits ($0000 / $0400) for the map rows of lines hl_line .. + hl_count
+; A = palette bits ($0000 / $0400) for the map rows of tile rows hl_line .. + hl_count
 SetLinePal:
     sta t3
     lda hl_line
-    asl a
     clc
-    adc #2                      ; map row of the first line
+    adc #2                      ; map row of the first tile row
     sta t0
     lda hl_count
-    asl a
     sta t1                      ; map rows
 @row:
     lda t0
@@ -557,6 +564,10 @@ ReadCode:
 
 ; Draw the string at p0 from g_x, g_y (a new line goes back to str_x0 and 16 px down).  p0 ends after it.
 PrintStr:
+    lda #16
+    sta str_lh
+; the same with str_lh px between lines
+PrintStrLH:
     lda g_x
     sta str_x0
 @l:
@@ -577,7 +588,7 @@ PrintStr:
     sta g_x
     lda g_y
     clc
-    adc #16
+    adc str_lh
     sta g_y
     bra @l
 @end:

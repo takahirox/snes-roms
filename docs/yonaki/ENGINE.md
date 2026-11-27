@@ -63,9 +63,11 @@ same colours seen through a translucent blue figure (`pictures.TINTS`: 50% of (5
 (232, 236, 255)) and red versions are in a second block (PicTable+75) and replace them while such a figure is on
 screen.
 
-Text: 18 full-width characters (216 px) per line from screen x 20, 10 lines a story page (`PAGE_LINES`; the menus and
-the name entry use all 12 lines of the bitmap), line n at screen y 18 + 16n
-(each line is exactly two tile rows, so a choice is highlighted by switching those map rows to palette 1).
+Text: 18 full-width characters (216 px) per line from screen x 20.  Story pages are laid out in tile rows
+(`page_line`, `RowY`): a line is `LINE_ROWS` = 3 rows (24 px apart), 7 lines a page (`PAGE_LINES`), an empty script
+line and the space before the options are one row (`GAP_ROWS`), and the options may go down to row 24 (8 lines on
+an empty page, `CHOICE_ROWS`).  The menus and the name entry use `LineY` lines (two rows, 16 px apart, 12 lines).
+A choice is highlighted by switching the map rows of its lines to palette 1 (`HighlightRows`).
 Story text and choices use a one-pixel dark outline around the glyphs; menus use the existing drop shadow.
 
 Colour math: a new picture opens at full brightness (`text_on` is cleared by `@bg`). Once a story text page is
@@ -305,7 +307,8 @@ per-channel requests to preserve the timing of the current bytecode.
 ## Script VM
 
 Ops (byte code, `tools/yonaki/build.py`): `TEXT id16 lines8 <string>` (lines bit 7: shown at once and no wait —
-the echo of an inline choice), `BLANK`, `PAGE`, `BG pic mode`,
+the echo of an inline choice), `BLANK`, `PAGE`, `BG pic mode` (mode 0 cut, 1 fade, 2 white, 3 mosaic, 4 keep: the
+photo goes dark under the text and the new one comes up under it; every `BG` ends the darkness of `@fx dark`),
 `SIL key sil x colour` (sil `$FF` = remove the key), `SILCLEAR`, `BGM n` (`$FE` stop, `$FF` fade),
 `SE n`, `AMB k` (`$FF` off), `FX kind arg16`, `SET/CLR flag16`, `SETG/CLRG g`, `IF cond16 addr24`,
 `GOTO addr24`, `CHOICE id16 n {nconds conds… addr24 lines8 <string>}` (n bit 7: inline), `END ending`,
@@ -329,13 +332,13 @@ Strings: `$00` end, `$01` new line, `$02` next page chunk (+ line count), `$03` 
 each were `NAME_MAX` = 4 characters; `ReadCode` hands out the name's glyphs from `names`), `$10-$EF` the 224 most frequent
 glyphs, `$F0-$FF xx` the others (up to 4320 glyphs).
 
-Text flow: a paragraph that does not fit the rest of the page starts a new page; one longer than 12 lines is
+Text flow: a paragraph that does not fit the rest of the page starts a new page; one longer than 7 lines is
 split into page chunks at build time.  After each paragraph the VM waits for A with a blinking mark: ▽-like
 (paragraph) or a double mark when the next paragraph will start a new page (it looks ahead over silhouette /
-sound / flag ops and jumps).  An empty line in the script adds a blank line when the page is not empty.
+sound / flag ops, `@bg … keep` and jumps).  An empty line in the script adds a gap when the page is not empty.
 Speeds (START menu): 遅い (slow) 1 glyph / 2 frames, 普通 (normal) 1, 速い (fast) 2, 瞬間 (instant) all.  A finishes the paragraph at once.
 B held: read paragraphs (read marks in SRAM) are shown at once and passed after 2 frames; it stops at the first
-unread one.  Choices are drawn under the text (a blank line first), each after its letter Ａ, Ｂ, … in the order shown, up / down / A; after a choice the page
+unread one.  Choices are drawn under the text (a gap first), each after its letter Ａ, Ｂ, … in the order shown, up / down / A; after a choice the page
 clears.  START at a paragraph wait or a choice: しおりをはさむ (insert a bookmark) / 文字の速さ (text speed) / タイトルへ (to the title) / もどる (back).
 A bookmark resumes at the paragraph (shown again on a fresh page) or at the choice (the paragraph before it
 is redrawn first).

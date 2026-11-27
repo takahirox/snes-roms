@@ -445,6 +445,7 @@
 @goto ch5_sumiko_calls
 
 *ch5_sumiko_calls
+@page
 @sil sumiko l
 @se water
 「お父さん!」
