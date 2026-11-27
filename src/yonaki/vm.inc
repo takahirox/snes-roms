@@ -86,7 +86,24 @@ EnsureVisible:
 :   rts
 
 ; ---------------------------------------------------------------- text
-; TEXT id16 lines8 <string>: page break if it does not fit, typewriter, wait mark, read mark.
+; TEXT id16 lines8 [16 counts] <string>: page break if it does not fit, typewriter, wait mark, read mark.
+; lines8: the lines of the first page, | $80 shown at once, | $40 the count depends on the names' lengths
+; (16 counts follow, one per NameIndex).
+
+; vp at the 16 counts -> A = the count of the names' lengths; vp after them
+NameLines:
+    jsr NameIndex
+    txy
+    lda [vp],y
+    and #$00FF
+    pha
+    lda vp
+    clc
+    adc #16
+    sta vp
+    pla
+    rts
+
 OpText:
     lda #ST_BUSY                ; (not the wait of the paragraph before while the page clears)
     sta ui_state
@@ -98,6 +115,9 @@ OpText:
     beq :+
     and #$7F
     inc text_nowait
+:   bit #$40
+    beq :+
+    jsr NameLines
 :   sta t0
     asl a
     adc t0                      ; tile rows (lines < 128: the shift leaves C clear)
@@ -197,7 +217,6 @@ OpText:
 @chunk:
     cmp #2
     bne @end
-    inc p0                      ; skip the next chunk's line count
     lda redraw
     bne :+
     jsr SetMark
@@ -250,6 +269,24 @@ SetMark:
     sta mark_y
     rts
 
+; p2 at a TEXT op -> A = the lines of its first page (for the names' lengths)
+NextLines:
+    ldy #3
+    lda [p2],y
+    and #$007F
+    bit #$40
+    beq :+
+    phx
+    jsr NameIndex
+    txa
+    plx
+    clc
+    adc #4
+    tay
+    lda [p2],y
+    and #$00FF
+:   rts
+
 ; A = GLYPH_PAGE when the next paragraph will start a new page (or the scene changes), else GLYPH_PARA
 NextMark:
     lda vp
@@ -279,9 +316,7 @@ NextMark:
 @not:
     cmp #OP_TEXT
     bne @other
-    ldy #3
-    lda [p2],y
-    and #$007F
+    jsr NextLines
     sta t0
     asl a
     adc t0                      ; tile rows
@@ -457,7 +492,10 @@ OpChoice:
 @addr:
     jsr ReadAddr
     jsr ReadB
-    sta t2                      ; lines
+    bit #$40
+    beq :+
+    jsr NameLines
+:   sta t2                      ; lines
     lda opt_count
     asl a
     tax
@@ -474,14 +512,18 @@ OpChoice:
     lda t2
     sta opt_lines,x
     inc opt_count
-@skip:
-    jsr ReadB                   ; skip the string
+@skip:                          ; past the string
+    lda vp
+    sta p0
+    lda vp+2
+    sta p0+2
+:   jsr ReadCode
+    bcc :-
     cmp #0
-    beq @opt
-    cmp #$F0
-    bcc @skip
-    jsr ReadB
-    bra @skip
+    bne :-
+    lda p0
+    sta vp
+    bra @opt
 @shown:
     lda opt_count
     bne :+

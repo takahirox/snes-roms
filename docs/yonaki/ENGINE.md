@@ -219,8 +219,8 @@ tinted colours (black, white, the title), is drawn solid in colours 8–13 as be
 
 ## Script VM
 
-Ops (byte code, `tools/yonaki/build.py`): `TEXT id16 lines8 <string>` (lines bit 7: shown at once and no wait —
-the echo of an inline choice), `BLANK`, `PAGE`, `BG pic mode` (mode 0 cut, 1 fade, 2 white, 3 mosaic, 4 keep: the
+Ops (byte code, `tools/yonaki/build.py`): `TEXT id16 lines8 [counts] <string>` (lines bit 7: shown at once and no wait —
+the echo of an inline choice; bit 6: 16 line counts by name lengths follow), `BLANK`, `PAGE`, `BG pic mode` (mode 0 cut, 1 fade, 2 white, 3 mosaic, 4 keep: the
 photo goes dark under the text and the new one comes up under it; every `BG` ends the darkness of `@fx dark`),
 `SIL key sil x colour` (sil `$FF` = remove the key), `SILCLEAR`, `BGM n` (`$FE` stop, `$FF` fade),
 `SE n`, `AMB k` (`$FF` off), `FX kind arg16`, `SET/CLR flag16`, `SETG/CLRG g`, `IF cond16 addr24`,
@@ -240,10 +240,14 @@ op (glyph indices of the grid); the first equal one is taken, else the default. 
 the grid (`drive.type_answer`); `routes.py` treats an `@ask` as a choice whose options are the first spelling of
 each answer and `*` (the default).
 A condition word: bit 15 negated, bit 14 global (index < 32 a global flag, 32 + e ending e seen), else a local flag.
-Strings: `$00` end, `$01` new line, `$02` next page chunk (+ line count), `$03` / `$04` the player's names (主人公の
-名字 "the protagonist's family name" / ヒロインの名前 "the heroine's given name": the script writes the default names 結城 / 千尋, `script.NAME_VARS`; lines are laid out as if
-each were `NAME_MAX` = 4 characters; `ReadCode` hands out the name's glyphs from `names`), `$10-$EF` the 224 most frequent
-glyphs, `$F0-$FF xx` the others (up to 4320 glyphs).
+Strings: `$00` end, `$01` new line, `$02` next page chunk, `$03` / `$04` the player's names (主人公の
+名字 "the protagonist's family name" / ヒロインの名前 "the heroine's given name": the script writes the default names 結城 / 千尋, `script.NAME_VARS`;
+`ReadCode` hands out the name's glyphs from `names`), `$05` / `$06 mask16` a new line / page chunk only for the
+name lengths in the mask, `$10-$EF` the 224 most frequent glyphs, `$F0-$FF xx` the others (up to 4320 glyphs).
+A text with a name is laid out for each of the 16 pairs of name lengths (1-4 characters each, `script.NAME_LENS`);
+where their line breaks differ the string has `$05` / `$06` with the pairs that break there (bit
+(hero − 1) × 4 + heroine − 1, `NameIndex`), so every line is filled for the names actually set.  When the line
+count differs too, the lines byte of `TEXT` and of a `CHOICE` option has bit 6 set and 16 counts follow it.
 
 Text flow: a paragraph that does not fit the rest of the page starts a new page; one longer than 7 lines is
 split into page chunks at build time.  After each paragraph the VM waits for A with a blinking mark: ▽-like

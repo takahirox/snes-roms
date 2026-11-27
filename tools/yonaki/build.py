@@ -132,7 +132,8 @@ def load_audio(diag):
 # ------------------------------------------------------------------ text encoding
 class Encoder:
     """Glyph codes: the 224 most frequent glyphs take one byte ($10-$EF), the others two ($F0+hi, lo).
-    Control bytes: $00 end, $01 new line, $02 next page chunk (a line-count byte follows)."""
+    Control bytes: $00 end, $01 new line, $02 next page chunk, $03 / $04 the names, $05 / $06 + a 16-bit mask:
+    a new line / page chunk only for the name lengths in the mask (bit k: script.NAME_LENS[k])."""
 
     def __init__(self, font):
         self.font = font
@@ -166,18 +167,31 @@ class Encoder:
         out = b''.join(self.code(c) for c in s)
         return out + (b'\x00' if end else b'')
 
-    def lines(self, chunks):
-        """Paragraph pages -> bytes: lines joined by $01, chunks by $02 + line count; ends with $00."""
-        out = bytearray()
-        for k, chunk in enumerate(chunks):
-            if k:
-                out += bytes([2, len(chunk)])
-            for j, ln in enumerate(chunk):
+    def text(self, s, maxpx=sc.LINE_PX):
+        """A paragraph (or an option, maxpx=CHOICE_PX: one page) -> (bytes ending with $00, the lines of its first
+        page for each of NAME_LENS).  The line breaks of every name length are kept: where they differ, $05 / $06
+        with the mask of the lengths that break there."""
+        every = sc.layouts(s, maxpx)
+        full = (1 << len(sc.NAME_LENS)) - 1
+        breaks = {}                         # character index -> [new-line mask, page mask]
+        for k, lines in enumerate(every):
+            bit = full if len(every) == 1 else 1 << k
+            i = 0
+            for j, ln in enumerate(lines):
                 if j:
-                    out.append(1)
-                out += self.string(ln, end=False)
+                    breaks.setdefault(i, [0, 0])[j % sc.PAGE_LINES == 0] |= bit
+                i += len(ln)
+        out = bytearray()
+        for i, ch in enumerate(s):
+            for kind, mask in zip((1, 2), breaks.get(i, (0, 0))):
+                if mask == full:
+                    out.append(kind)
+                elif mask:
+                    out += bytes([kind + 4]) + struct.pack('<H', mask)
+            out += self.code(ch)
         out.append(0)
-        return bytes(out)
+        firsts = [min(len(lines), sc.PAGE_LINES) for lines in every]
+        return bytes(out), firsts * (len(sc.NAME_LENS) // len(firsts))
 
     def font_blob(self):
         """32 bytes per glyph: 12 rows as little-endian words (bit 15 = leftmost pixel), byte 24 = advance width."""
@@ -436,9 +450,12 @@ class Builder:
         def op_bytes(op, i):
             k = op[0]
             if k == 'text':
+                # TEXT id, lines of the first page (| $80 nowait; | $40: one count per name length follows), text
                 nowait = 0x80 if len(op) > 3 and op[3] else 0
-                return (bytes([OP['TEXT']]) + struct.pack('<H', op[1]) + bytes([len(op[2][0]) | nowait])
-                        + enc.lines(op[2]))
+                data, firsts = enc.text(''.join(ln for page in op[2] for ln in page))
+                if len(set(firsts)) == 1:
+                    return bytes([OP['TEXT']]) + struct.pack('<H', op[1]) + bytes([firsts[0] | nowait]) + data
+                return bytes([OP['TEXT']]) + struct.pack('<H', op[1]) + bytes([0x40 | nowait, *firsts]) + data
             if k == 'blank':
                 return bytes([OP['BLANK']])
             if k == 'page':
@@ -477,9 +494,10 @@ class Builder:
                 ofs = []
                 for cs, t, lab in op[2]:
                     out += bytes([len(cs)]) + b''.join(struct.pack('<H', cond(c)) for c in cs) + A(lab)
-                    out += bytes([len(t)])
+                    data, firsts = enc.text(''.join(t), sc.CHOICE_PX)
+                    out += bytes([firsts[0]] if len(set(firsts)) == 1 else [0x40, *firsts])   # as in TEXT
                     ofs.append(len(out))
-                    out += enc.lines([t])
+                    out += data
                 self.opt_ofs[op[1]] = ofs
                 return bytes(out)
             if k == 'ask':

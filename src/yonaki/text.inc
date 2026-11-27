@@ -3,9 +3,9 @@
 ; (y >> 3) * 480 + (x >> 3) * 16 + (y & 7) * 2 (+1 for plane 1).  Colours: 1 white (plane 0), 2 shadow
 ; (plane 1), 3 grey (both).  Story text uses a one-pixel outline; other glyphs use a shadow one pixel
 ; right, down and diagonal.  The shadow never covers existing ink, and ink always covers shadow.
-; Encoded strings (tools/yonaki/build.py Encoder): $00 end, $01 new line, $02 page chunk (+ line count), $03 / $04
-; the names (主人公, ヒロイン),
-; $10-$EF glyph 0-223, $F0-$FF + byte: glyph 224 + 12-bit value.
+; Encoded strings (tools/yonaki/build.py Encoder): $00 end, $01 new line, $02 page chunk, $03 / $04 the names
+; (主人公, ヒロイン), $05 / $06 + word: a new line / page chunk when the mask has the bit of the names' lengths
+; (NameMask), $10-$EF glyph 0-223, $F0-$FF + byte: glyph 224 + 12-bit value.
 .a16
 .i16
 
@@ -532,10 +532,10 @@ ReadCode:
     clc
     rts
 @ctl:
+    cmp #5
+    bcs @cond
     cmp #3
     bcc @ctl_ret
-    cmp #5
-    bcs @ctl_ret
     phx
     ldx #0
     cmp #3
@@ -561,6 +561,46 @@ ReadCode:
 @ctl_ret:
     sec
     rts
+@cond:                          ; $05 / $06 + mask: a break of some name lengths
+    sbc #4                      ; (carry set) 1 new line, 2 chunk
+    pha
+    phx
+    jsr NameMask
+    plx
+    and [p0]
+    sta t6
+    inc p0
+    inc p0
+    lda t6
+    beq :+
+    pla
+    sec
+    rts
+:   pla
+    jmp ReadCode                ; not for these names
+
+; X = the variant of the names' lengths (tools/yonaki/script.py NAME_LENS): (hero - 1) * 4 + (heroine - 1)
+.assert NAME_MAX = 4, error, "NameIndex assumes four lengths a name"
+NameIndex:
+    lda names                   ; lengths 1..NAME_MAX
+    dec a
+    asl a
+    asl a
+    clc
+    adc names+10
+    dec a
+    tax
+    rts
+
+; A = the bit of NameIndex in a $05 / $06 mask
+NameMask:
+    jsr NameIndex
+    lda #1
+:   dex
+    bmi :+
+    asl a
+    bra :-
+:   rts
 
 ; Draw the string at p0 from g_x, g_y (a new line goes back to str_x0 and 16 px down).  p0 ends after it.
 PrintStr:

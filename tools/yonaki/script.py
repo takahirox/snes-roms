@@ -6,7 +6,8 @@ into page-sized chunks here; pagination across paragraphs happens at run time (a
 the rest of the page starts a new page).
 
 Ops (the VM of src/yonaki/vm.inc runs the same list, encoded by tools/yonaki/build.py):
-  ('text', tid, chunks[, nowait])   chunks: list of pages, each a list of lines (str); nowait: shown at once
+  ('text', tid, chunks[, nowait])   chunks: list of pages, each a list of lines (str), laid out for the default
+                                names (the ROM gets every name length: build.py Encoder.text); nowait: shown at once
   ('blank',) ('page',)
   ('bg', name, mode)            mode: cut fade white mosaic keep (the picture changes under the text)
   ('sil', key, name|None, colour)   key: 'l' 'c' 'r' or 'x=NN'; name None removes
@@ -37,9 +38,12 @@ CHOICE_LINES = 8                 # the options of a choice on an empty page (yon
 CHOICE_PX = 188                  # after the cursor and the option letter (src/yonaki/vm.inc OPT_TEXT_X)
 MAX_CHOICES = 8
 # the names the player sets (はじめから): in the script they are written as the default names, which become
-# the control codes $03 / $04; the engine draws the name in their place, so a line is laid out for the longest
+# the control codes $03 / $04; the engine draws the name in their place.  A text with a name is laid out for
+# every pair of name lengths (NAME_LENS), and the ROM keeps the line breaks of all of them.
 NAME_VARS = {'結城': '\x03', '千尋': '\x04'}     # the hero's family name, the heroine's given name
 NAME_MAX = 4
+NAME_LENS = [(h, w) for h in range(1, NAME_MAX + 1) for w in range(1, NAME_MAX + 1)]   # src/yonaki/text.inc NameIndex
+DEFAULT_LENS = tuple(len(n) for n in NAME_VARS)
 MAX_CONDS = 4
 SIL_KEYS = ('l', 'c', 'r')
 BG_MODES = ('cut', 'fade', 'white', 'mosaic', 'keep')
@@ -78,8 +82,20 @@ class Diag:
         self.notes.append(f'{where}: {msg}')
 
 
-def width(s):
-    return sum(NAME_MAX * 12 if c in '\x03\x04' else 6 if ord(c) < 0x80 else 12 for c in s)
+def width(s, lens=DEFAULT_LENS):
+    return sum(lens[0] * 12 if c == '\x03' else lens[1] * 12 if c == '\x04' else 6 if ord(c) < 0x80 else 12
+               for c in s)
+
+
+def layouts(s, maxpx=LINE_PX):
+    """The lines of s for every pair of name lengths (NAME_LENS), or its one layout when it has no name."""
+    if '\x03' in s or '\x04' in s:
+        return [wrap(s, maxpx, lens) for lens in NAME_LENS]
+    return [wrap(s, maxpx)]
+
+
+def pages(lines):
+    return [lines[i:i + PAGE_LINES] for i in range(0, len(lines), PAGE_LINES)]
 
 
 def name_vars(s):
@@ -101,7 +117,7 @@ def normalize(s, font):
     return ''.join(out)
 
 
-def wrap(s, maxpx=LINE_PX):
+def wrap(s, maxpx=LINE_PX, lens=DEFAULT_LENS):
     """Greedy line breaking with kinsoku (push-out): no line starts with NO_START, none ends with NO_END,
     no break inside '……' / '――' or inside a run of ASCII letters/digits."""
     def breakable(a, b):
@@ -116,14 +132,14 @@ def wrap(s, maxpx=LINE_PX):
     lines = []
     cur = ''
     for ch in s:
-        if width(cur + ch) <= maxpx:
+        if width(cur + ch, lens) <= maxpx:
             cur += ch
             continue
         # find the last allowed break inside cur + ch (between cur[i-1] and cur[i])
         t = cur + ch
         cut = None
         for i in range(len(t) - 1, 0, -1):
-            if width(t[:i]) <= maxpx and breakable(t[i - 1], t[i]):
+            if width(t[:i], lens) <= maxpx and breakable(t[i - 1], t[i]):
                 cut = i
                 break
         if cut is None:
@@ -133,7 +149,7 @@ def wrap(s, maxpx=LINE_PX):
     if cur:
         lines.append(cur)
     for ln in lines:
-        assert width(ln) <= maxpx
+        assert width(ln, lens) <= maxpx
     return lines
 
 
@@ -288,12 +304,13 @@ def parse(scn_dir, endings, font, diag):
                 if not text:
                     diag.err(where, 'empty choice text')
                 try:
+                    most = max(map(len, layouts(text, CHOICE_PX)))
                     cl = wrap(text, CHOICE_PX)
                 except ScriptError as e:
                     diag.err(where, str(e))
-                    cl = [text]
-                if len(cl) > 2:
-                    diag.err(where, f'choice "{text}" needs {len(cl)} lines (at most 2 lines of 15 full-width characters)')
+                    most, cl = 1, [text]
+                if most > 2:
+                    diag.err(where, f'choice "{text}" needs {most} lines (at most 2 lines of 15 full-width characters)')
                 pending_choice[0][2].append((conds, cl, m.group(3)))
                 continue
             close_choice()
@@ -329,8 +346,9 @@ def parse(scn_dir, endings, font, diag):
                     q = name_vars(q)
                     if not q:
                         diag.err(where, '@ask without a question')
-                    elif width(q) > LINE_PX:
-                        diag.err(where, f'@ask question too wide ({width(q)} px; one line of 18 characters)')
+                    elif width(q, (NAME_MAX, NAME_MAX)) > LINE_PX:
+                        diag.err(where, f'@ask question too wide ({width(q, (NAME_MAX, NAME_MAX))} px with the longest '
+                                        'names; one line of 18 characters)')
                     pending_choice = (['ask', prog.ask_count, q, [], None], where)
                     prog.ask_count += 1
                 elif cmd == 'chapter':
@@ -452,22 +470,21 @@ def parse(scn_dir, endings, font, diag):
                 diag.err(where, f'characters not in the font: {" ".join(f"{c}(U+{ord(c):04X})" for c in bad)}')
                 text = ''.join(c for c in text if c not in bad) or '　'
             try:
-                lines_ = wrap(text)
+                every = layouts(text)
             except ScriptError as e:
                 diag.err(where, str(e))
                 continue
-            k = check_kinsoku(lines_)
+            k = next(filter(None, map(check_kinsoku, every)), None)
             if k:
-                diag.warn(where, f'kinsoku: {k}: {lines_}')
-            chunks = [lines_[i:i + PAGE_LINES] for i in range(0, len(lines_), PAGE_LINES)]
-            emit(('text', prog.text_count, chunks), where)
+                diag.warn(where, f'kinsoku: {k}: {wrap(text)}')
+            emit(('text', prog.text_count, pages(wrap(text))), where)
             prog.text_count += 1
         close_choice()
     # the echo paragraphs of inline choices, after the program (each goes on to the option's target)
     for echo, text, lab, where in echoes:
         prog.labels[echo] = len(prog.ops)
         prog.label_where[echo] = where
-        emit(('text', prog.text_count, [wrap(text)], True), where)
+        emit(('text', prog.text_count, pages(wrap(text)), True), where)
         prog.text_count += 1
         emit(('goto', lab), where)
     # choice ops were built as lists
@@ -541,8 +558,8 @@ def check(prog, endings, diag, assets):
             targets = [t for _, _, t in op[2]]
             if len(op[2]) > MAX_CHOICES:
                 diag.err(where, f'{len(op[2])} choices (at most {MAX_CHOICES})')
-            if sum(len(t) for _, t, _ in op[2]) > CHOICE_LINES:
-                diag.err(where, f'the options of this choice take more than {CHOICE_LINES} lines')
+            if sum(max(map(len, layouts(''.join(t), CHOICE_PX))) for _, t, _ in op[2]) > CHOICE_LINES:
+                diag.err(where, f'the options of this choice take more than {CHOICE_LINES} lines (longest names)')
             if all(any(c[2] for c in cs) for cs, _, _ in op[2]):
                 diag.warn(where, 'every option of this choice is gated by a global flag')
         for t in targets:

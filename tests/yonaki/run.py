@@ -510,6 +510,45 @@ def test_names():
     return rec
 
 
+def test_name_layout():
+    """A line with a name is laid out for the name's length: 千尋さんは窓の外をじっと見ていた。 is one line with
+    the default heroine's name (2 characters) and two with one of 4 (the ROM keeps the breaks of every length)."""
+    rec = {}
+
+    def lines(g):
+        tid = next(int(k) for k, t in g.layout['texts'].items()
+                   if ''.join(ln for page in t['pages'] for ln in page) == '\x04さんは窓の外をじっと見ていた。')
+        before = 0
+        for _ in range(20):
+            g.until(lambda: g.state() == 'WAIT', 3000, 'paragraph')
+            if g.w('cur_text') == tid:
+                return (g.w('page_line') - before) // 3
+            before = g.w('page_line')
+            g.tap('A', 1, 3)
+        raise AssertionError('the paragraph with the name was not shown')
+
+    g = new('name_layout', sram=bytes(8192))
+    g.new_game()
+    rec['default_lines'] = lines(g)
+    finish(g, rec.setdefault('default', {}))
+    g = new('name_layout4', sram=bytes(8192))
+    g.title()
+    g.menu_to(g.title_items().index(0))
+    g.tap('A', 2, 4)
+    g.rename()
+    g.tap('START', 2, 6)                      # the hero's name stays 結城
+    g.tap('B', 2, 6)
+    g.tap('B', 2, 6)
+    for row, col in ((3, 0), (4, 1), (3, 0), (4, 1)):   # まりまり
+        g.name_pick(row, col)
+    assert len(g.name_glyphs(1)) == 4, g.name_glyphs(1)
+    g.tap('START', 2, 6)
+    rec['long_lines'] = lines(g)
+    finish(g, rec.setdefault('long', {}))
+    assert (rec['default_lines'], rec['long_lines']) == (1, 2), rec
+    return rec
+
+
 def test_fastforward():
     """B held skips read paragraphs only: it stops at the first unread one and waits there."""
     rec = {}
@@ -1022,7 +1061,7 @@ def test_coverage():
 
 
 TESTS = [test_coverage, test_boot, test_demo, test_corrupt, test_endings, test_endings_list, test_save_load, test_recovery,
-         test_names, test_fastforward, test_speed, test_effects, test_scheduler,
+         test_names, test_name_layout, test_fastforward, test_speed, test_effects, test_scheduler,
          test_reading_controls, test_silhouette_updates]
 
 
