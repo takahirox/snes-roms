@@ -113,9 +113,7 @@ OpText:
 :   lda redraw
     bne :+
     jsr EnsureVisible
-:   lda #1
-    sta text_on
-    lda cur_text
+:   lda cur_text
     jsr IsRead
     sta cur_read
     lda #1
@@ -207,8 +205,6 @@ OpText:
     sta mark_glyph
     jsr WaitAdvance
 :   jsr ClearPage
-    lda #1
-    sta text_on
     stz cur_line
     lda #0
     jsr RowY
@@ -491,8 +487,6 @@ OpChoice:
     bne :+
     rts                         ; nothing to choose: go on after the op
 :   jsr EnsureVisible
-    lda #1
-    sta text_on
     ; tile rows needed: every option + the gap after text
     lda opt_count
     asl a
@@ -928,7 +922,6 @@ OpBg:
     cmp #BG_KEEP
     beq :+
     jsr ClearPage
-    stz text_on
 :   jsr ClearSlots
 @peek:
     lda [vp]

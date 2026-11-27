@@ -388,7 +388,6 @@ def decay_s(x, rate, drop_db=40):
 
 # ------------------------------------------------------------------ reviews
 NAMES = 'C C# D D# E F F# G G# A A# B'.split()
-DRUMS = ('taiko', 'snare', 'shaker', 'wood', 'timp', 'stab', 'kane')
 
 
 def chord_pcs(name):

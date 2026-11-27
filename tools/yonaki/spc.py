@@ -88,8 +88,6 @@ class Asm:
     def mov_a_x(self): self.b(0x7D)
     def mov_y_a(self): self.b(0xFD)
     def mov_a_y(self): self.b(0xDD)
-    def mov_x_dp(self, dp): self.b(0xF8, dp)
-    def mov_dp_x(self, dp): self.b(0xD8, dp)
     def mov_y_dp(self, dp): self.b(0xEB, dp)
     def mov_dp_y(self, dp): self.b(0xCB, dp)
     def mov_a_ind_y(self, dp): self.b(0xF7, dp)
@@ -105,14 +103,11 @@ class Asm:
             self.absop(0xF5, label, add)
     def mov_absx_a(self, addr): self.b(0xD5, addr & 0xFF, addr >> 8)
     def mov_a_absy(self, label, add=0): self.absop(0xF6, label, add)
-    def movw_ya_dp(self, dp): self.b(0xBA, dp)
-    def movw_dp_ya(self, dp): self.b(0xDA, dp)
     # arithmetic
     def adc_a_imm(self, v): self.b(0x88, v & 0xFF)
     def adc_a_dp(self, dp): self.b(0x84, dp)
     def adc_a_dpx(self, dp): self.b(0x94, dp)
     def sbc_a_imm(self, v): self.b(0xA8, v & 0xFF)
-    def sbc_a_dp(self, dp): self.b(0xA4, dp)
     def sbc_a_dpx(self, dp): self.b(0xB4, dp)
     def cmp_a_imm(self, v): self.b(0x68, v & 0xFF)
     def cmp_a_dp(self, dp): self.b(0x64, dp)
@@ -130,11 +125,9 @@ class Asm:
     def ror_dp(self, dp): self.b(0x6B, dp)
     def inc_dp(self, dp): self.b(0xAB, dp)
     def dec_dp(self, dp): self.b(0x8B, dp)
-    def inc_dpx(self, dp): self.b(0xBB, dp)
     def dec_dpx(self, dp): self.b(0x9B, dp)
     def inc_x(self): self.b(0x3D)
     def inc_y(self): self.b(0xFC)
-    def dec_y(self): self.b(0xDC)
     def mul(self): self.b(0xCF)
     def xcn(self): self.b(0x9F)
     def addw(self, dp): self.b(0x7A, dp)
@@ -164,13 +157,7 @@ class Asm:
         self.b(0xD0, 3)
         self.jmp(l)
 
-    def bne_far(self, l):
-        self.b(0xF0, 3)
-        self.jmp(l)
 
-    def bcc_far(self, l):
-        self.b(0xB0, 3)
-        self.jmp(l)
 
     def bcs_far(self, l):
         self.b(0x90, 3)

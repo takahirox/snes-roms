@@ -29,11 +29,9 @@ Driver sequence bytes (per channel):
   $EB d n        bend: d signed (pitch * d / 4096 per tick), n ticks (bit 7: arrive at the note = scoop)
 Song header: T1 divisor, echo feedback, echo volume, echo-on mask (DSP voices), 6 channel addresses.
 """
-import math, pathlib, random, sys, hashlib, json
+import math, pathlib, random, hashlib, json
 
 TPQ = 48
-CHANNELS = 6
-DSP_RATE = 32000
 MUSIC_GAIN = 0.80
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 CACHE = ROOT / 'build/yonaki-audio/brr-cache'
@@ -141,41 +139,10 @@ def brr_into_loop(samples):
     return _cached('head', s, None, 0x03)
 
 
-def brr_decode(data, max_blocks=None):
-    out, p1, p2 = [], 0, 0
-    for b in range(0, len(data), 9):
-        hdr = data[b]
-        shift, flt = hdr >> 4, hdr >> 2 & 3
-        for j in range(16):
-            byte = data[b + 1 + j // 2]
-            nib = (byte >> 4) if j % 2 == 0 else (byte & 15)
-            nib = nib - 16 if nib >= 8 else nib
-            s = brr_step(nib, shift, flt, p1, p2)
-            p2, p1 = p1, s
-            out.append(s)
-        if hdr & 1:
-            break
-    return out
-
-
 # ------------------------------------------------------------------ synthesis helpers
 def norm(x, peak):
     m = max(abs(v) for v in x) or 1
     return [v * peak / m for v in x]
-
-
-def loop_partials(parts, n, detune=(0,), seed=0):
-    """n samples; parts = [(cycles in n, amp)] (integer cycles: seamless).  Each detune step d adds a copy
-    with cycles*(1)+d*harmonic number (a chorus that stays periodic)."""
-    out = [0.0] * n
-    rnd = random.Random(seed)
-    for d in detune:
-        for c, a in parts:
-            ph = rnd.random()
-            w = 2 * math.pi * c / n
-            for i in range(n):
-                out[i] += a * math.sin(w * i + 2 * math.pi * ph)
-    return out
 
 
 def harmonic_loop(f_cycles, harmonics, n, detune=(0,), seed=0):
@@ -271,15 +238,6 @@ def struck(f, rate, parts, attack_n, loop_cycles, loop_parts, seed=1, bend=0.0, 
         j = attack_n - fade + i
         att[j] = att[j] * (1 - w) + loop[(j - attack_n) % L] * w
     return att + loop, attack_n, f
-
-
-def oneshot_pad(x):
-    return list(x) + [0.0] * ((-len(x)) % 16)
-
-
-def env_ar(n, a, rate):
-    na = max(1, int(a * rate))
-    return [min(1.0, i / na) for i in range(n)]
 
 
 # ------------------------------------------------------------------ samples

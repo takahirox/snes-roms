@@ -1,6 +1,7 @@
 """Pictures of 夜鳴き鐘: photos -> 256x192 8bpp tiles (240 colours, CGRAM 16-255), silhouettes -> 2-bit masks.
 
-Backgrounds (assets/yonaki/src/bg/<id>.png, 4:3, any size): Lanczos resize to 256x192, a mild unsharp mask,
+Backgrounds (assets/yonaki/src/bg/<id>.png, 4:3, any size): Lanczos resize to 256x192, a mild unsharp mask, the
+same gamma lift for every photo (GAMMA),
 palette by median cut refined with weighted k-means on the 15-bit colours, snapped to the SNES 5-bit grid, then
 dithered (default: serpentine Floyd-Steinberg with damped error, see DITHER) and cut into 768 8bpp tiles (32 per
 row, row-major), pixel value = palette index + 16.
@@ -32,8 +33,9 @@ W, H = 256, 192
 COLORS = 240
 TINT_COLORS = 112                                   # photos under translucent silhouettes
 # figure colour, opacity: the colours under a blue / white (ghost) / red figure
-TINTS = dict(blue=((52, 48, 132), 0.5), white=((232, 236, 255), 0.45), red=((190, 24, 24), 0.6))
+TINTS = dict(blue=((36, 52, 176), 0.6), white=((232, 236, 255), 0.45), red=((190, 24, 24), 0.6))
 SIL_HEIGHT = 160
+GAMMA = 0.8                                         # every photo lifted the same way (the night ones read)
 CACHE = ROOT / 'build/yonaki/cache'
 WEIGHT = np.array([0.299, 0.587, 0.114]) * 3        # distance weights (gamma-encoded RGB)
 DITHER = 'fs'                                       # 'fs' (damped error diffusion), 'bayer', 'none'
@@ -70,23 +72,10 @@ def resize_photo(img):
     return img.filter(ImageFilter.UnsharpMask(radius=0.8, percent=45, threshold=2))
 
 
-def _kmeans(pix, pal, iters=8):
-    """pix: (N,3) float, counts folded in by using unique colours with weights."""
-    cols, counts = np.unique((pix / 4).round().astype(int), axis=0, return_counts=True)
-    cols = cols * 4.0
-    wts = counts.astype(float)
-    for _ in range(iters):
-        idx = _nearest(cols, pal)
-        new = pal.copy()
-        for k in range(len(pal)):
-            m = idx == k
-            if m.any():
-                new[k] = (cols[m] * wts[m, None]).sum(0) / wts[m].sum()
-        if np.allclose(new, pal, atol=0.25):
-            pal = new
-            break
-        pal = new
-    return pal
+def photo_array(path):
+    """A background photo as shown: resized, then lifted by GAMMA."""
+    arr = np.asarray(resize_photo(Image.open(path)), float)
+    return 255 * (arr / 255) ** GAMMA
 
 
 def _nearest(cols, pal, chunk=16384):
@@ -250,8 +239,7 @@ def background(path, method=DITHER, tint=False):
     data = pathlib.Path(path).read_bytes()
 
     def make():
-        arr = np.asarray(resize_photo(Image.open(path)), float)
-        return convert_photo(arr, method, tint)
+        return convert_photo(photo_array(path), method, tint)
     return _cached(_key(data, method, tint, TINTS), make)
 
 
@@ -269,7 +257,7 @@ def titled(path, logo_rgba, pos, method=DITHER):
     data = pathlib.Path(path).read_bytes()
 
     def make():
-        arr = np.asarray(resize_photo(Image.open(path)), float)
+        arr = photo_array(path)
         lh, lw = logo_rgba.shape[:2]
         x, y = pos
         a = logo_rgba[..., 3:4] / 255.0

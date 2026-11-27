@@ -136,7 +136,6 @@ GAP_ROWS  = 1                   ; an empty script line, and the space between th
 BG_KEEP   = 4                   ; @bg mode: the picture changes under the text (tools/yonaki/build.py BGMODE)
 CHOICE_X  = 26                  ; option letter (cursor at TX0)
 OPT_TEXT_X = CHOICE_X + 16      ; option text (tools/yonaki/script.py CHOICE_PX)
-DIM_TEXT  = 7                   ; most BG1 dim under a story text page (of 31; per picture, tools/yonaki/build.py reads it)
 DIM_READ  = 13                  ; BG1 dim while R is held
 DIM_MENU  = 15
 
@@ -154,7 +153,6 @@ ST_BUSY = 10
 ST_CONFIRM = 11
 ST_NAME = 12
 ST_WELCOME = 13                 ; the guest register before a new game (NameConfirm)
-ST_ASK = 14                     ; (reserved)
 
 ; ---------------------------------------------------------------- variables
 .segment "ZEROPAGE"
@@ -249,8 +247,6 @@ ui_pal:    .res 32
 bright:    .res 2              ; master brightness 0-15
 blanked:   .res 2              ; 1: forced blank
 dim_cur:   .res 2
-dim_step:  .res 2
-text_on:   .res 2              ; a story text page has been drawn
 story_active: .res 2           ; reading controls apply in the story, including bookmark resume
 dark_on:   .res 2              ; @fx dark
 menu_dim:  .res 2
@@ -374,7 +370,6 @@ slot_any:  .res 2
 end_index: .res 2
 menu_last_text: .res 2
 debug_vp:  .res 4              ; (review builds) start address of はじめから
-sil_comp:  .res 2
 glyph_count: .res 2            ; glyphs drawn in this frame (DrawGlyph paces itself)
 work_count: .res 2             ; silhouette tiles composited in this frame
 boot_frames: .res 2            ; frames the sound driver upload took              ; brightness added to the silhouette colours (8-13) against the dim
@@ -383,8 +378,6 @@ list_page: .res 2
 saved_line: .res 2
 saved_hl:  .res 2
 saved_hlc: .res 2
-saved_text_on: .res 2
-num_buf:   .res 8
 BOOKMARK_CHAPTER = 20          ; chapter offset in the SRAM bookmark payload
 record_id: .res 2
 record_generation: .res 2
@@ -966,29 +959,6 @@ InitState:
     rts
 
 .include "src/yonaki/frame.inc"
-
-; A = last line on which a main-thread DMA may start: wait (the NMI may come meanwhile) until the beam is
-; on an earlier line, so the DMA cannot hold the next NMI past the V-blank.  Nothing to wait in forced blank.
-VGuard:
-    ldx blanked
-    bne @r
-    sta t6
-@l:
-    sep #$20
-    .a8
-    lda SLHV
-    lda STAT78                  ; reset the OPVCT read order
-    lda OPVCT
-    xba
-    lda OPVCT
-    and #$01
-    xba
-    rep #$20
-    .a16
-    cmp t6
-    bcs @l
-@r:
-    rts
 
 ; ---------------------------------------------------------------- uploads
 ; Queue one job.  t0 dest, t1 type | bank << 8, t2 source, t3 length.

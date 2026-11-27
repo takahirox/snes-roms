@@ -82,19 +82,6 @@ def with_bars(seg_events):
     return out
 
 
-def arp(bars, beats, pattern, step, low=45):
-    """Broken chords: pattern = tone indices (None = rest), restarting per chord."""
-    se = []
-    for bi, name, t in segments(bars, beats):
-        ts = tones(name, low)
-        ev = []
-        for k in range(t // step):
-            i = pattern[k % len(pattern)]
-            ev.append(('rest', step) if i is None else ('note', ts[i], step))
-        se.append((bi, ev))
-    return with_bars(se)
-
-
 def figure(bars, beats, offsets, step, low=45, minor_ofs=None, special=None):
     """Broken chords by semitone offsets from the root (root >= low).  offsets for major chords;
     minor_ofs for minor ones; special = {chord name: offsets}.  None = rest."""

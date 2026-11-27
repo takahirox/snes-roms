@@ -619,55 +619,6 @@ def check(prog, endings, diag, assets):
 
 
 # ------------------------------------------------------------------ simulation (routes)
-def simulate(ops, labels, start, flags, gflags, choose, limit=200000):
-    """Run the program from label start with local flags (set) and global flags (set: names and ending ids).
-    choose(choice_op_index, visible_options) -> option index (into visible) or None to stop.  Returns
-    ('end', ending_id, path) or ('stop', op_index, path) where path is a list of (op index, visible index, label)."""
-    i = labels[start]
-    flags = set(flags)
-    path = []
-    steps = 0
-    while steps < limit:
-        steps += 1
-        op = ops[i]
-        k = op[0]
-        if k == 'goto':
-            i = labels[op[1]]
-            continue
-        if k == 'if':
-            n, neg, _ = op[1]
-            hold = (n in gflags if op[1][2] else n in flags) != neg
-            i = labels[op[2]] if hold else i + 1
-            continue
-        if k == 'set':
-            flags.add(op[1])
-        elif k == 'clr':
-            flags.discard(op[1])
-        elif k == 'setg':
-            gflags = set(gflags) | {op[1]}
-        elif k == 'clrg':
-            gflags = set(gflags) - {op[1]}
-        elif k == 'end':
-            return ('end', op[1], path, flags)
-        elif k == 'choice':
-            vis = [(j, o) for j, o in enumerate(op[2])
-                   if all(((c[0] in gflags) if c[2] else (c[0] in flags)) != c[1] for c in o[0])]
-            c = choose(i, vis, flags)
-            if c is None:
-                return ('stop', i, path, flags)
-            path.append((i, c, vis[c][1][2], vis[c][1][1]))
-            i = labels[vis[c][1][2]]
-            continue
-        elif k == 'ask':
-            vis = list(enumerate(options(op)))
-            c = choose(i, vis, flags)
-            if c is None:
-                return ('stop', i, path, flags)
-            path.append((i, c, vis[c][1][2], vis[c][1][1]))
-            i = labels[vis[c][1][2]]
-            continue
-        i += 1
-    raise ScriptError('simulation did not finish (a loop without choices?)')
 
 
 def _tested_flags(ops):

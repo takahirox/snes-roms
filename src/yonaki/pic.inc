@@ -3,36 +3,27 @@
 .i16
 
 ; Once per frame (WaitFrame): the dim, colour addition, shake, ripple, mosaic and brightness -> shadows.
+; The photo keeps its own brightness; only the menu, @fx dark and R held dim it.
 Tick:
     inc blink
     lda #3
     sta reg_tm
     lda menu_dim
-    bne @menu_dim
-    ldx story_active
-    beq @plain
-    ; story: the photo is dimmed under a text page (up to DIM_TEXT, by picture) so the text reads; a new picture is shown at full
-    ; brightness until its first text.  L held: the text hidden and the photo at full brightness (look at it);
-    ; R held: dimmed further (DIM_READ) for reading.
+    beq @story
+    lda #DIM_MENU
+    bra @dark
+@story:
+    lda story_active
+    beq @dark
+    ; story: L held hides the text (the photo and figures alone), R held dims the photo for reading
     lda pad
     bit #PAD_L
-    beq @dim_r
+    beq :+
     ldx #1
     stx reg_tm
-    bra @plain
-@dim_r:
-    bit #PAD_R
-    beq :+
-    lda #DIM_READ
-    bra @dark
-:   lda text_on
+:   bit #PAD_R
     beq @plain
-    ldx pic_entry               ; the picture's own dim under text (build.py picture_text_dim: 0 for a night photo)
-    lda PicTable+78,x
-    and #$00FF
-    bra @dark
-@menu_dim:
-    lda #DIM_MENU
+    lda #DIM_READ
     bra @dark
 @plain:
     lda #0
@@ -68,68 +59,6 @@ Tick:
 :   lda t0
 :   sta dim_cur
 @dimdone:
-    ; the silhouette colours rise as the photo is dimmed under text, so the figures keep their brightness;
-    ; toward a full dim (dark, hiding an upload) they go down with the photo
-    lda #0
-    ldx add_level
-    bne :+
-    ldx dim_cur
-    lda SilComp,x
-    and #$00FF
-:   cmp sil_comp
-    beq @comp_ok
-    sta sil_comp
-    ldx #16
-@cc:
-    lda f:SysPalette,x
-    and #$001F
-    clc
-    adc sil_comp
-    cmp #32
-    bcc :+
-    lda #31
-:   sta t2
-    lda f:SysPalette,x
-    and #$03E0
-    lsr a
-    lsr a
-    lsr a
-    lsr a
-    lsr a
-    clc
-    adc sil_comp
-    cmp #32
-    bcc :+
-    lda #31
-:   asl a
-    asl a
-    asl a
-    asl a
-    asl a
-    ora t2
-    sta t2
-    lda f:SysPalette,x
-    xba
-    lsr a
-    lsr a
-    and #$001F
-    clc
-    adc sil_comp
-    cmp #32
-    bcc :+
-    lda #31
-:   xba
-    asl a
-    asl a
-    ora t2
-    sta ui_pal,x
-    inx
-    inx
-    cpx #28
-    bne @cc
-    lda #1
-    sta ui_dirty
-@comp_ok:
     ; colour math
     lda add_level
     beq @nodd
@@ -722,7 +651,7 @@ SilOldPointer:
     cmp #$BB00
     bcs @tail
     clc
-    adc #$C000-$7B00
+    adc #.loword(SIL_OLD_B)-$7B00
     sta p1
     lda #$7F
     sta p1+2

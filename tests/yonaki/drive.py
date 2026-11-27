@@ -5,9 +5,9 @@ A through paragraphs, up / down until the wanted option is under the cursor, A.
 """
 import sys, pathlib
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-from emu import Game, ROOT, ST     # noqa: E402
+from emu import Game, ROOT         # noqa: E402
 
-MOVING = {'TYPE', 'WAIT', 'BUSY', 'CHAPTER', 'BOOT'}
+MOVING = {'TYPE', 'WAIT', 'BUSY', 'BOOT'}
 
 
 class Stuck(Exception):

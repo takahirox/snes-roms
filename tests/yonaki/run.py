@@ -210,12 +210,6 @@ def test_endings_list():
     return rec
 
 
-def to_wait(g, text_id):
-    while True:
-        st = g.advance(limit=4000)
-        raise Stuck(st)
-
-
 def checkpoint(g):
     fields = ('pic_cur', 'music_cur', 'amb_cur', 'chapter_cur', 'dark_on', 'ripple_on')
     silhouettes = [
@@ -304,7 +298,7 @@ def test_save_load():
     g.tap('A', 2, 4)
     g.until(lambda: g.state() == 'CHOICE', 1200, 'resumed choice')
     assert g.w('choice_id') == cid
-    assert choice_text != 0xFFFF and g.w('last_text') == choice_text and g.w('text_on') == 1
+    assert choice_text != 0xFFFF and g.w('last_text') == choice_text
     assert checkpoint(g) == choice_checkpoint and g.options() == choice_options
     shot(g, 'loaded_choice')
     g.choose(index=0)
@@ -739,13 +733,12 @@ def test_scheduler():
     return rec
 
 
-DIM_TEXT, DIM_READ = (int(re.search(rf'^{n}\s*=\s*(\d+)', (ROOT / 'src/yonaki/yonaki.s').read_text(), re.M)[1])
-                      for n in ('DIM_TEXT', 'DIM_READ'))
+DIM_READ = int(re.search(r'^DIM_READ\s*=\s*(\d+)', (ROOT / 'src/yonaki/yonaki.s').read_text(), re.M)[1])
 
 
 def test_reading_controls():
-    """A new picture shows at full brightness until its first text, the photo dims under a text page, and held
-    shoulder buttons only change the view (L: the photo alone, R: darker for reading)."""
+    """The photo keeps one brightness from its fade-in through the text, and held shoulder buttons only change
+    the view: L the photo alone, R darker for reading, both together both."""
     import numpy as np
     from vramview import text_indices
 
@@ -754,10 +747,9 @@ def test_reading_controls():
     fade_levels = []
 
     def observe(game):
-        assert game.w('reg_tm') != 2, 'a chapter card interrupted the opening'
-        if game.w('pic_cur') == bus and not game.w('blanked') and not game.w('text_on'):
+        if game.w('pic_cur') == bus and not game.w('blanked'):
             fade_levels.append(game.w('bright'))
-            assert game.w('dim_cur') == 0, 'the picture dimmed before its text'
+            assert game.w('dim_cur') == 0, 'the brightness of the picture changed'
 
     g.observers.append(observe)
     g.new_game()
@@ -765,8 +757,7 @@ def test_reading_controls():
     g.run(12)
     g.observers.remove(observe)
     assert min(fade_levels) < 15 and max(fade_levels) == 15, fade_levels
-    text_dim = g.layout['text_dim'][bus]
-    assert 0 < text_dim <= DIM_TEXT and g.w('dim_cur') == text_dim, 'the photo is not dimmed under the text'
+    assert g.w('dim_cur') == 0 and g.w('reg_cgadsub') == 0, 'the photo is dimmed under the text'
     assert g.w('chapter_cur') == 0, 'the prologue must still label bookmarks'
     g.until(lambda: g.w('blink') & 32 and not g.w('mark_on'), 80, 'blank wait mark')
     g.run(4)
@@ -796,24 +787,24 @@ def test_reading_controls():
     sample = lambda: g.screen()[16:32].copy()
     normal = sample()
     shot(g, 'normal', settle=False)
-    assert g.w('dim_cur') == text_dim
-    g.run(12, ('R',))
+    assert g.w('dim_cur') == 0
+    g.run(20, ('R',))
     reading = sample()
     assert g.w('dim_cur') == DIM_READ
     assert reading[:, :8].mean() < normal[:, :8].mean(), 'R did not dim the photo'
     shot(g, 'hold_r', settle=False)
     g.run(12)
-    assert g.w('dim_cur') == text_dim and np.array_equal(sample(), normal)
+    assert g.w('dim_cur') == 0 and np.array_equal(sample(), normal)
 
     g.run(12, ('L',))
     scenic = g.screen().copy()
     assert g.w('reg_tm') == 1 and g.w('dim_cur') == 0
     assert not np.array_equal(scenic[16:32], normal), 'L did not remove the text'
-    assert scenic[16:32, :8].mean() > normal[:, :8].mean(), 'L did not show the photo at full brightness'
+    assert np.array_equal(scenic[16:32, :8], normal[:, :8]), 'L changed the brightness of the photo'
     shot(g, 'hold_l', settle=False)
-    g.run(12, ('L', 'R'))
-    assert g.w('reg_tm') == 1 and g.w('dim_cur') == 0, 'L (the photo alone) wins over R'
-    assert np.array_equal(g.screen(), scenic), 'R changed the view while L is held'
+    g.run(20, ('L', 'R'))
+    assert g.w('reg_tm') == 1 and g.w('dim_cur') == DIM_READ, 'L and R together: no text and the reading dim'
+    assert g.screen()[16:32, :8].mean() < scenic[16:32, :8].mean()
     shot(g, 'hold_both', settle=False)
     g.run(12)
     assert np.array_equal(sample(), normal) and g.w('cur_text') == text_id and g.state() == 'WAIT'
@@ -832,7 +823,7 @@ def test_reading_controls():
     g.run(20, ('L', 'R'))
     assert g.w('reg_tm') == 3 and g.w('dim_cur') == 15, 'shoulder buttons affected the menu'
     shot(g, 'menu_with_shoulders_held', settle=False)
-    rec = dict(default_dim=text_dim, held_r_dim=DIM_READ, held_l_layers=1)
+    rec = dict(default_dim=0, held_r_dim=DIM_READ, held_l_layers=1)
     finish(g, rec)
     return rec
 
@@ -847,7 +838,6 @@ def test_silhouette_updates():
     g.until(lambda: g.state() == 'WAIT', 3000, 'first paragraph')
     g.run(12)
     picture = g.w('pic_cur')
-    text_dim = g.w('dim_cur')
     initial_tiles = bytes(g.e.vram[:49152])
     previous_tiles = initial_tiles
     # The fixture's figures start at photo row 4 or lower. This strip is above
@@ -879,7 +869,7 @@ def test_silhouette_updates():
                 game.shot(game.shots / f'update_{updates}_prepare.png')
             busy_frames += 1
             assert np.array_equal(current, previous), 'background changed during a silhouette update'
-            assert game.w('bright') == 15 and game.w('dim_cur') == text_dim, 'silhouette update dimmed the photo'
+            assert game.w('bright') == 15 and game.w('dim_cur') == 0, 'silhouette update dimmed the photo'
             phase = game.w('sil_phase')
             if 1 <= phase <= 8:
                 phase_frames[phase] = phase_frames.get(phase, 0) + 1

@@ -969,7 +969,6 @@ StartGame:
 
 ResetScreenState:
     stz story_active
-    stz text_on
     stz dark_on
     stz ripple_on
     stz menu_dim
@@ -1525,7 +1524,6 @@ EndingScreen:
     lda #ST_ENDING
     sta ui_state
     jsr ClearPage
-    stz text_on
     jsr EnsureVisible
     lda #1
     sta menu_dim

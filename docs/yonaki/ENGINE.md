@@ -59,7 +59,7 @@ bit (above BG1).  The BG3 map pointer (offset-per-tile in mode 4) points at zero
 CGRAM 0–15: 0 black (backdrop), BG2 palette 0 = 1 text white, 2 shadow, 3 grey; palette 1 (highlighted line) =
 5 yellow-white, 6 shadow, 7; silhouettes 8/9 white (ghost) body/rim, 10/11 red, 12/13 blue.  CGRAM 16–255: the
 photo's 240 colours.  A photo that silhouettes appear on has 112 colours (CGRAM 16–127) and, at CGRAM 144–255, the
-same colours seen through a translucent blue figure (`pictures.TINTS`: 50% of (52, 48, 132), a dark indigo); the white (45% of
+same colours seen through a translucent blue figure (`pictures.TINTS`: 60% of (36, 52, 176)); the white (45% of
 (232, 236, 255)) and red versions are in a second block (PicTable+75) and replace them while such a figure is on
 screen.
 
@@ -70,14 +70,11 @@ an empty page, `CHOICE_ROWS`).  The menus and the name entry use `LineY` lines (
 A choice is highlighted by switching the map rows of its lines to palette 1 (`HighlightRows`).
 Story text and choices use a one-pixel dark outline around the glyphs; menus use the existing drop shadow.
 
-Colour math: a new picture opens at full brightness (`text_on` is cleared by `@bg`). Once a story text page is
-drawn, BG1 is dimmed by `DIM_TEXT` (7 of 31 levels) so the text reads over the photo; the dim ramps one level a
-frame. Holding L masks BG2 in the main-screen register shadow and takes the dim off (the photo alone); holding R
-dims by `DIM_READ` (13). The buttons apply during scene fades and bookmark resume. Scripted darkness and menu
-dimming use their own levels.
-The silhouette colours 8–13 are raised by about half
-the dim (table `SilComp`) so solid figures keep their brightness under text and still go black in
-the dark; a translucent figure is part of the photo and dims with it.
+Colour math: the photo keeps its own brightness (every photo is lifted by the same gamma at build time,
+`pictures.GAMMA`); text does not dim it.  BG1 is dimmed (a fixed-colour subtract, ramping one level a frame) only
+by the START menu (`DIM_MENU` 15), `@fx dark` (31, until `@fx light` or the next `@bg`) and R held (`DIM_READ`
+13).  Holding L masks BG2 in the main-screen register shadow (the photo and figures alone); L and R together do
+both.  The buttons apply during scene fades and bookmark resume.
 Flashes and the white transition add a fixed colour to every layer.  Shake moves BG1; the ripple is HDMA
 channel 7 on BG1HOFS (a 2-px sine, table in bank 0); mosaic uses MOSAIC on BG1; fades use master brightness.
 
@@ -219,90 +216,6 @@ Figures are translucent: compositing keeps the photo's pixel under the figure an
 the tinted version), rim included, so it has no outline.  Only one tint is in CGRAM at a time: white
 before red before blue among the slots (`PickTint`); a figure of another colour, or any figure on a picture without
 tinted colours (black, white, the title), is drawn solid in colours 8–13 as before.
-
-### Silhouette performance
-
-The Snes9x 1.63 fixture `effects` trace was recorded on the baseline (`6da6766`) and on the packed-span
-renderer. The frame counts below follow `hide_bg1` from assertion to release. They include the ramp into
-black. Restoration and upload bytes come from the ROM-derived tile counts and the live WRAM span tables,
-at 64 bytes per tile. Compositor visits count tiles passed to the paced pixel loop, including empty tiles
-inside a span. The separate tint palette job is 224 bytes per batch on these fixture photos.
-
-| Batch | ROM → WRAM bytes | Compositor tile visits | WRAM → VRAM photo bytes | Frames in `ApplySils` |
-|---|---:|---:|---:|---:|
-| First figure | 5,760 → 0 | 60 → 29 | 5,760 → 1,856 | 13 → 9 |
-| Add two figures with a tint change | 34,560 → 1,856 | 420 → 306 | 34,560 → 28,288 | 63 → 42 |
-| Remove the centre figure | 34,560 → 28,288 | 360 → 277 | 34,560 → 28,288 | 58 → 43 |
-| Clear remaining figures | 29,440 → 26,944 | 0 → 0 | 29,440 → 26,944 | 18 → 17 |
-| Total | 104,320 → 57,088 | 840 → 612 | 104,320 → 85,376 | 152 → 111 |
-
-At the 12-tile quota, the four batches take 67 → 50 compositor waits. The photo DMA payload drops from
-208,640 to 142,464 bytes across both directions, about 529,000 master clocks saved at eight per byte,
-before per-job setup. The fixture's cut and fade use the same forced-blank durations. The white transition
-holds full white for 38 frames, down from 42, with the same ramp durations. The mosaic sequence takes
-83 frames in both builds. [Snes9x 1.63 DMA timing implementation](https://github.com/snes9xgit/snes9x/blob/1.63/dma.cpp)
-
-The span renderer packed the 106 production masks from 154,512 to 102,732 ROM bytes, including row headers.
-All 106 packed masks decoded byte-for-byte to the original cover and rim data in a ROM audit. The builder
-derives spans from the existing mask cache. The renderer added 74 bytes of runtime variables overall and
-reduced occupied ROM from 78 to 76 banks within the 4 MiB image.
-
-- **Exact tile runs.** In the three-figure fixture batch the upload spans cover 442 tiles in 20 jobs.
-  Exact coverage would use 288 tiles in 49 jobs. That saves 9,856 bytes but requires tracking multiple
-  runs per row and scheduling their setup within the 24-job and 3,072-byte VBlank limits.
-- **Incremental redraw.** Removing the centre figure changes only 29 of the 442 uploaded tiles in that
-  batch. Tracking changed slots could narrow the update. Each dirty tile would still need the surviving
-  overlaps replayed in slot order, and a tint selection change can change the drawing mode of a slot whose
-  position and silhouette are unchanged. Retaining one span per row keeps restoration and upload bounded
-  by 24 jobs per direction and avoids retaining additional photo or mask copies in WRAM.
-
-`make yonaki-test` passed on both builds. Snes9x passed all 11 checks, including all 20 production
-endings. All 73 existing Snes9x captures and all 41 final battery images were identical across the
-builds. The fixture's full `effects` trace went from 1,301 to 1,256 frames. A separate fixture run with
-overlapping, right-clipped figures and a white-to-red tint change matched all 31 screenshots.
-
-Both bsnes 115 runs passed all 20 standard replays. Every battery image matched Snes9x, with no more
-than 2 RGB levels of difference per channel across 51 captures. The Snes9x suite recorded zero VBlank
-overruns or deferred DMA jobs. Peak NMI end lines were 251 → 248 on the fixture and 255 → 257 on
-production routes, within the NTSC VBlank range of 225–261. Peak DMA was 3,072 bytes on the production
-routes and 3,072 → 3,008 on the `effects` trace. A read-only check of the bsnes `effects` trace's
-serialized WRAM found the same DMA peaks and NMI end lines, with zero overruns or deferrals. The
-production C02 replay reached line 257 and 3,040 DMA bytes on both cores, with zero overruns or deferrals.
-
-### PPU layout alternatives
-
-The current Mode 4 layout uses 49,152 photo bytes, 11,520 text bytes, 64 shared blank tile bytes and
-4,096 map bytes. That leaves 704 of the 65,536 VRAM bytes. The active-width BG budget is 32 visible
-8-pixel columns per layer, with an edge fetch when scrolled. The shipped layout uses zero OBJ slots
-or OBJ fetches. These estimates use Yonaki's assets and the documented SNES hardware.
-[Nintendo SNES Development Manual, Book I](https://archive.org/details/SNESDevManual)
-
-| Layout | VRAM and scanline budget | Presentation considerations |
-|---|---|---|
-| Mode 4 with OBJ masks | The free bytes fit at most 22 4bpp tiles by size, before OBJ base alignment. At one 8×8 OBJ per nonempty tile, the three-figure fixture would need 295 OAM entries and 23 slivers on its busiest scanline. One production figure reaches 17 slivers. The hardware allows 32 OBJ and 34 slivers per scanline, with 128 OAM entries across the screen. | Larger OBJ can reduce OAM entries but consume fetches for blank slivers. Photo shake, mosaic and ripple would have to keep the overlay aligned. |
-| Mode 1 with BG1 photo, BG2 masks and BG3 text | Full-size 4bpp photo and overlay cost 24,576 bytes each. 2bpp text costs 11,520 and three maps cost 6,144. The 66,816-byte total exceeds VRAM by 1,280 bytes before blank tiles. Sparse overlay tiles can reduce storage and use up to 32 visible columns on that BG. | A 4bpp photo requires per-tile palette quantization. Text priority and palette assignments also need rework. |
-| Mode 3 with an 8bpp photo and a 4bpp second BG | Photo, text and two maps alone total 76,288 bytes before blank tiles or overlay art. A separate mask BG would need a different mode. | Preserving the current photo and text shapes would require factoring or sharing tile data. |
-| Main/subscreen colour math with an OBJ or BG mask | Mask storage and fetches follow the selected layout. A mask on the subscreen alone still requires that layer's tile and map or OAM storage. | Half-add gives a 50% mix. The authored tints use 45% or 60%, and the hardware math path also drives the existing dim and flashes. Matching the palette rounding and the effects would require additional work. |
-
-The limits and blend behaviour can also be checked in the pinned core's sources.
-[bsnes OBJ evaluator](https://github.com/libretro/bsnes/blob/63ee22f7af8f5d1ada295c2c98fd7bf261fa62a7/bsnes/sfc/ppu/object.cpp)
-[bsnes screen compositor](https://github.com/libretro/bsnes/blob/63ee22f7af8f5d1ada295c2c98fd7bf261fa62a7/bsnes/sfc/ppu/screen.cpp)
-
-Small tile-local pose or prop updates could reuse the packed spans with incremental redraw. Two changed
-8bpp tiles cost 128 VRAM bytes, against a theoretical 48 tile transfers per VBlank at the current payload
-limit before text, palette and job costs. The compositor quota is 12 tile visits per frame. Palette-only
-animation could transfer as little as a few CGRAM words, provided it reserves palette indices whose
-other uses should animate together. Large moving figures would need measured overlap and DMA budgets
-before choosing a frame rate.
-
-### Future scheduling capabilities
-
-A future concurrent cue could carry a target frame and a script-order sequence number, with waits for a
-specific upload or sound dispatch. DMA admission would still honor the byte budget. The SPC command handoff
-could serve as a dispatch signal, with separate acknowledgement for playback completion. An additional skip
-policy would need to define which cues are delivered, which can be coalesced, and how to reach the same final
-text, graphics and audio state at the next wait. The current scheduler uses one continuation and the existing
-per-channel requests to preserve the timing of the current bytecode.
 
 ## Script VM
 
@@ -453,40 +366,3 @@ the real scenario traces.
 `run.py` writes `build/yonaki-test/tests.json` and `bsnes.py` writes `build/yonaki-test/bsnes/RESULTS.json`.
 The drivers save screenshots under `build/yonaki-test/shots/`, `build/yonaki-test/scheduler/shots/`, and
 `build/yonaki/shots/` (real endings).
-
-### Scheduler regression results for issue #4
-
-The scheduler was tested on top of main at `4dbf917`. Snes9x ran with `run.py --real` and
-`bsnes.py` replayed all generated traces.
-
-- **Snes9x 1.63** passed all 12 tests, including all 20 real endings and both pages of the real ending list.
-  The reported maximums were 3072 DMA bytes and NMI end line 257. V-blank overruns, deferred DMA jobs and
-  clipped glyphs were all zero.
-- **bsnes 115** passed all 45 replays, including 24 fixture and 21 real scenario traces. Across 273,127
-  frames, final battery images matched in every replay. The largest RGB channel difference across
-  82 captures was 2 on the 0–255 scale.
-- **Comparison with main** matched all 41 existing Snes9x traces across 271,467 frames, including controller
-  masks, capture frames, all 73 screenshot files, and initial and final battery images. The 75 generated
-  production data banks and 20 fixture data banks matched byte for byte.
-- **Scheduler fixture** sent commands `$41`, `$01` and `$70` on consecutive frames with text DMA and ripple
-  active. The white transition held through all 24 photo row transfers and started clearing as soon as the
-  final DMA job drained, with the span cursor still at the end of the table. Both skip runs reached unread
-  text 120 frames after the fixture driver's new-game setup. Releasing B at the timed wait restored its
-  12-frame duration.
-
-### Issue #5 validation
-
-Snes9x 1.63 passed all 13 checks, including the save-recovery and scheduler fixtures, all 20 story endings,
-and the second page of the ending list. Across the 54 sessions with timing counters, the maximum queued
-DMA payload was 3,072 bytes and the latest NMI completion was on scanline 257. V-blank overruns, deferred
-DMA jobs and clipped glyphs were all zero.
-
-| bsnes 115 replay | Sessions passed | Frames | Screenshots | Battery images matched | Maximum RGB difference |
-|---|---:|---:|---:|---:|---:|
-| Fixture, including save recovery and scheduler | 34 / 34 | 23,549 | 69 | 34 / 34 | 2 |
-| Real scenario | 21 / 21 | 253,765 | 22 | 21 / 21 | 2 |
-
-The 4 MiB release combines the save changes with the scheduler from `main` at `2c2fb53`. A clean build
-with a fresh picture cache matched `dist/yonaki.sfc` byte for byte. Its SHA-256 is
-`7dbe3ca4083d141baf13b6404cd5b6035366915527a7f21d1e01f65261e3243b`. Only LoROM bank 0 changed
-from the ROM packaged at PR #12 revision `a486af0`.
