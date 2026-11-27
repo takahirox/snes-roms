@@ -1,29 +1,53 @@
-# 夜鳴き鐘 — the opening: played at power-on before the title (any button goes to the title).
-# Rain and the far bell on black, the way to the inn as the night comes, the empty bath, the bell; the bell
-# strikes and the title comes out of the white.
+# 夜鳴き鐘 — the opening: played at power-on before the title (any button goes to the title).  No words: the
+# pictures, the sounds and the pauses between them.
+#   the maker's mark and the credit, each out of black and back into it;
+#   the rain alone on black, the far bell, then the valley comes up slowly out of the dark, the inn in the storm;
+#   thunder, and short cuts that come faster: the covered walkway, the dark corridor, the empty bath, the bell;
+#   the bell strikes (red, the picture shakes), the rain stops: black and silence;
+#   the bathhouse comes up without the title, the bell strikes once more and the title is there out of the white,
+#   with its music.
 
 *opening
+@fx wait 40
+@bg logo fade 5
+@fx wait 150
+@fx out 5
+@fx wait 50
+@bg credit fade 5
+@fx wait 140
+@fx out 5
+@fx wait 40
 @amb rain
-@fx wait 60
+@fx wait 150
 @se bell_far
-@fx wait 100
-@bgm title
-@bg valley fade
-@fx wait 150
-@bg inn_storm fade
-@caption 嵐の晩、
-@fx wait 150
-@bg watari fade
 @fx wait 120
-@bg oldbath_night fade
+@bg valley fade 8
+@fx wait 140
+@bg inn_storm fade 5
+@fx wait 100
+@se thunder
+@fx flash
+@fx wait 60
+@bg watari cut
+@fx wait 70
+@bg corridor_dark cut
+@fx wait 45
+@se drip
+@bg oldbath_night cut
 @fx ripple on
-@caption 誰もいない湯殿で、鐘が鳴る。
-@fx wait 180
+@fx wait 80
 @fx ripple off
-@bg bell fade
-@caption 鳴っても、数えてはいけない。
-@fx wait 150
+@bg bell cut
+@fx wait 50
 @se bell
-@fx wait 20
+@fx redflash
+@fx shake
+@amb off
+@bg black cut
+@fx wait 100
+@bg title_plain fade 7
+@fx wait 60
+@se bell
+@bgm title
 @bg title white
 @title

@@ -1330,5 +1330,19 @@
   "method": "Codex CLI built-in image generation, editing the background (codex exec --image)",
   "target": "assets/yonaki/src/stage/lobby_dark__shino__r.png",
   "date": "2026-11-01"
+ },
+ "bg/shiori": {
+  "prompt": "Three traditional Japanese washi paper bookmarks (shiori) lying parallel and vertical on an old dark wooden writing desk at night, evenly spaced across the frame: one at the left third, one in the centre, one at the right third, each tall and narrow with a short silk tassel at the top; the left one deep indigo, the centre one faded vermilion, the right one pale moss green, faint pressed leaves in the paper, plain with no writing; seen straight from above, warm light of a single paper lamp, the lower quarter of the frame is plain dark wood, deep shadows at the edges. Photorealistic photograph, 4:3 landscape, shot on 35mm color film in Japan in 1994, natural grain, realistic lighting, no people, no animals, no text, no signs with readable letters, no logos, no watermark.",
+  "generated_path": "~/.codex/generated_images/01a21d81-330e-79c1-9b8b-1c4c81bd3e25/exec-544785be-b9da-427e-a837-b37cf8fe3913.png",
+  "method": "Codex CLI built-in image generation (codex exec)",
+  "target": "assets/yonaki/src/bg/shiori.png",
+  "date": "2026-11-27"
+ },
+ "bg/register": {
+  "prompt": "An old Japanese hot-spring inn guest register (yadocho) lying open on a dark wooden reception counter at night, thick yellowed paper with ruled vertical columns, a few faded illegible brush-ink entries, an inkstone and a brush beside it, a small brass bell for calling the staff, warm light of a paper lantern, rain-streaked window glass behind, shallow depth of field, close-up from slightly above. Photorealistic photograph, 4:3 landscape, shot on 35mm color film in Japan in 1994, natural grain, realistic lighting, no people, no animals, no text, no signs with readable letters, no logos, no watermark.",
+  "generated_path": "~/.codex/generated_images/01a21d81-3306-7cd2-ac49-b0de97d3a29d/exec-8ba44b93-96e9-403c-9a25-f3f6ca44e096.png",
+  "method": "Codex CLI built-in image generation (codex exec)",
+  "target": "assets/yonaki/src/bg/register.png",
+  "date": "2026-11-27"
  }
 }

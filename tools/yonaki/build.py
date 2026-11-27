@@ -38,11 +38,13 @@ MAX_BANKS = 128                 # 4 MiB LoROM
 SPEEDS = ['遅い', '普通', '速い', '瞬間']
 OMAKE_ENDINGS = 10              # the title's おまけ needs this many endings seen
 TITLE_BGS = ['oldbath_ext', 'bell']
-REGISTER_BG = 'inn_dusk'        # behind the guest register before a new game
+REGISTER_BG = 'register'        # behind the guest register and the name entry before a new game
+SHIORI_BG = 'shiori'            # the three bookmarks (はじめる): the picture and the light on each (x from, to)
+SHIORI_WIN = [(38, 82), (108, 150), (179, 223)]
 OP = dict(HALT=0, TEXT=1, BLANK=2, PAGE=3, BG=4, SIL=5, SILCLEAR=6, BGM=7, SE=8, FX=9, SET=10, CLR=11, SETG=12,
-          CLRG=13, IF=14, GOTO=15, CHOICE=16, END=17, CHAPTER=18, AMB=19, ASK=20, CAPTION=21)
+          CLRG=13, IF=14, GOTO=15, CHOICE=16, END=17, CHAPTER=18, AMB=19, ASK=20)
 BGMODE = dict(cut=0, fade=1, white=2, mosaic=3, keep=4)
-FXK = dict(shake=0, flash=1, redflash=2, ripple_on=3, ripple_off=4, dark=5, light=6, wait=7)
+FXK = dict(shake=0, flash=1, redflash=2, ripple_on=3, ripple_off=4, dark=5, light=6, wait=7, out=8)
 SILCOL = dict(blue=0, white=1, red=2)
 SILKEY = dict(l=0, c=1, r=2)
 GLYPH_PARA = ''           # blinking wait marks and the choice cursor (drawn in font.CUSTOM)
@@ -79,12 +81,12 @@ fontmod.CUSTOM.update({
 })
 # user interface strings (the ROM refers to them as Str_<key>)
 UI = dict(
-    new='はじめから', load='しおりから', endings='結末の一覧', omake='おまけ',
+    new='はじめる', endings='結末の一覧', omake='おまけ',
     menu_save='しおりをはさむ', menu_speed='文字の速さ', menu_title='タイトルへ', menu_back='もどる',
-    slot_empty='――　なし　――', slot_head_save='どこにはさみますか', slot_head_load='どのしおりから読みますか',
-    saved='しおりをはさみました。', title_confirm='タイトルにもどりますか', yes='はい', no='いいえ',
+    slot_empty='まだ、はさんでいません', slot_go='つづきから', slot_new='はじめから',
+    saved='をはさみました。', title_confirm='タイトルにもどりますか', yes='はい', no='いいえ',
     unknown='？？？？？？', list_hint='←→　ページ　　Ｂ　もどる',
-    slot1='しおり一', slot2='しおり二', slot3='しおり三', notitle='（章なし）',
+    slot1='藍のしおり', slot2='朱のしおり', slot3='萌黄のしおり', notitle='（章なし）',
     empty='', kind0='真の結末', kind1='結末', kind2='悪い結末',
     name_hero='主人公', name_heroine='ヒロイン', name_note='（名前）',
     name_hero_family='結城', name_heroine_family='早瀬', name_hint='Ｂ　けす　　ＳＴＡＲＴ　決定',
@@ -304,9 +306,12 @@ class Builder:
         for op, _ in self.prog.ops:
             if op[0] == 'bg' and op[1] not in names and op[1] not in sc.BUILTIN_BG:
                 names.append(op[1])
-        if REGISTER_BG not in names:
-            names.append(REGISTER_BG)
-        self.pic_names = ['black', 'white'] + names + ['@title']
+        for ui in (REGISTER_BG, SHIORI_BG):
+            if ui not in names:
+                names.append(ui)
+        # the opening's cards and the title photo without its logo, when the script shows them
+        cards = [n for n in sc.OPENING_BG if any(op[0] == 'bg' and op[1] == n for op, _ in self.prog.ops)]
+        self.pic_names = ['black', 'white'] + names + cards + ['@title']
         self.pics = [pictures.solid((0, 0, 0)), pictures.solid((255, 255, 255))]
         prev = OUT / 'previews'
         # the photos a silhouette can appear on get the translucent-figure colours (pictures.TINT_COLORS)
@@ -317,6 +322,12 @@ class Builder:
             self.pics.append(pictures.background(p, tint=n in sil_bgs) if p.exists() else pictures.solid((0, 0, 0)))
         # the title: the first title background that exists, with the logo
         tb = next((b for b in TITLE_BGS if (ROOT / f'assets/yonaki/src/bg/{b}.png').exists()), None)
+        for n in cards:
+            if n == 'title_plain':
+                self.pics.append(pictures.background(ROOT / f'assets/yonaki/src/bg/{tb}.png') if tb
+                                 else pictures.solid((0, 0, 0)))
+            else:
+                self.pics.append(pictures.convert_photo(logomod.card(n)))
         lg = logomod.logo_rgba(self.font)
         self.title_bg = tb
         if tb:
@@ -407,9 +418,6 @@ class Builder:
                 for words, _ in op[3]:
                     for w in words:
                         enc.feed(w)
-        for op, _ in prog.ops:
-            if op[0] == 'caption':
-                enc.feed(op[1])
         for t in prog.chapters:
             enc.feed(t)
         for e in self.endings:
@@ -465,7 +473,7 @@ class Builder:
             if k == 'page':
                 return bytes([OP['PAGE']])
             if k == 'bg':
-                return bytes([OP['BG'], self.pic_index[op[1]], BGMODE[op[2]]])
+                return bytes([OP['BG'], self.pic_index[op[1]], BGMODE[op[2]] | op[3] << 4])   # | frames a fade step
             if k == 'sil':
                 key = SILKEY[op[1]] if op[1] in SILKEY else 0x80 | int(op[1][2:])
                 if op[2] is None:
@@ -515,8 +523,6 @@ class Builder:
                 return bytes([OP['END'], self.eindex[op[1]]])
             if k == 'chapter':
                 return bytes([OP['CHAPTER'], op[1]])
-            if k == 'caption':
-                return bytes([OP['CAPTION']]) + enc.string(op[1])
             if k == 'title':
                 return bytes([OP['HALT']])
             raise AssertionError(op)
@@ -671,7 +677,7 @@ class Builder:
         c += [f'ROM_SIZE_BYTE = ${rom_size_byte:02X}', f'ROM_BANKS = {self.nbanks}',
               f'FONT_BANK = ${0x80 + self.font_bank:02X}', f'TEXT_TABLE = ${self.text_table:06X}',
               f'CHOICE_TABLE = ${self.choice_table:06X}', f'TEXT_COUNT = {prog.text_count}',
-              f'CHOICE_COUNT = {prog.choice_count}', f'PIC_COUNT = {len(self.pics)}', f'PIC_TITLE = {len(self.pics) - 1}', f'PIC_REGISTER = {self.pic_index[REGISTER_BG]}',
+              f'CHOICE_COUNT = {prog.choice_count}', f'PIC_COUNT = {len(self.pics)}', f'PIC_TITLE = {len(self.pics) - 1}', f'PIC_REGISTER = {self.pic_index[REGISTER_BG]}', f'PIC_SHIORI = {self.pic_index[SHIORI_BG]}',
               f'SIL_COUNT = {len(self.sils)}', f'ENDING_COUNT = {len(self.endings)}',
               f'GFLAG_COUNT = {len(prog.gnames)}', f'LFLAG_COUNT = {len(prog.local_flags)}',
               f'CHAPTER_COUNT = {len(prog.chapters)}', f'START_ADDR = ${A["start"]:06X}',
@@ -741,6 +747,7 @@ class Builder:
                 d.append('    .word ' + ', '.join(f'${x:04X}' for x in vals[i:i + 16]))
         d.append('SpeedTable: .word ' + ', '.join(f'Str_speed{i}' for i in range(4)))
         d.append('SlotNames: .word Str_slot1, Str_slot2, Str_slot3')
+        d.append('ShioriWin: .word ' + ', '.join(f'{a}, {b}' for a, b in SHIORI_WIN) + '   ; the light on each bookmark')
         # endings: title, kind (0 true 1 normal 2 bad), global flags set (32-bit mask)
         sets = sc.ending_sets(self.endings)
         d.append('EndingTable:   ; title, kind, global flag mask (lo, hi), 0')

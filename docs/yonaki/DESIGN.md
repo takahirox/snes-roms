@@ -64,7 +64,7 @@ old bathhouse.
 | (past) お由良 (Oyura) | 16 | Innkeeper's daughter at the end of the Edo period | The girl of the legend | Protagonist of おゆら篇 |
 
 The two call each other by their given names (航くん / 千尋さん); everyone else uses their family names. The player
-can change only the given names (はじめから, the guest register).
+can change only the given names (a new game, the guest register).
 
 ### Relationships
 - In 1969 Gondō lost his daughter Chizuru. His wife left, taking their younger daughter Sumiko (then 10). Gondō stayed at the
@@ -180,8 +180,7 @@ Chapters break automatically (a chapter heading is shown).
 
 ## 5. Unlocked scenarios
 
-After the main story's true ending (E01), new options appear among the choices in the prologue and chapter 4 (the
-colour of the bookmark on the title screen changes).
+After the main story's true ending (E01), new options appear among the choices in the prologue and chapter 4.
 
 | Unlock condition | Scenario | Entry | Contents |
 |---|---|---|---|
@@ -231,15 +230,20 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 - Chapter markers label bookmarks and let the story continue.
 - A: advance / confirm. B (held): fast-forward through text already read (stops at unread text). START: menu
   (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
-- Opening (at power-on, any button skips it): rain and the far bell on black; the valley, the inn in the storm,
-  the covered walkway, the empty bath (its water rippling) and the bell, with three lines of the taboo typed under
-  them (嵐の晩、/ 誰もいない湯殿で、鐘が鳴る。/ 鳴っても、数えてはいけない。); the bell strikes and the title comes
-  out of the white.
-- Title: the menu: はじめから (new game) / しおりから
-  (continue from a bookmark) / 結末の一覧 (list of endings) / (after unlocking) おまけ (bonus). Left alone for 20
+- Opening (at power-on, any button skips it), without words: the pictures, the sounds and the pauses carry it.
+  The maker's mark (takahirox) and the credit (作) each come out of black and go back into it; then the rain alone on
+  black and the far bell; the valley comes up slowly out of the dark, then the inn in the storm; thunder, and cuts
+  that come faster (the covered walkway, the dark corridor, the empty bath with its water rippling, the bell); the
+  bell strikes (a red flash, the picture shakes), the rain stops: black and silence.  The bathhouse comes up without
+  the title, the bell strikes once more and the title is there out of the white, its music starting with it.
+- Title: the menu: はじめる (start) / 結末の一覧 (list of endings) / (after unlocking) おまけ (bonus). Left alone for 20
   seconds, the title plays a demo: the lounge in chapter 1 reads and chooses by itself until a button is pressed.
-- はじめから: the guest register of 水明館 over the inn at dusk in the rain; the story then opens on the bus, with no
-  narration before it.
+- はじめる: three washi bookmarks on a desk (藍 indigo, 朱 vermilion, 萌黄 moss green); a light falls on the one
+  chosen, with its name and the chapter it holds under it.  A play belongs to one bookmark: an empty one starts a
+  new game, one in use offers つづきから (continue) / はじめから (start again; the bookmark keeps its page until
+  しおりをはさむ writes over it).  しおりをはさむ writes the bookmark of the play (おまけ has none).
+- A new game: the names written over 水明館's open guest register; the name entry is over the same register,
+  dimmed.  The story then opens on the bus, with no narration before it.
 
 ---
 
@@ -250,13 +254,16 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 *label                 label (unique across the whole script; *start begins the game, *opening plays at power-on,
                        *demo is the title's demo)
 @chapter 第一章　最後の客
-@bg lobby [cut|fade|white|mosaic|keep]   background (default fade; keep: under the text, the page goes on)
+@bg lobby [cut|fade [N]|white|mosaic|keep]   background (default fade, N frames a brightness step (2);
+                       keep: under the text, the page goes on)
 @sil chihiro l|c|r|x=NN [blue|white|red]   place a silhouette (x is a tile column)
 @sil - l|c|r            remove the silhouette there
 @silclear               remove all
 @bgm name | @bgm stop | @bgm fade
 @se name
-@fx shake | flash | redflash | ripple on | ripple off | dark | light | wait N   (dark: until light or the next @bg)
+@fx shake | flash | redflash | ripple on | ripple off | dark | light | wait N | out N
+                       (dark: until light or the next @bg; out: fade to black, N frames a step, the next @bg
+                       fades in from it)
 @set flag / @clr flag
 @if flag label / @ifnot flag label / @ifg gflag label   (gflag: a global flag kept in SRAM)
 @goto label
@@ -268,8 +275,9 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 > * -> label                    anything else
 @end E01               ending (recorded in 結末の一覧, shows 「終」 and returns to the title)
 @page                  page break
-@caption text          one line centred low on the photo, typed slowly (the opening)
 @title                 back to the title (the opening ends with @bg title white, then @title)
+                       The opening's pictures: @bg logo / credit (the maker's mark and the credit,
+                       assets/yonaki/logo/card_*.png), title_plain (the title photo without the title) and title.
 body text              one line is one paragraph; wrapped automatically, waits for A at the end of the paragraph
 (empty line)           adds one blank line when in the middle of a page
 ```

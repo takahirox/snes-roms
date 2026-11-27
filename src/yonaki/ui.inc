@@ -9,7 +9,8 @@ MENU_LINE = 3
 
 ; ---------------------------------------------------------------- generic list menu
 ; menu_count items at page lines menu_item[i], menu_hlc lines highlighted each, cursor at menu_cx.
-; -> A = the chosen item, or $FFFF (B / START: cancel), or MENU_IDLE (menu_idle: no button for DEMO_IDLE frames)
+; A or START chooses; menu_cancel 1: B cancels, 2: B or START cancels (the START menu closes with START).
+; -> A = the chosen item, or $FFFF (cancel), or MENU_IDLE (menu_idle: no button for DEMO_IDLE frames)
 MenuLoop:
     jsr MenuShow
     jsr FlushPad
@@ -52,16 +53,27 @@ MenuLoop:
 @a:
     lda pad_new
     and #PAD_A
-    beq :+
+    bne @ok
+    lda pad_new
+    and #PAD_START
+    beq @b
+    lda menu_cancel
+    cmp #2
+    beq @cancel
+@ok:
     jsr MenuHide
     jsr SndOk
     lda menu_sel
     rts
-:   lda menu_cancel
-    beq @l
+@b:
     lda pad_new
-    and #PAD_B|PAD_START
-    beq @l
+    and #PAD_B
+    beq @next
+    lda menu_cancel
+    bne @cancel
+@next:
+    jmp @l
+@cancel:
     jsr MenuHide
     jsr SndCancel
     lda #$FFFF
@@ -177,11 +189,11 @@ TitleScreen:
     sta ui_state
     lda menu_kind,x
     beq @new
-    cmp #1
-    beq @load
     cmp #2
     beq @list
-    ; おまけ
+    ; おまけ (no bookmark)
+    lda #$FFFF
+    sta cur_slot
     jsr StartGame
     lda #.loword(OMAKE_ADDR)
     sta vp
@@ -190,15 +202,32 @@ TitleScreen:
     jsr RunVM
     jmp TitleScreen
 @new:
+    jsr ShioriScreen
+    cmp #$FFFF
+    bne :+
+    jmp TitleScreen             ; B: the title picture again
+:   bit #SHIORI_NEW
+    bne @fresh
+    sta cur_slot                ; つづきから
+    lda #2
+    jsr FadeOut
+    jsr ResetScreenState
+    lda cur_slot
+    jsr LoadGame
+    beq :+
+    jsr RunVM
+:   jmp TitleScreen
+@fresh:
+    and #$00FF
+    sta cur_slot
+@register:
     jsr NameConfirm
     cmp #0
     beq @go                     ; このまま始める
     cmp #1
-    bne @cancel
+    bne @new                    ; B: the bookmarks again
     jsr NameEntry
-    bcc @go
-@cancel:
-    jmp TitleScreen             ; cancelled: the title picture again
+    bcs @register               ; cancelled: the register again
 @go:
     jsr StartGame
     lda #.loword(START_ADDR)
@@ -215,25 +244,8 @@ TitleScreen:
 .endif
     jsr RunVM
     jmp TitleScreen
-@load:
-    lda slot_any
-    beq @menu
-    lda #1
-    jsr SlotScreen
-    cmp #$FFFF
-    beq @back
-    pha
-    lda #2
-    jsr FadeOut
-    jsr ResetScreenState
-    pla
-    jsr LoadGame
-    beq :+
-    jsr RunVM
-:   jmp TitleScreen
 @list:
     jsr EndingsList
-@back:
     jsr ClearPage
     jsr TitleMenuDraw
     jmp @menu
@@ -261,18 +273,26 @@ AutoPlay:
     stz demo_on
     rts
 
-; ---------------------------------------------------------------- the guest register (はじめから)
-; The names kept from the last time (or the defaults), written in the inn's register over the inn at dusk
-; (REGISTER_BG): このまま始める (A = 0) / 名前を書きなおす (A = 1, the name entry) / B: back (A = $FFFF).
+; ---------------------------------------------------------------- the guest register (a new game)
+; The names kept from the last time (or the defaults), written over the inn's register (REGISTER_BG):
+; このまま始める (A = 0) / 名前を書きなおす (A = 1, the name entry) / B: back (A = $FFFF).
 NC_LINE = 8                     ; the first option
 NameConfirm:
     lda #ST_BUSY
     sta ui_state
-    lda #2
-    jsr FadeOut
+    lda pic_cur                 ; back from the name entry: the register stays
+    cmp #PIC_REGISTER
+    bne :+
+    lda blanked
+    bne :+
     jsr ClearPage
+    bra @draw
+:   lda #2
+    jsr FadeOut
+    jsr ResetScreenState
     lda #PIC_REGISTER
     jsr LoadPic
+@draw:
     lda #2                      ; outlined over the photo
     sta g_col
     stz g_space
@@ -331,9 +351,9 @@ NameConfirm:
     pla
     rts
 
-; ---------------------------------------------------------------- name entry (はじめから)
+; ---------------------------------------------------------------- name entry (a new game)
 ; The given names of the hero (主人公) and the heroine (ヒロイン) (1..NAME_MAX glyphs each) typed from
-; pages of characters (かな, カナ, 漢字 1-3, NameGrid) over the dimmed picture (the family names 結城 and 早瀬
+; pages of characters (かな, カナ, 漢字 1-3, NameGrid) over the dimmed register (the family names 結城 and 早瀬
 ; are fixed and shown grey before them).  Arrows move the cursor (the command row under the grid:
 ; かな カナ 漢字 けす 決定), A types or runs a command, B deletes (on an empty name: back to the first name, or
 ; to the title), L / R change the page, START decides.  Carry set: back to the title.
@@ -346,8 +366,25 @@ NE_CELL    = 21                         ; px per character cell (cursor, then th
 NE_CMD_W   = 44                         ; px per command
 
 NameEntry:
+    ldx #18
+:   lda names,x
+    sta names_old,x
+    dex
+    dex
+    bpl :-
     stz ne_ask
     stz ne_field
+    jsr NeRun
+    bcc @r
+    ldx #18                     ; cancelled: the names as they were
+:   lda names_old,x
+    sta names,x
+    dex
+    dex
+    bpl :-
+    sec
+@r: rts
+
 NeRun:
     lda #ST_BUSY
     sta ui_state
@@ -355,7 +392,7 @@ NeRun:
     stz ne_row
     stz ne_col
     lda #1
-    sta dark_on                 ; the title picture out of the way
+    sta menu_dim                ; the picture dimmed under the grid
     jsr NeDrawAll
     jsr WaitUploads
     jsr FlushPad
@@ -404,15 +441,13 @@ NeRun:
 :   jsr NePage
     jmp @loop
 @leave:
-    stz dark_on
+    stz menu_dim
     cmp #1                      ; carry set: cancelled
     rts
 
 ; the answer of an @ask (src/yonaki/vm.inc OpAsk): one field (names+20) under the question, on the grid of
-; the name entry over the darkened scene.  START or 決定 with something typed ends it; it cannot be left empty.
+; the name entry over the dimmed scene.  START or 決定 with something typed ends it; it cannot be left empty.
 AskEntry:
-    lda dark_on
-    sta ask_dark
     stz names+20
     lda #1
     sta ne_ask
@@ -420,8 +455,6 @@ AskEntry:
     sta ne_field
     jsr NeRun
     stz ne_ask
-    lda ask_dark
-    sta dark_on
     jmp ClearPage
 
 ; carry clear: go on; carry set and A = 0: done (names saved), A = 1: cancelled
@@ -949,21 +982,17 @@ NeDrawName:
     bcc :--
     rts
 
-; the title menu: はじめから / しおりから (grey without a bookmark) / 結末の一覧 / おまけ (unlocked)
+; the title menu: はじめる (the bookmarks) / 結末の一覧 / おまけ (unlocked)
 TitleMenuDraw:
     lda #ST_BUSY
     sta ui_state
     jsr ClearPage
     stz menu_dim
-    jsr AnySlot
     lda #TITLE_CX
     sta menu_cx
     stz menu_count
     lda #0
     ldx #.loword(Str_new)
-    jsr @item
-    lda #1
-    ldx #.loword(Str_load)
     jsr @item
     lda #2
     ldx #.loword(Str_endings)
@@ -995,14 +1024,7 @@ TitleMenuDraw:
     sta menu_item,y
     lda #1
     sta g_col
-    lda t0
-    cmp #1
-    bne :+
-    lda slot_any
-    bne :+
-    lda #3
-    sta g_col
-:   phx
+    phx
     lda menu_item,y
     tax
     pla
@@ -1033,6 +1055,7 @@ StartGame:
 
 ResetScreenState:
     stz story_active
+    stz spot_on
     stz dark_on
     stz ripple_on
     stz menu_dim
@@ -1238,24 +1261,28 @@ OpenMenu:
     sta menu_cx
     lda #1
     sta menu_hlc
+    lda #2                      ; START closes the menu
     sta menu_cancel
     jsr MenuLoop
     cmp #$FFFF
     beq @close
     cmp #0
     bne @speed
-    ; しおりをはさむ
-    lda #0
-    jsr SlotScreen
-    cmp #$FFFF
-    beq @draw
+    ; しおりをはさむ: into the bookmark of this play (none in おまけ)
+    lda cur_slot
+    bmi @loop
     jsr SaveGame
     beq @close
     jsr ClearPage
     lda #5
     jsr LineY
-    lda #.loword(Str_saved)
-    jsr PrintCentered
+    lda cur_slot
+    asl a
+    tax
+    lda SlotNames,x             ; 藍のしおり をはさみました。
+    ldx #.loword(Str_saved)
+    ldy #0
+    jsr PrintPair
     lda #60
     jsr WaitFrames
     bra @close
@@ -1328,9 +1355,15 @@ MenuDraw:
     inx
     cpx #8
     bne :-
-    lda #.loword(Str_menu_save)
+    lda cur_slot                ; grey without a bookmark (おまけ)
+    bpl :+
+    lda #3
+    sta g_col
+:   lda #.loword(Str_menu_save)
     ldx #MENU_LINE
     jsr MenuText
+    lda #1
+    sta g_col
     lda #.loword(Str_menu_speed)
     ldx #MENU_LINE+1
     jsr MenuText
@@ -1387,162 +1420,227 @@ Confirm:
 :   cmp #0
     rts
 
-; ---------------------------------------------------------------- bookmarks
-; A = 0 save / 1 load -> A = slot 0-2, or $FFFF
-SlotScreen:
-    sta slot_mode
-    lda ui_state
-    pha
+; ---------------------------------------------------------------- the bookmarks (はじめる)
+; The three bookmarks on the desk (PIC_SHIORI); a light (SpotMove) on the one under the cursor, its name and the
+; chapter it holds under them.  ←→ (or ↑↓) choose, A / START take it, B back.  An empty one starts a new game; one
+; in use asks つづきから / はじめから.  -> A = slot (continue), slot | SHIORI_NEW (a new game), $FFFF (back).
+; The light stays on until the next screen fades out (ResetScreenState).
+SHIORI_NEW = $0100
+SHIORI_LINE = 9                 ; the name; the chapter (or the options) under it
+ShioriScreen:
     lda #ST_BUSY
     sta ui_state
-    lda #1
-    sta menu_dim
-    jsr ClearPage
-    lda #1
-    sta g_col
-    lda #0
-    jsr LineY
-    lda #.loword(Str_slot_head_save)
-    ldx slot_mode
-    beq :+
-    lda #.loword(Str_slot_head_load)
-:   jsr PrintCentered
-    lda #24
-    sta menu_cx
-    lda #3
-    sta menu_count
     lda #2
-    sta menu_hlc
-    lda #1
-    sta menu_cancel
-    stz slot_k
-@slot:
-    lda slot_k
-    asl a
-    tax
-    lda slot_k
-    asl a
-    clc
-    adc slot_k
-    adc #2
-    sta menu_item,x
-    lda #1
-    sta g_col
-    lda SlotNames,x
-    pha
-    lda menu_item,x
-    tax
-    pla
-    jsr MenuText
-    lda slot_k
+    jsr FadeOut
+    jsr ResetScreenState
+    lda #PIC_SHIORI
+    jsr LoadPic
+    ldx #4
+:   phx
+    txa
+    lsr a
     jsr ValidateSlot
-    pha
-    lda slot_k
-    asl a
-    tax
-    pla
+    plx
     sta slot_valid,x
-    beq @empty
-    lda save_buf+BOOKMARK_CHAPTER
-    cmp #CHAPTER_COUNT
-    bcs @nochap
+    dex
+    dex
+    bpl :-
+    lda cur_slot                ; the bookmark of the last play first
+    cmp #3
+    bcc :+
+    lda #0
+:   sta slot_k
     asl a
     asl a
     tax
-    lda ChapterTable,x
-    pha
-    lda ChapterTable+2,x
-    pha
-    bra @chap
-@nochap:
-    lda #.loword(Str_notitle)
-    pha
-    lda #.loword(Str_empty)
-    pha
-@chap:
-    lda slot_k
-    asl a
-    clc
-    adc slot_k
-    adc #3
-    jsr LineY
-    lda #64
-    sta g_x
+    lda ShioriWin,x
+    sta win_l
+    lda ShioriWin+2,x
+    sta win_r
     lda #1
-    sta g_space
-    pla
-    sta t7
-    pla
-    jsr PrintRom
-    lda g_x
-    clc
-    adc #8
-    sta g_x
-    lda t7
-    jsr PrintRom
-    stz g_space
-    bra @nexts
-@empty:
-    lda #3
-    sta g_col
-    lda slot_k
-    asl a
-    clc
-    adc slot_k
-    adc #3
-    jsr LineY
-    lda #64
-    sta g_x
-    lda #.loword(Str_slot_empty)
-    jsr PrintRom
-@nexts:
-    inc slot_k
-    lda slot_k
-    cmp #3
-    bcs :+
-    jmp @slot
-:   lda #1
-    sta g_col
-    stz menu_sel
+    sta spot_on
+    jsr ShioriInfo
+    jsr WaitUploads
+    lda #2
+    jsr FadeIn
+@pick:
     lda #ST_SLOTS
     sta ui_state
-@pick:
-    jsr MenuLoop
-    cmp #$FFFF
-    beq @out
-    sta t0
-    lda slot_mode
-    beq @ok                     ; saving: any slot
-    lda t0
+    jsr FlushPad
+@loop:
+    jsr WaitFrame
+    lda pad_rep
+    and #PAD_LEFT|PAD_UP
+    beq :+
+    lda slot_k
+    bne @prev
+    lda #3
+@prev:
+    dec a
+    bra @move
+:   lda pad_rep
+    and #PAD_RIGHT|PAD_DOWN
+    beq @keys
+    lda slot_k
+    inc a
+    cmp #3
+    bcc @move
+    lda #0
+@move:
+    sta slot_k
+    jsr SndCursor
+    jsr ShioriInfo
+    bra @pick
+@keys:
+    lda pad_new
+    and #PAD_A|PAD_START
+    bne @take
+    lda pad_new
+    and #PAD_B
+    beq @loop
+    jsr SndCancel
+    lda #$FFFF
+    rts
+@take:
+    jsr SndOk
+    lda slot_k
     asl a
     tax
     lda slot_valid,x
-    beq @pick
-@ok:
-    lda t0
-@out:
-    sta t0
-    pla
+    bne @used
+@new:
+    lda slot_k
+    ora #SHIORI_NEW
+    rts
+@used:                          ; つづきから / はじめから under its name
+    lda #ST_BUSY
     sta ui_state
-    lda t0
+    jsr ShioriName
+    lda #SHIORI_X
+    sta menu_cx
+    lda #2
+    sta menu_count
+    lda #SHIORI_LINE+1
+    sta menu_item
+    inc a
+    sta menu_item+2
+    lda #1
+    sta g_col
+    lda #.loword(Str_slot_go)
+    ldx #SHIORI_LINE+1
+    jsr MenuText
+    lda #.loword(Str_slot_new)
+    ldx #SHIORI_LINE+2
+    jsr MenuText
+    stz menu_sel
+    lda #1
+    sta menu_hlc
+    sta menu_cancel
+    lda #ST_RESUME
+    sta ui_state
+    jsr MenuLoop
+    cmp #$FFFF
+    bne :+
+    jsr ShioriInfo              ; B: choose again
+    jmp @pick
+:   cmp #1
+    beq @new
+    lda slot_k
+    rts
+SHIORI_X = 78                   ; the cursor of つづきから / はじめから
+
+; the name of bookmark slot_k and what it holds
+ShioriInfo:
+    lda #ST_BUSY
+    sta ui_state
+    jsr ShioriName
+    lda #SHIORI_LINE+1
+    jsr LineY
+    lda slot_k
+    asl a
+    tax
+    lda slot_valid,x
+    bne :+
+    lda #3
+    sta g_col
+    lda #.loword(Str_slot_empty)
+    jsr PrintCentered
+    lda #1
+    sta g_col
+    rts
+:   lda #2
+    sta g_col
+    lda slot_k
+    jsr ValidateSlot            ; (its chapter)
+    lda save_buf+BOOKMARK_CHAPTER
+    cmp #CHAPTER_COUNT
+    bcc :+
+    lda #.loword(Str_notitle)
+    jsr PrintCentered
+    bra @done
+:   asl a
+    asl a
+    tax
+    lda ChapterTable+2,x
+    pha
+    lda ChapterTable,x
+    plx
+    ldy #12
+    jsr PrintPair
+@done:
+    lda #1
+    sta g_col
     rts
 
-; slot_any = 1 when a valid bookmark exists
-AnySlot:
-    stz slot_any
-    lda #0
-    jsr ValidateSlot
-    ora slot_any
-    sta slot_any
+ShioriName:
+    jsr ClearPage
+    lda #2                      ; outlined over the photo
+    sta g_col
+    stz g_space
+    lda #SHIORI_LINE
+    jsr LineY
+    lda slot_k
+    asl a
+    tax
+    lda SlotNames,x
+    jsr PrintCentered
     lda #1
-    jsr ValidateSlot
-    ora slot_any
-    sta slot_any
-    lda #2
-    jsr ValidateSlot
-    ora slot_any
-    sta slot_any
+    sta g_col
     rts
+
+; A, X = strings (bank 0) with Y px between them, centred on the line at g_y
+PrintPair:
+    phy
+    phx
+    pha
+    sta p0
+    lda #^Str_new
+    sta p0+2
+    jsr StrWidth
+    pha                         ; 1,s width of the first, 3,s first, 5,s second, 7,s gap
+    lda 5,s
+    sta p0
+    jsr StrWidth
+    clc
+    adc 1,s
+    adc 7,s
+    sta 1,s
+    lda #240
+    sec
+    sbc 1,s
+    lsr a
+    sta g_x
+    pla
+    pla
+    jsr PrintRom
+    pla
+    tax
+    pla
+    clc
+    adc g_x
+    sta g_x
+    txa
+    jmp PrintRom
 
 ; ---------------------------------------------------------------- the bitmap under the menu
 ; in 8 slices of 1440 bytes (MVN: 7 cycles a byte), a frame each

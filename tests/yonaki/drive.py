@@ -65,15 +65,58 @@ class Driver(Game):
         n = self.w('menu_count')
         return [self.w('menu_kind', 2 * i) for i in range(n)]
 
-    def title_pick(self, kind):
-        """kind: 0 はじめから, 1 しおりから, 2 結末の一覧, 3 おまけ"""
+    def title_pick(self, kind, slot=0, fresh=True):
+        """kind: 0 はじめる (the bookmark slot: a new game in it (fresh) or つづきから), 2 結末の一覧, 3 おまけ"""
         items = self.title_items()
         if kind not in items:
             raise Stuck(f'title item {kind} not in {items}')
         self.menu_to(items.index(kind))
         self.tap('A', 2, 4)
         if kind == 0:
-            self.names()
+            self.shiori(slot, fresh)
+            if fresh:
+                self.names()
+
+    def shiori(self, slot, fresh=True, limit=600):
+        """The bookmarks after はじめる: the light to slot, A; one in use asks つづきから / はじめから."""
+        self.until(lambda: self.state() == 'SLOTS', limit, 'bookmarks')
+        for _ in range(4):
+            if self.w('slot_k') == slot:
+                break
+            self.tap('RIGHT', 2, 3)
+            self.until(lambda: self.state() == 'SLOTS', limit, 'bookmarks')
+        assert self.w('slot_k') == slot, 'bookmark cursor'
+        used = self.w('slot_valid', 2 * slot)
+        self.tap('A', 2, 4)
+        if used:
+            self.until(lambda: self.state() == 'RESUME', limit, 'つづきから / はじめから')
+            self.run(2)
+            self.menu_to(1 if fresh else 0)
+            self.tap('A', 2, 4)
+
+    def to_register(self, slot=0):
+        """From the title to the guest register (a new game in bookmark slot)."""
+        items = self.title_items()
+        self.menu_to(items.index(0))
+        self.tap('A', 2, 4)
+        self.shiori(slot, True)
+        self.until(lambda: self.state() == 'WELCOME', 600, 'guest register')
+
+    def save(self):
+        """START menu しおりをはさむ: into the bookmark of this play, back to the wait."""
+        st = self.state()
+        self.press('START', 'MENU')
+        self.menu_to(0)
+        self.press('A', st, limit=600)
+
+    def to_title(self):
+        """START menu タイトルへ, はい."""
+        self.press('START', 'MENU')
+        self.menu_to(2)
+        self.press('A', 'CONFIRM')
+        self.menu_to(0)
+        self.tap('A', 2, 4)
+        self.title()
 
     def name_pick(self, row, col):
         """Name entry: move the cursor to (row, col) of the page (row NAME_ROWS: the commands) and press A."""
@@ -163,9 +206,9 @@ class Driver(Game):
         assert self.w('opt_sel') == index
         self.tap('A', 2, 2)
 
-    def new_game(self):
+    def new_game(self, slot=0):
         self.title()
-        self.title_pick(0)
+        self.title_pick(0, slot)
 
     def type_answer(self, text):
         """An @ask: type text on the name entry grid (switching pages with R) and decide with START.

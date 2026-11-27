@@ -37,6 +37,9 @@ VMDATAL = $2118
 CGADD   = $2121
 CGDATA  = $2122
 W12SEL  = $2123
+WOBJSEL = $2125
+WH0     = $2126
+WH1     = $2127
 TM      = $212C
 TS      = $212D
 TMW     = $212E
@@ -72,6 +75,10 @@ BBAD1   = $4311
 A1T1L   = $4312
 A1B1    = $4314
 DAS1L   = $4315
+DMAP6   = $4360
+BBAD6   = $4361
+A1T6L   = $4362
+A1B6    = $4364
 DMAP7   = $4370
 BBAD7   = $4371
 A1T7L   = $4372
@@ -138,6 +145,8 @@ CHOICE_X  = 26                  ; option letter (cursor at TX0)
 OPT_TEXT_X = CHOICE_X + 16      ; option text (tools/yonaki/script.py CHOICE_PX)
 DIM_READ  = 13                  ; BG1 dim while R is held
 DIM_MENU  = 15
+DIM_SPOT  = 12                  ; the bookmarks out of the light (ShioriScreen)
+SPOT_STEP = 6                   ; px a frame the light moves to another bookmark
 TITLE_FADE = 4                  ; frames a brightness step while the title picture comes up (the menu after it)
 DEMO_IDLE = 1200                ; frames on the title without a button before the demo plays
 DEMO_WAIT = 90                  ; frames the demo reads a paragraph or looks at a choice before it presses A
@@ -158,6 +167,7 @@ ST_BUSY = 10
 ST_CONFIRM = 11
 ST_NAME = 12
 ST_WELCOME = 13                 ; the guest register before a new game (NameConfirm)
+ST_RESUME = 14                  ; a bookmark in use: つづきから / はじめから (ShioriScreen)
 
 ; ---------------------------------------------------------------- variables
 .segment "ZEROPAGE"
@@ -222,6 +232,10 @@ reg_hofs:  .res 2
 reg_vofs:  .res 2
 reg_hdma:  .res 2
 reg_hdma_src: .res 2
+reg_cgwsel: .res 2             ; $20 while the light is on a bookmark: no colour math inside window 1
+win_l:     .res 2              ; window 1 (the light of ShioriScreen)
+win_r:     .res 2
+spot_hdma: .res 13             ; HDMA table of WH0 / WH1: the light on the bookmarks' lines only (SpotMove)
 ; input
 pad:      .res 2
 pad_prev: .res 2
@@ -371,14 +385,15 @@ idle_frames: .res 2
 ; the opening and the title's demo: the script plays itself (ReadPad presses A) until a button or DEMO_FRAMES
 demo_on:   .res 2
 demo_quit: .res 2              ; 1: back to the title at the next wait
+fade_step: .res 2              ; frames a brightness step of a @bg fade
 demo_timer: .res 2             ; frames in the current wait
 demo_frames: .res 2
 list_first: .res 2
 list_k:    .res 2
 list_i:    .res 2
-slot_mode: .res 2
-slot_k:    .res 2
-slot_any:  .res 2
+cur_slot:  .res 2              ; the bookmark of this play (しおりをはさむ writes it), $FFFF none (おまけ)
+slot_k:    .res 2              ; the bookmark under the light (ShioriScreen)
+spot_on:   .res 2              ; 1: ShioriScreen's light (window 1 at ShioriWin[slot_k], the rest dimmed)
 end_index: .res 2
 menu_last_text: .res 2
 debug_vp:  .res 4              ; (review builds) start address of はじめから
@@ -401,6 +416,7 @@ sram_resets: .res 2            ; bit 0 global, bit 1 read marks were reset at bo
 save_buf:  .res 256
 ; the names the player set (NameEntry): the given names of the hero at +0 and of the heroine at +10, each a length word and NAME_MAX glyphs
 names:     .res 30             ; +20: the answer typed at an @ask (length word and NAME_MAX glyphs)
+names_old: .res 20             ; the names before the name entry (put back when it is cancelled)
 name_left: .res 2              ; glyphs of a name still to come from ReadCode
 name_pos:  .res 2              ; offset in names of the next one
 ne_field:  .res 2              ; name entry: 0 主人公, 1 ヒロイン
@@ -413,7 +429,6 @@ ne_ask:    .res 2              ; 1: the entry is the answer of an @ask (one fiel
 ask_prompt: .res 4             ; long address of the @ask question (an encoded string)
 ask_tbl:   .res 4              ; long address of the @ask answers
 ask_n:     .res 2
-ask_dark:  .res 2              ; dark_on before the @ask
 choice_inline: .res 2          ; the choice on screen is inline (its options become the paragraph chosen)
 opt_sum:   .res 2              ; tile rows of the options on screen
 text_nowait: .res 2            ; the paragraph being typed is shown at once and goes on without a wait
@@ -665,6 +680,8 @@ Nmi:
     sta MOSAIC
     lda reg_cgadsub
     sta CGADSUB
+    lda reg_cgwsel
+    sta CGWSEL
     lda reg_col_r
     sta COLDATA
     lda reg_col_g
@@ -679,16 +696,15 @@ Nmi:
     sta BG1VOFS
     lda reg_vofs+1
     sta BG1VOFS
-    lda reg_hdma
-    beq @nohdma
+    lda reg_hdma                ; channel 7: the ripple, channel 6: the light of ShioriScreen
+    beq :+
     ldx reg_hdma_src
     stx A1T7L
     lda #$80
-    sta HDMAEN
-    bra @hdone
-@nohdma:
-    stz HDMAEN
-@hdone:
+:   ldx spot_on
+    beq :+
+    ora #$40
+:   sta HDMAEN
     ; V counter at the end of the work
     lda SLHV
     lda STAT78
@@ -816,7 +832,9 @@ InitPpu:
     stz TS
     stz TMW
     stz W12SEL
-    stz CGWSEL                  ; colour math always, with the fixed colour
+    stz CGWSEL                  ; colour math always, with the fixed colour (reg_cgwsel: but in window 1)
+    lda #$20                    ; window 1 is the colour window
+    sta WOBJSEL
     stz CGADSUB
     lda #$E0
     sta COLDATA
@@ -828,6 +846,14 @@ InitPpu:
     sta BBAD7
     lda #^RippleTable
     sta A1B7
+    ; HDMA channel 6: WH0 and WH1 (window 1: the light of ShioriScreen), the table spot_hdma in WRAM
+    lda #$01
+    sta DMAP6
+    lda #<WH0
+    sta BBAD6
+    ldx #.loword(spot_hdma)
+    stx A1T6L
+    stz A1B6
     ; colours 0-15
     stz CGADD
     ldx #0
@@ -950,6 +976,7 @@ UploadMapNow:
 InitState:
     lda #$FFFF
     sta hl_line
+    sta cur_slot
     sta music_cur
     sta amb_cur
     sta chapter_cur

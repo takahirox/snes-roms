@@ -8,7 +8,13 @@ Tick:
     inc blink
     lda #3
     sta reg_tm
-    lda menu_dim
+    stz reg_cgwsel
+    lda spot_on
+    beq :+
+    jsr SpotMove
+    lda #DIM_SPOT
+    bra @dark
+:   lda menu_dim
     beq @story
     lda #DIM_MENU
     bra @dark
@@ -158,11 +164,72 @@ Tick:
 :   sta inidisp
     rts
 
+; ShioriScreen: the light (window 1, no colour math inside it) slides to the bookmark slot_k.  The window is
+; set by HDMA (channel 6, spot_hdma) on the lines of the bookmarks only, so the text under them stays dim.
+SPOT_TOP = 18                   ; screen lines above the light (photo line 2), then SPOT_LINES lit
+SPOT_LINES = 140
+SpotMove:
+    lda #$20
+    sta reg_cgwsel
+    lda slot_k
+    asl a
+    asl a
+    tax
+    lda ShioriWin,x
+    ldy #win_l
+    jsr @edge
+    lda ShioriWin+2,x
+    ldy #win_r
+    jsr @edge
+    sep #$20
+    .a8
+    lda #SPOT_TOP
+    sta spot_hdma
+    lda #127
+    sta spot_hdma+3
+    lda #SPOT_LINES-127
+    sta spot_hdma+6
+    lda #1
+    sta spot_hdma+9
+    lda #$FF                    ; left > right: no window
+    sta spot_hdma+1
+    sta spot_hdma+10
+    stz spot_hdma+2
+    stz spot_hdma+11
+    stz spot_hdma+12            ; the end
+    lda win_l
+    sta spot_hdma+4
+    sta spot_hdma+7
+    lda win_r
+    sta spot_hdma+5
+    sta spot_hdma+8
+    rep #$20
+    .a16
+    rts
+@edge:                          ; A = target, Y = the edge (a word in bank 0)
+    sec
+    sbc a:0,y
+    beq @r
+    bmi @left
+    cmp #SPOT_STEP
+    bcc :+
+    lda #SPOT_STEP
+:   bra @add
+@left:
+    cmp #.loword(-SPOT_STEP)
+    bcs @add
+    lda #.loword(-SPOT_STEP)
+@add:
+    clc
+    adc a:0,y
+    sta a:0,y
+@r: rts
+
 ShakeX: .word 3, $FFFD, 2, $FFFE, 3, $FFFF, 1, $FFFE
 ShakeY: .word $FFFE, 2, $FFFF, 1, 2, $FFFE, 1, 0
 
 ; ---------------------------------------------------------------- fades (master brightness)
-; A = frames per step
+; A = frames per step (the opening / demo skipped: at once)
 FadeOut:
     sta t6
     lda blanked
@@ -170,6 +237,8 @@ FadeOut:
 @l:
     lda bright
     beq @off
+    lda demo_quit
+    bne @off
     dec bright
     lda t6
     jsr WaitFrames
@@ -193,6 +262,8 @@ FadeIn:
     lda bright
     cmp #15
     bcs @done
+    lda demo_quit
+    bne @done
     inc bright
     lda t6
     jsr WaitFrames

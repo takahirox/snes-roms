@@ -111,18 +111,44 @@ def asm_const(name):
 
 
 # ------------------------------------------------------------------ tests
+def shiori_win():
+    """ShioriWin of the build: the light's edges on each bookmark"""
+    line = next(l for l in (B / 'data.inc').read_text().splitlines() if l.startswith('ShioriWin:'))
+    v = [int(x) for x in line.split('.word')[1].split(';')[0].split(',')]
+    return list(zip(v[::2], v[1::2]))
+
+
+def bookmarks(g):
+    """はじめる: the bookmarks screen; -> the three slot_valid"""
+    g.menu_to(g.title_items().index(0))
+    g.tap('A', 2, 4)
+    g.until(lambda: g.state() == 'SLOTS', 600, 'bookmarks')
+    g.run(20)
+    return [g.w('slot_valid', 2 * k) for k in range(3)]
+
+
 def test_boot():
-    """Empty battery: both blocks are reset; the title has はじめから / しおりから (grey) / 結末の一覧."""
+    """Empty battery: both blocks are reset; the title has はじめる / 結末の一覧.  はじめる shows the three bookmarks
+    (all empty), the light on the first; → moves it to the next; B goes back to the title."""
     g = new('boot', sram=bytes(8192))
     rec = {}
     g.title()
     rec['title_frame'] = g.frame
     assert g.frame < 400, g.frame
     assert g.w('sram_resets') == 3, g.w('sram_resets')
-    assert g.title_items() == [0, 1, 2], g.title_items()
-    assert g.w('slot_any') == 0
+    assert g.title_items() == [0, 2], g.title_items()
     assert g.w('spc_ready') == 1, 'the sound driver did not answer'
     shot(g, 'title')
+    assert bookmarks(g) == [0, 0, 0]
+    win = shiori_win()
+    assert g.w('spot_on') == 1 and g.w('slot_k') == 0 and (g.w('win_l'), g.w('win_r')) == win[0]
+    shot(g, 'bookmarks')
+    g.tap('RIGHT', 2, 2)
+    g.until(lambda: (g.w('win_l'), g.w('win_r')) == win[1], 60, 'the light on the second bookmark')
+    shot(g, 'bookmark2')
+    g.tap('B', 2, 2)
+    g.title()
+    assert g.w('spot_on') == 0
     sram = finish(g, rec)
     gb = global_block(sram)
     assert gb['valid'] and gb['endings'] == 0 and gb['speed'] == 1, gb
@@ -137,7 +163,7 @@ def test_corrupt():
     rec = {}
     g.title()
     assert g.w('sram_resets') == 3, g.w('sram_resets')
-    assert g.w('slot_any') == 0
+    assert bookmarks(g) == [0, 0, 0]
     sram = finish(g, rec)
     assert global_block(sram)['valid'] and read_header(sram, g.layout['build_id'])
     assert not any(sram[0x808:0x13F8]) and not any(sram[0x1400:0x1FF0])
@@ -145,17 +171,19 @@ def test_corrupt():
 
 
 def test_opening():
-    """At power-on the opening plays by itself (its caption is written) and ends on the title picture, which stays
-    up while the menu comes; a button skips it to the title.  It keeps nothing in the battery."""
+    """At power-on the opening plays by itself: the maker's mark comes out of black and goes back into it (@fx out),
+    a picture, and the title out of the white, which stays up while the menu comes; a button skips it to the title.
+    It keeps nothing in the battery."""
     rec = {}
     g = new('opening', sram=bytes(8192))
-    title = g.layout['pictures'].index('@title')
+    pics = g.layout['pictures']
+    title = pics.index('@title')
     g.until(g.opening, 400, 'the opening')
-    g.until(lambda: g.w('pic_cur') == g.layout['pictures'].index('valley') and not g.w('blanked'), 400, 'first shot')
-    g.until(lambda: g.w('text_dirty') or g.w('text_dirty', 2), 200, 'the caption')
-    g.run(40)
-    shot(g, 'caption')
+    g.until(lambda: g.w('pic_cur') == pics.index('logo') and g.w('bright') == 15, 400, 'the maker\'s mark')
+    shot(g, 'logo')
     assert g.screen()[16:208].max() > 0
+    g.until(lambda: g.w('blanked'), 200, 'back into black')
+    g.until(lambda: g.w('pic_cur') == pics.index('valley') and not g.w('blanked'), 400, 'first shot')
     g.until(lambda: g.w('pic_cur') == title, 600, 'the title picture')
     blanks = []
     g.observers.append(lambda game: blanks.append(game.w('blanked')))
@@ -281,11 +309,12 @@ def checkpoint(g):
 
 
 def test_save_load():
-    """START menu bookmark at a paragraph (slot 2) and at a choice (slot 3), タイトルへ, then しおりから after a
-    power cycle resumes at the same paragraph / choice."""
+    """しおりをはさむ writes the bookmark the play was started in: one play bookmarks a paragraph (藍 = slot 1 here:
+    朱), another a choice (萌黄, slot 2), タイトルへ; after a power cycle はじめる shows them in use and つづきから
+    resumes at the same paragraph / choice; はじめから on one in use goes to the register (B: back)."""
     rec = {}
     g = new('save', sram=bytes(8192))
-    g.new_game()
+    g.new_game(slot=1)
     # stop at a paragraph with three silhouettes
     g.until(lambda: g.state() == 'WAIT', 2000, 'first wait')
     while g.w('cur_text') < 3:
@@ -298,13 +327,15 @@ def test_save_load():
     g.press('START', 'MENU')
     shot(g, 'menu')
     g.menu_to(0)
-    g.press('A', 'SLOTS')
-    shot(g, 'slots_save')
-    g.menu_to(1)
-    g.press('A', 'WAIT')
-    assert g.w('save_ok') == 1
-    shot(g, 'after_save')
-    # on to the first choice; bookmark it in slot 3
+    g.tap('A', 2, 30)
+    assert g.w('save_ok') == 1 and g.w('saves_done') == 1
+    shot(g, 'saved', settle=False)
+    g.until(lambda: g.state() == 'WAIT', 300, 'back to the paragraph')
+    g.to_title()
+    sram = finish(g, rec.setdefault('first', {}))
+    # another play in slot 2: bookmark the first choice
+    g = new('save_choice', sram=sram)
+    g.new_game(slot=2)
     st = g.advance()
     assert st == 'CHOICE'
     cid = g.w('choice_id')
@@ -312,12 +343,7 @@ def test_save_load():
     choice_options = g.options()
     choice_text = g.w('last_text')
     shot(g, 'choice')
-    g.press('START', 'MENU')
-    g.menu_to(0)
-    g.press('A', 'SLOTS')
-    g.menu_to(2)
-    g.press('A', 'CHOICE')
-    # タイトルへ
+    g.save()
     g.press('START', 'MENU')
     g.menu_to(2)
     g.press('A', 'CONFIRM')
@@ -325,38 +351,29 @@ def test_save_load():
     g.menu_to(0)
     g.tap('A', 2, 4)
     g.title()
-    sram = finish(g, rec.setdefault('first', {}))
+    sram = finish(g, rec.setdefault('second', {}))
     s1, s2 = slot_block(sram, 1), slot_block(sram, 2)
     assert s1['valid'] and s1['kind'] == 1 and s1['id'] == tid, s1
     assert s2['valid'] and s2['kind'] == 2 and s2['id'] == cid, s2
     assert not slot_block(sram, 0)['valid']
-    # power cycle: load slot 2 -> the same paragraph
+    # power cycle: the bookmarks in use; slot 1 -> the same paragraph
     g = new('load_text', sram=sram)
     g.title()
-    assert g.w('slot_any') == 1
-    g.title_pick(1)
-    g.until(lambda: g.state() == 'SLOTS', 300, 'slots')
-    g.run(40)
+    assert bookmarks(g) == [0, 1, 1]
     shot(g, 'slots_load')
-    g.menu_to(0)
-    g.tap('A', 2, 30)
-    assert g.state() == 'SLOTS', 'an empty slot must not load'
-    g.menu_to(1)
-    g.tap('A', 2, 4)
+    g.tap('B', 2, 4)
+    g.title()
+    g.title_pick(0, slot=1, fresh=False)
     g.until(lambda: g.state() == 'WAIT', 1200, 'resumed paragraph')
     assert g.w('cur_text') == tid, (g.w('cur_text'), tid)
-    assert g.w('loads_done') == 1
+    assert g.w('loads_done') == 1 and g.w('cur_slot') == 1
     assert checkpoint(g) == text_checkpoint
     shot(g, 'loaded_text')
     finish(g, rec.setdefault('load_text', {}))
-    # load slot 3 -> the same choice, the paragraph before it redrawn
+    # slot 2 -> the same choice, the paragraph before it redrawn
     g = new('load_choice', sram=sram)
     g.title()
-    g.title_pick(1)
-    g.until(lambda: g.state() == 'SLOTS', 300, 'slots')
-    g.run(40)
-    g.menu_to(2)
-    g.tap('A', 2, 4)
+    g.title_pick(0, slot=2, fresh=False)
     g.until(lambda: g.state() == 'CHOICE', 1200, 'resumed choice')
     assert g.w('choice_id') == cid
     assert choice_text != 0xFFFF and g.w('last_text') == choice_text
@@ -365,6 +382,14 @@ def test_save_load():
     g.choose(index=0)
     assert g.advance() in ('CHOICE', 'ENDING')
     finish(g, rec.setdefault('load_choice', {}))
+    # はじめから on a bookmark in use: the register (B back to the bookmarks); nothing is overwritten
+    g = new('restart', sram=sram)
+    g.title()
+    g.title_pick(0, slot=1, fresh=True)       # (title_pick confirms the register: a new game in slot 1)
+    g.until(lambda: g.state() in ('TYPE', 'WAIT'), 2000, 'new game')
+    assert g.w('cur_slot') == 1 and g.w('loads_done') == 0
+    after = finish(g, rec.setdefault('restart', {}))
+    assert all(after[a:a + 0x300] == sram[a:a + 0x300] for a in (0x100, 0x500)), 'a bookmark changed'
 
     # Exercise a choice whose preceding paragraph spans multiple pages, with the music stopped.
     long_text = next(int(k) for k, t in g.layout['texts'].items() if len(t['pages']) > 1)
@@ -375,10 +400,8 @@ def test_save_load():
     g = new('load_choice_multipage', sram=silent)
     g.title()
     assert g.w('music_cur') != 0xFFFF
-    g.title_pick(1)
-    g.until(lambda: g.state() == 'SLOTS', 300, 'slots')
-    g.menu_to(2)
-    g.press('A', 'CHOICE', limit=1200)
+    g.title_pick(0, slot=2, fresh=False)
+    g.until(lambda: g.state() == 'CHOICE', 1200, 'resumed choice')
     assert g.w('choice_id') == cid and g.w('last_text') == long_text and g.w('music_cur') == 0xFFFF
     shot(g, 'loaded_choice')
     finish(g, rec.setdefault('load_choice_multipage', {}))
@@ -394,11 +417,8 @@ def test_recovery():
     g.new_game()
     g.until(lambda: g.state() == 'WAIT', 2000, 'first wait')
 
-    def save(slot):
-        g.press('START', 'MENU')
-        g.press('A', 'SLOTS')
-        g.menu_to(slot)
-        g.press('A', 'WAIT')
+    def save():
+        g.save()
         assert g.w('save_ok') == 1
 
     def next_text():
@@ -414,14 +434,27 @@ def test_recovery():
         g.until(lambda: g.state() == 'MENU' and g.w('speed') == speed, 300, 'next speed')
         g.press('B', 'WAIT')
 
-    save(0)
+    save()
     previous_text = next_text()
-    save(0)
-    save(1)
+    save()
+    # the same paragraph in the second bookmark: a new game in it, read up to there
+    g.to_title()
+    g.title_pick(0, slot=1)
+    for _ in range(200):
+        g.until(lambda: g.state() == 'WAIT', 2000, 'paragraph')
+        if g.w('cur_text') == previous_text:
+            break
+        g.tap('A', 1, 2)
+    assert g.w('cur_text') == previous_text
+    save()
+    # the first bookmark again: つづきから
+    g.to_title()
+    g.title_pick(0, slot=0, fresh=False)
+    g.until(lambda: g.state() == 'WAIT' and g.w('cur_text') == previous_text, 2000, 'resumed')
     latest_text = next_text()
     next_speed(2)
     before = g.sram_image()
-    save(0)
+    save()
     next_speed(3)
     after = finish(g, rec.setdefault('source', {}))
     old_global, old_slot = (record(before, k) for k in (0, 1))
@@ -434,12 +467,12 @@ def test_recovery():
         g = new(f'recovery_{name}', sram=battery)
         g.title()
         assert g.w('speed') == speed and g.w('sram_resets') == resets
-        assert g.w('slot_any') == 1 and is_read(g.sram_image(), previous_text)
-        g.title_pick(1)
-        g.until(lambda: g.state() == 'SLOTS', 300, 'slots')
-        assert g.w('slot_valid') == (slot == 0) and g.w('slot_valid', 2) == 1
-        g.menu_to(slot)
-        g.press('A', 'WAIT', limit=1200)
+        assert is_read(g.sram_image(), previous_text)
+        assert bookmarks(g)[:2] == [int(slot == 0), 1]
+        g.tap('B', 2, 4)
+        g.title()
+        g.title_pick(0, slot=slot, fresh=False)
+        g.until(lambda: g.state() == 'WAIT', 1200, 'resumed')
         assert g.w('loads_done') == 1 and g.w('cur_text') == tid
         shot(g, 'resumed')
         finish(g, rec.setdefault(name, {}))
@@ -475,18 +508,21 @@ def test_recovery():
 
 
 def test_names():
-    """はじめから shows the names in the guest register; 名前を書きなおす asks for the two names: B deletes, the pages and the cursor type new ones, START decides; the
-    names are kept in the battery RAM and drawn in the story in place of 航 / 千尋 (結城 and 早瀬 are fixed)."""
+    """A new game shows the names in the guest register; 名前を書きなおす asks for the two names: B deletes, the
+    pages and the cursor type new ones, START decides; the names are kept in the battery RAM and drawn in the story
+    in place of 航 / 千尋 (結城 and 早瀬 are fixed).  B on an empty first name cancels: the register again with the
+    names as they were; START there decides (このまま始める), B goes back to the bookmarks."""
     rec = {}
     lay = json.loads((B / 'layout.json').read_text())
     gi = {c: i for i, c in enumerate(lay['glyphs'])}
     g = new('names', sram=bytes(8192))
     g.title()
-    items = g.title_items()
-    g.menu_to(items.index(0))
+    g.to_register()
+    shot(g, 'register')
+    g.tap('B', 2, 4)
+    g.until(lambda: g.state() == 'SLOTS', 600, 'B: the bookmarks')
     g.tap('A', 2, 4)
     g.until(lambda: g.state() == 'WELCOME', 600, 'guest register')
-    shot(g, 'register')
     g.rename()
     assert g.name_glyphs(0) == [gi['航']] and g.name_glyphs(1) == [gi['千'], gi['尋']], 'default names'
     shot(g, 'entry')
@@ -527,14 +563,18 @@ def test_names():
     assert words(sram, a + 10, 3) == (2, gi['ま'], gi['り'])
     g = new('names2', sram=sram)              # kept after a power cycle
     g.title()
-    g.menu_to(g.title_items().index(0))
-    g.tap('A', 2, 4)
+    g.to_register()
     g.rename()
     assert g.name_glyphs(0) == [gi['佐'], gi['藤']] and g.name_glyphs(1) == [gi['ま'], gi['り']]
     g.tap('B', 2, 6)
     g.tap('B', 2, 6)
-    g.tap('B', 2, 6)                          # empty first name: back to the title
-    g.title()
+    assert g.name_glyphs(0) == []
+    g.tap('B', 2, 6)                          # empty first name: back to the register, the names kept
+    g.until(lambda: g.state() == 'WELCOME', 600, 'the register again')
+    assert g.name_glyphs(0) == [gi['佐'], gi['藤']] and g.name_glyphs(1) == [gi['ま'], gi['り']]
+    shot(g, 'register_again')
+    g.tap('START', 2, 4)                      # START: このまま始める
+    g.until(lambda: g.state() in ('TYPE', 'WAIT'), 2000, 'START starts the story')
     finish(g, rec.setdefault('kept', {}))
     return rec
 
@@ -562,8 +602,7 @@ def test_name_layout():
     finish(g, rec.setdefault('default', {}))
     g = new('name_layout4', sram=bytes(8192))
     g.title()
-    g.menu_to(g.title_items().index(0))
-    g.tap('A', 2, 4)
+    g.to_register()
     g.rename()
     g.tap('START', 2, 6)                      # the hero's name stays 航
     g.tap('B', 2, 6)
@@ -1071,11 +1110,11 @@ def test_coverage():
     ops = lay['ops']
     kinds = {o[0] for o in ops}
     want = {'text', 'blank', 'page', 'bg', 'sil', 'silclear', 'bgm', 'se', 'amb', 'fx', 'set', 'clr', 'setg', 'clrg',
-            'if', 'goto', 'choice', 'end', 'chapter', 'ask', 'caption', 'title'}
+            'if', 'goto', 'choice', 'end', 'chapter', 'ask', 'title'}
     assert want <= kinds, want - kinds
     assert {o[2] for o in ops if o[0] == 'bg'} >= {'cut', 'fade', 'white', 'mosaic', 'keep'}
     assert {o[1] for o in ops if o[0] == 'fx'} >= {'shake', 'flash', 'redflash', 'ripple_on', 'ripple_off', 'dark',
-                                                   'light', 'wait'}
+                                                   'light', 'wait', 'out'}
     assert {o[1][:1] for o in ops if o[0] == 'sil'} >= {'l', 'c', 'r', 'x'}
     assert {o[3] for o in ops if o[0] == 'sil'} >= {'blue', 'white', 'red'}
     assert any(o[0] == 'sil' and o[2] is None for o in ops)

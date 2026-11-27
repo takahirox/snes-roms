@@ -86,6 +86,21 @@ def logo_rgba(font, text=TEXT, size=SIZE, vertical=True):
     return np.concatenate([np.clip(rgb, 0, 255), (alpha * 255)[..., None]], 2).astype(np.uint8)
 
 
+CARDS = ('logo', 'credit')          # the cards of the opening (assets/yonaki/logo/card_<name>.png)
+
+
+def card(name):
+    """A card of the opening as the 256x192 picture: the 4x coverage (tools/yonaki/make_logo_mask.py --cards)
+    resampled, pale warm white with a faint glow on black."""
+    m = Image.open(ROOT / f'assets/yonaki/logo/card_{name}.png').convert('L')
+    cov = np.asarray(m.resize((256, 192), Image.BOX), float) / 255
+    glow = np.asarray(m.resize((256, 192), Image.BOX).filter(ImageFilter.GaussianBlur(3)), float) / 255
+    ink = np.array([236, 230, 216], float)
+    halo = np.array([120, 104, 80], float)
+    arr = glow[..., None] * halo * 0.5
+    return arr * (1 - cov[..., None]) + ink * cov[..., None]
+
+
 if __name__ == '__main__':
     f = fontmod.Font()
     lg = logo_rgba(f)

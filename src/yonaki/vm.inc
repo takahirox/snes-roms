@@ -57,7 +57,7 @@ RunVM:
     and #$00FF
 @go:
     inc vp
-    cmp #OP_CAPTION+1
+    cmp #OP_ASK+1
     bcc :+
     lda #OP_HALT
 :   asl a
@@ -73,51 +73,12 @@ VmExit:
 
 OpTable:
     .word OpHalt, OpText, OpBlank, OpPage, OpBg, OpSil, OpSilClear, OpBgm, OpSe, OpFx, OpSet, OpClr
-    .word OpSetG, OpClrG, OpIf, OpGoto, OpChoice, OpEnd, OpChapter, OpAmb, OpAsk, OpCaption
+    .word OpSetG, OpClrG, OpIf, OpGoto, OpChoice, OpEnd, OpChapter, OpAmb, OpAsk
 
 ; @title or the end of the program: back to the title, which fades out what is on screen (unless it is the
 ; title picture: the opening ends on it)
 OpHalt:
     jmp VmExit
-
-; CAPTION <string>: one line centred low on the photo, written a glyph at a time (the opening)
-CAPTION_ROW = 19
-CAPTION_STEP = 4
-OpCaption:
-    lda #ST_BUSY
-    sta ui_state
-    jsr ClearPage
-    lda vp
-    sta p0
-    lda vp+2
-    sta p0+2
-    stz g_space
-    jsr StrWidth
-    sta t0
-    lda #240
-    sec
-    sbc t0
-    lsr a
-    sta g_x
-    lda #CAPTION_ROW
-    jsr RowY
-    lda #TEXT_OUTLINE
-    sta g_col
-@glyph:
-    jsr ReadCode
-    bcs @end
-    jsr PutGlyph
-    lda demo_quit               ; skipped: the rest at once
-    bne @glyph
-    lda #CAPTION_STEP
-    jsr WaitFrames
-    bra @glyph
-@end:
-    lda p0
-    sta vp
-    lda p0+2
-    sta vp+2
-    rts
 
 ; turn on the display before drawing text on a blanked screen
 EnsureVisible:
@@ -418,7 +379,7 @@ NextMark:
 
 ; size of the ops NextMark may step over (0: stop there)
 OpSize:
-    .byte 0, 0, 1, 0, 0, 5, 1, 2, 2, 4, 3, 3, 2, 2, 0, 0, 0, 0, 0, 2, 0, 0
+    .byte 0, 0, 1, 0, 0, 5, 1, 2, 2, 4, 3, 3, 2, 2, 0, 0, 0, 0, 0, 2, 0
 
 ; Wait for A with the blinking mark (mark_x, mark_y, mark_glyph).  B held over read text goes on by itself;
 ; START opens the menu.
@@ -1032,7 +993,16 @@ OpBg:
     jsr ClearSlots
     bra @peek
 :   stz sil_dirty
+    lda 1,s                     ; mode | frames a fade step << 4 (0: 2)
+    lsr a
+    lsr a
+    lsr a
+    lsr a
+    bne :+
+    lda #2
+:   sta fade_step
     pla
+    and #$000F
     asl a
     tax
     pla
@@ -1058,11 +1028,11 @@ BgKeep:
 
 BgFade:
     pha
-    lda #2
+    lda fade_step
     jsr FadeOut
     pla
     jsr LoadPic
-    lda #2
+    lda fade_step
     jmp FadeIn
 
 BgCut:
@@ -1235,7 +1205,7 @@ OpFx:
     asl a
     tax
     jmp (FxTable,x)
-FxTable: .word FxShake, FxFlash, FxRedFlash, FxRippleOn, FxRippleOff, FxDark, FxLight, FxWait
+FxTable: .word FxShake, FxFlash, FxRedFlash, FxRippleOn, FxRippleOff, FxDark, FxLight, FxWait, FxOut
 
 FxShake:
     lda #24
@@ -1278,6 +1248,9 @@ FxWait:
     lda t7
     ldx #WAIT_SKIP
     jmp WaitTimedEvent
+FxOut:                          ; to black, arg frames a step (the next @bg fades in from it)
+    lda t7
+    jmp FadeOut
 
 OpEnd:
     lda demo_on

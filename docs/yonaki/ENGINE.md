@@ -23,7 +23,7 @@ shows it.  Python needs Pillow and numpy: `python3 -m pip install --target tools
 (the tools add that directory to `sys.path`, so `python3 -I` works).
 
 Review tools:
-- `python3 -I tests/yonaki/shots.py LABEL ...` — pages from a label (review ROM, はじめから (new game) starts there);
+- `python3 -I tests/yonaki/shots.py LABEL ...` — pages from a label (review ROM, a new game starts there);
   `--ending E05` follows the route to that ending; `--follow`, `--pages N`, `--all-labels`.  PNGs and an
   `index.png` contact sheet under `build/yonaki-shots/<label>/`.
 - `python3 -I tests/yonaki/routes.py [build/yonaki]` — the choice path to every ending (exact VM rules), in an
@@ -75,6 +75,10 @@ Colour math: the photo keeps its own brightness (every photo is lifted by the sa
 by the START menu (`DIM_MENU` 15), `@fx dark` (31, until `@fx light` or the next `@bg`) and R held (`DIM_READ`
 13).  Holding L masks BG2 in the main-screen register shadow (the photo and figures alone); L and R together do
 both.  The buttons apply during scene fades and bookmark resume.
+The bookmarks screen (`ShioriScreen`) dims BG1 by `DIM_SPOT` except in a light on the bookmark chosen: colour
+window 1 (`CGWSEL` $20: no colour math inside it), its edges written per line by HDMA channel 6 from `spot_hdma`
+(only the bookmarks' lines, so the text under them stays dim) and moved `SPOT_STEP` px a frame toward the
+bookmark's `ShioriWin` edges (`SpotMove`).
 Flashes and the white transition add a fixed colour to every layer.  Shake moves BG1; the ripple is HDMA
 channel 7 on BG1HOFS (a 2-px sine, table in bank 0); mosaic uses MOSAIC on BG1; fades use master brightness.
 
@@ -221,12 +225,14 @@ tinted colours (black, white, the title), is drawn solid in colours 8–13 as be
 
 Ops (byte code, `tools/yonaki/build.py`): `TEXT id16 lines8 [counts] <string>` (lines bit 7: shown at once and no wait —
 the echo of an inline choice; bit 6: 16 line counts by name lengths follow), `BLANK`, `PAGE`, `BG pic mode` (mode 0 cut, 1 fade, 2 white, 3 mosaic, 4 keep: the
-photo goes dark under the text and the new one comes up under it; every `BG` ends the darkness of `@fx dark`),
+photo goes dark under the text and the new one comes up under it; bits 4-7: frames a brightness step of a fade, 0 = 2;
+every `BG` ends the darkness of `@fx dark`),
 `SIL key sil x colour` (sil `$FF` = remove the key), `SILCLEAR`, `BGM n` (`$FE` stop, `$FF` fade),
 `SE n`, `AMB k` (`$FF` off), `FX kind arg16`, `SET/CLR flag16`, `SETG/CLRG g`, `IF cond16 addr24`,
 `GOTO addr24`, `CHOICE id16 n {nconds conds… addr24 lines8 <string>}` (n bit 7: inline), `END ending`,
 `CHAPTER ch`, `HALT` (`@title`, the end of the program: back to the title), `ASK n {len8 glyph16… addr24}…
-default24 <question>`, `CAPTION <string>` (one line centred low on the photo, typed a glyph every 4 frames).
+default24 <question>`.  `FX out N` fades to black at N frames a step and leaves the screen black; a following
+`BG … fade` only fades in.
 
 Inline choices (`@choice inline`): the parser sends each option to an echo paragraph after the program (its text,
 re-wrapped, `nowait`) that goes on to the option's target. After the choice the VM erases the options and the blank
@@ -262,23 +268,31 @@ A bookmark resumes at the paragraph (shown again on a fresh page) or at the choi
 is redrawn first).
 
 Opening: after the boot the VM plays `*opening` (`AutoPlay`; a scenario without it goes straight to the title):
-shots, `@caption` lines and sounds, ending with `@bg title white` and `@title`.  A button skips it: `@fx wait`
-and caption typing stop at once, and the VM leaves between ops (`DemoExit`).  `TitleScreen` keeps the title picture
+pictures, sounds and pauses, ending with `@bg title white` and `@title`.  Its cards (`@bg logo`, `@bg credit`) are
+`assets/yonaki/logo/card_*.png` styled by `logo.card`; `@bg title_plain` is the title photo without the title.  A
+button skips it: `@fx wait` and fades stop at once, and the VM leaves between ops (`DemoExit`).  `TitleScreen` keeps the title picture
 when the opening ended on it; otherwise it fades in (`TITLE_FADE` frames a step) and the menu is drawn after it.
 `DEMO_IDLE` frames (20 s) on the title without a button start the demo: `AutoPlay` from `*demo` (a scenario without
 it has no demo), `ReadPad` pressing A `DEMO_WAIT` frames into each paragraph wait and choice (the first option)
 while nothing else is held.  A button, or the first wait after `DEMO_FRAMES` (60 s), returns to the title; an
 `@end` or `@ask` ends it at once.  The opening and the demo mark nothing read and skip `@setg` / `@clrg`.
 
-Guest register (`NameConfirm`, state `ST_WELCOME`): はじめから first shows the names in the inn's register over the
-inn at dusk (`REGISTER_BG` in build.py; このまま始める / 名前を書きなおす; B back to the title).
+Bookmarks (`ShioriScreen`, states `ST_SLOTS` and `ST_RESUME`): はじめる shows the three bookmarks (`SHIORI_BG`),
+the light on the one under the cursor (`slot_k`; ←→ or ↑↓), its name and chapter under it.  A or START takes it,
+B goes back to the title.  A play belongs to a bookmark (`cur_slot`): an empty one starts a new game, one in use
+asks つづきから (`LoadGame`) / はじめから (a new game; the bookmark is written only by しおりをはさむ).  The START menu's
+しおりをはさむ writes `cur_slot` at once; おまけ has none (`$FFFF`, the item grey).
+Menus: A or START chooses, B cancels; in the START menu START closes it (`menu_cancel` 2).
+
+Guest register (`NameConfirm`, state `ST_WELCOME`): a new game first shows the names over the inn's open register
+(`REGISTER_BG` in build.py; このまま始める / 名前を書きなおす; B back to the bookmarks).
 
 Name entry (`NameEntry`, ui.inc, state `ST_NAME`): 名前を書きなおす asks for the given names of 主人公 and ヒロイン (1-4 glyphs each,
 shown with ＿ for the free places, the fixed family names 結城 / 早瀬 grey before them and （名前） ("given name")
-after them) on a dark screen: 8 rows of 10 characters a page (かな, カナ, 3 pages of name
+after them) over the register dimmed by `DIM_MENU`: 8 rows of 10 characters a page (かな, カナ, 3 pages of name
 kanji, `NameGrid` from build.py `NAME_PAGES` / `NAME_KANJI`) and the commands かな カナ 漢字 けす 決定 (hiragana, katakana, kanji, erase, confirm).  Arrows move
 (wrapping), A types / runs the command, B deletes the last character (on an empty name: the first name again, or
-back to the title), L / R change the page, START decides.  The names are checked at power-on and at a bookmark load
+back to the register with the names as they were, `names_old`), L / R change the page, START decides.  The names are checked at power-on and at a bookmark load
 (length and glyph range; a broken one becomes its default) and saved in the global block when both are decided.
 
 Endings: `@end ID` records the ending (and `cleared_<scenario>`: main only by a `true` ending, the other
@@ -364,10 +378,10 @@ after them a full-width space; other ASCII stays half width (6 px).  Kinsoku: no
 ## Tests (`tests/yonaki/`)
 
 `run.py` (Snes9x 1.63 libretro, pad input only; WRAM read by label; the battery carried like a `.srm`):
-coverage of the fixture, boot with an empty and a random battery, the title's demo (it plays itself, keeps nothing and
+coverage of the fixture, boot with an empty and a random battery (the bookmarks empty, the light moving), the title's demo (it plays itself, keeps nothing and
 returns on a button or its time), every fixture ending in route order with the
 gated option checked before / after the unlock and おまけ after 3 endings, 結末の一覧, bookmarks at a paragraph
-and at a choice across a power cycle, B fast-forward stopping at unread text, text speed kept in the battery,
+and at a choice (two plays in two bookmarks) across a power cycle, はじめから on a bookmark in use leaving it as it was, B fast-forward stopping at unread text, text speed kept in the battery,
 and the effects (screenshots of every page). The save tests compare the resumed scene, local flags, names and
 visible choices. Recovery cases boot from battery images captured before and after real overwrites, with cuts
 after invalidation, during the payload and immediately before commit. They also cover a bad CRC, an invalid

@@ -9,11 +9,13 @@ Ops (the VM of src/yonaki/vm.inc runs the same list, encoded by tools/yonaki/bui
   ('text', tid, chunks[, nowait])   chunks: list of pages, each a list of lines (str), laid out for the default
                                 names (the ROM gets every name length: build.py Encoder.text); nowait: shown at once
   ('blank',) ('page',)
-  ('bg', name, mode)            mode: cut fade white mosaic keep (the picture changes under the text)
+  ('bg', name, mode, step)      mode: cut fade white mosaic keep (the picture changes under the text); step: frames
+                                a brightness step of a fade (0: the usual 2)
   ('sil', key, name|None, colour)   key: 'l' 'c' 'r' or 'x=NN'; name None removes
   ('silclear',)
   ('bgm', name|'stop'|'fade') ('se', name) ('amb', name|'off')
-  ('fx', kind, arg)             kind: shake flash redflash ripple_on ripple_off dark light wait
+  ('fx', kind, arg)             kind: shake flash redflash ripple_on ripple_off dark light wait out (to black, arg
+                                frames a step)
   ('set', flag) ('clr', flag) ('setg', g) ('clrg', g)
   ('if', cond, label)           cond = (name, negated, is_global); jumps when the condition holds
   ('goto', label)
@@ -25,7 +27,6 @@ Ops (the VM of src/yonaki/vm.inc runs the same list, encoded by tools/yonaki/bui
                                 answers: spellings (lists of up to NAME_MAX characters) that lead to label
   ('end', ending_id)
   ('chapter', chid, title)
-  ('caption', text)             one line centred low on the photo, written a glyph at a time (the opening)
   ('title',)                    back to the title (staying on the title picture when it is on screen)
 """
 import pathlib, re
@@ -49,8 +50,11 @@ DEFAULT_LENS = tuple(len(n) for n in NAME_VARS)
 MAX_CONDS = 4
 SIL_KEYS = ('l', 'c', 'r')
 BG_MODES = ('cut', 'fade', 'white', 'mosaic', 'keep')
-FX = ('shake', 'flash', 'redflash', 'ripple', 'dark', 'light', 'wait')
-BUILTIN_BG = ('black', 'white', 'title')   # title: the title picture (the opening ends on it)
+FX = ('shake', 'flash', 'redflash', 'ripple', 'dark', 'light', 'wait', 'out')
+# the opening's pictures: the maker's mark and the credit (assets/yonaki/logo/card_*.png) and the title photo
+# without its logo
+OPENING_BG = ('logo', 'credit', 'title_plain')
+BUILTIN_BG = ('black', 'white', 'title') + OPENING_BG   # title: the title picture (the opening ends on it)
 COLOURS = ('blue', 'white', 'red')
 
 
@@ -363,14 +367,17 @@ def parse(scn_dir, endings, font, diag):
                         prog.chapters.append(title)
                     emit(('chapter', prog.chapters.index(title), title), where)
                 elif cmd == 'bg':
+                    step = 0
+                    if len(args) == 3 and args[1] == 'fade' and args[2].isdigit() and 0 < int(args[2]) < 16:
+                        step = int(args.pop())
                     if not args or len(args) > 2:
-                        diag.err(where, 'usage: @bg name [cut|fade|white|mosaic|keep]')
+                        diag.err(where, 'usage: @bg name [cut|fade [frames a step, 1..15]|white|mosaic|keep]')
                         continue
                     mode = args[1] if len(args) > 1 else 'fade'
                     if mode not in BG_MODES:
                         diag.err(where, f'unknown @bg transition "{mode}"')
                         mode = 'fade'
-                    emit(('bg', args[0], mode), where)
+                    emit(('bg', args[0], mode, step), where)
                 elif cmd == 'sil':
                     if len(args) < 2 or len(args) > 3:
                         diag.err(where, 'usage: @sil name l|c|r|x=NN [blue|white|red] / @sil - l|c|r|x=NN')
@@ -419,6 +426,11 @@ def parse(scn_dir, endings, font, diag):
                             diag.err(where, 'usage: @fx wait N (frames, 1..65535)')
                             continue
                         emit(('fx', 'wait', int(args[1])), where)
+                    elif k == 'out':
+                        if len(args) != 2 or not args[1].isdigit() or not 0 < int(args[1]) < 16:
+                            diag.err(where, 'usage: @fx out N (fade to black, frames a step, 1..15)')
+                            continue
+                        emit(('fx', 'out', int(args[1])), where)
                     else:
                         if len(args) != 1:
                             diag.err(where, f'@fx {k} takes no argument')
@@ -464,14 +476,6 @@ def parse(scn_dir, endings, font, diag):
                     emit(('page',), where)
                 elif cmd == 'title':
                     emit(('title',), where)
-                elif cmd == 'caption':
-                    text = normalize(s[len('@caption'):].strip(), font)
-                    bad = sorted({c for c in text if not font.has(c)})
-                    if not text or bad:
-                        diag.err(where, '@caption needs a text in the font' + (f' (not: {" ".join(bad)})' if bad else ''))
-                    elif width(text) > LINE_PX:
-                        diag.err(where, f'caption too wide ({width(text)} px; one line of 18 characters)')
-                    emit(('caption', text), where)
                 else:
                     diag.err(where, f'unknown command @{cmd}')
                 continue
