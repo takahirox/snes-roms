@@ -57,7 +57,7 @@ NAME_PAGES = [                       # '　' = an empty cell
     'アイウエオカキクケコ' 'サシスセソタチツテト' 'ナニヌネノハヒフヘホ' 'マミムメモヤ　ユ　ヨ'
     'ラリルレロワ　　　ン' 'ガギグゲゴザジズゼゾ' 'ダヂヅデドバビブベボ' 'パピプペポャュョッー',
 ]
-NAME_KANJI = (                       # surnames first, then given names; the first 3 pages' worth are used.  The
+NAME_KANJI = (                       # the people of the story first, then given names; 3 pages' worth are used.  The
                                      # kanji of the people of the story come early (the culprit is typed at @ask)
     '結城千尋早瀬佐藤鈴木権益男澄遼嶋圭我達宗夜鶴源航高橋田中伊渡辺山本小林加吉松井上村清水斎森池野川口阪石原内岡前長谷部近坂遠青西東北南'
     '大竹宮崎浦島平福太葉菅沢秋桜岩丸今永安堀杉横矢市菊須賀浅倉関根桑柴有馬広星下河合久保望月白鳥黒澤神片桐志'
@@ -86,9 +86,9 @@ UI = dict(
     unknown='？？？？？？', list_hint='←→　ページ　　Ｂ　もどる',
     slot1='しおり一', slot2='しおり二', slot3='しおり三', notitle='（章なし）',
     empty='', kind0='真の結末', kind1='結末', kind2='悪い結末',
-    name_hero='主人公', name_heroine='ヒロイン', name_hero_note='（名字）', name_heroine_note='（名前）',
-    name_heroine_family='早瀬', name_hint='Ｂ　けす　　ＳＴＡＲＴ　決定',
-    register_head='霧見沢温泉　水明館　御宿帳', register_hero='\x03　様', register_heroine='早瀬\x04　様',
+    name_hero='主人公', name_heroine='ヒロイン', name_note='（名前）',
+    name_hero_family='結城', name_heroine_family='早瀬', name_hint='Ｂ　けす　　ＳＴＡＲＴ　決定',
+    register_head='霧見沢温泉　水明館　御宿帳', register_hero='結城　\x03　様', register_heroine='早瀬　\x04　様',
     register_ask='このお名前で、よろしいですか。', register_go='このまま始める', register_change='名前を書きなおす',
     ask_hint='名字か名前を　ＳＴＡＲＴ　決定', ask_label='その名は',
     name_cmd0='かな', name_cmd1='カナ', name_cmd2='漢字', name_cmd3='けす', name_cmd4='決定',
@@ -721,7 +721,7 @@ class Builder:
         d.append('NameGrid:   ; glyph per cell ($FFFF empty), NAME_ROWS x NAME_COLS a page')
         for pg in self.name_pages:
             d.append('    .word ' + ', '.join('$FFFF' if c == '　' else str(enc.index[c]) for c in pg))
-        d.append('NameDefault:   ; length, NAME_MAX glyphs: family name of the hero, given name of the heroine')
+        d.append('NameDefault:   ; length, NAME_MAX glyphs: the given names of the hero and the heroine')
         for name in sc.NAME_VARS:
             g = [enc.index[c] for c in name] + [0] * (sc.NAME_MAX - len(name))
             d.append(f'    .word {len(name)}, ' + ', '.join(map(str, g)) + f'   ; {name}')

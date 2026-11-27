@@ -446,7 +446,7 @@ def test_recovery():
 
 def test_names():
     """はじめから shows the names in the guest register; 名前を書きなおす asks for the two names: B deletes, the pages and the cursor type new ones, START decides; the
-    names are kept in the battery RAM and drawn in the story in place of 結城 / 千尋."""
+    names are kept in the battery RAM and drawn in the story in place of 航 / 千尋 (結城 and 早瀬 are fixed)."""
     rec = {}
     lay = json.loads((B / 'layout.json').read_text())
     gi = {c: i for i, c in enumerate(lay['glyphs'])}
@@ -458,9 +458,8 @@ def test_names():
     g.until(lambda: g.state() == 'WELCOME', 600, 'guest register')
     shot(g, 'register')
     g.rename()
-    assert g.name_glyphs(0) == [gi['結'], gi['城']] and g.name_glyphs(1) == [gi['千'], gi['尋']], 'default names'
+    assert g.name_glyphs(0) == [gi['航']] and g.name_glyphs(1) == [gi['千'], gi['尋']], 'default names'
     shot(g, 'entry')
-    g.tap('B', 2, 6)
     g.tap('B', 2, 6)
     assert g.name_glyphs(0) == []
     g.tap('R', 2, 30)
@@ -536,7 +535,7 @@ def test_name_layout():
     g.menu_to(g.title_items().index(0))
     g.tap('A', 2, 4)
     g.rename()
-    g.tap('START', 2, 6)                      # the hero's name stays 結城
+    g.tap('START', 2, 6)                      # the hero's name stays 航
     g.tap('B', 2, 6)
     g.tap('B', 2, 6)
     for row, col in ((3, 0), (4, 1), (3, 0), (4, 1)):   # まりまり

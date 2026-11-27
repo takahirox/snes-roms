@@ -40,7 +40,7 @@ MAX_CHOICES = 8
 # the names the player sets (はじめから): in the script they are written as the default names, which become
 # the control codes $03 / $04; the engine draws the name in their place.  A text with a name is laid out for
 # every pair of name lengths (NAME_LENS), and the ROM keeps the line breaks of all of them.
-NAME_VARS = {'結城': '\x03', '千尋': '\x04'}     # the hero's family name, the heroine's given name
+NAME_VARS = {'航': '\x03', '千尋': '\x04'}       # the given names of the hero (結城) and the heroine (早瀬)
 NAME_MAX = 4
 NAME_LENS = [(h, w) for h in range(1, NAME_MAX + 1) for w in range(1, NAME_MAX + 1)]   # src/yonaki/text.inc NameIndex
 DEFAULT_LENS = tuple(len(n) for n in NAME_VARS)

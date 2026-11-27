@@ -319,14 +319,14 @@ NameConfirm:
     rts
 
 ; ---------------------------------------------------------------- name entry (はじめから)
-; The hero's family name (主人公) and the heroine's given name (ヒロイン) (1..NAME_MAX glyphs each) typed from
-; pages of characters (かな, カナ, 漢字 1-3, NameGrid) over the dimmed title picture (the heroine's family name
-; 早瀬 is fixed and shown grey before her name; notes say which name each one is).  Arrows move the cursor (the command row under the grid:
+; The given names of the hero (主人公) and the heroine (ヒロイン) (1..NAME_MAX glyphs each) typed from
+; pages of characters (かな, カナ, 漢字 1-3, NameGrid) over the dimmed picture (the family names 結城 and 早瀬
+; are fixed and shown grey before them).  Arrows move the cursor (the command row under the grid:
 ; かな カナ 漢字 けす 決定), A types or runs a command, B deletes (on an empty name: back to the first name, or
 ; to the title), L / R change the page, START decides.  Carry set: back to the title.
-NE_FAMILY_X = TX0 + 74                  ; ヒロイン: 早瀬
+NE_FAMILY_X = TX0 + 74                  ; the fixed family names (結城, 早瀬)
 NE_NAME_X  = TX0 + 104                  ; the names (aligned)
-NE_NOTE_X  = NE_NAME_X + NAME_MAX * 12 + 6   ; （名字） / （名前）
+NE_NOTE_X  = NE_NAME_X + NAME_MAX * 12 + 6   ; （名前）
 NE_GRID    = 3                          ; first page line of the characters
 NE_CMDS    = NE_GRID + NAME_ROWS        ; the command line
 NE_CELL    = 21                         ; px per character cell (cursor, then the character at +9)
@@ -775,8 +775,14 @@ NeDrawAll:
     sta g_x
     lda #.loword(Str_name_heroine)
     jsr PrintRom
-    lda #3                      ; grey: what is fixed, what each name is
+    lda #3                      ; grey: the fixed family names, （名前）
     sta g_col
+    lda #0
+    jsr LineY
+    lda #NE_FAMILY_X
+    sta g_x
+    lda #.loword(Str_name_hero_family)
+    jsr PrintRom
     lda #1
     jsr LineY
     lda #NE_FAMILY_X
@@ -787,13 +793,13 @@ NeDrawAll:
     jsr LineY
     lda #NE_NOTE_X
     sta g_x
-    lda #.loword(Str_name_hero_note)
+    lda #.loword(Str_name_note)
     jsr PrintRom
     lda #1
     jsr LineY
     lda #NE_NOTE_X
     sta g_x
-    lda #.loword(Str_name_heroine_note)
+    lda #.loword(Str_name_note)
     jsr PrintRom
     lda #1
     sta g_col

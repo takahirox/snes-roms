@@ -240,8 +240,8 @@ op (glyph indices of the grid); the first equal one is taken, else the default. 
 the grid (`drive.type_answer`); `routes.py` treats an `@ask` as a choice whose options are the first spelling of
 each answer and `*` (the default).
 A condition word: bit 15 negated, bit 14 global (index < 32 a global flag, 32 + e ending e seen), else a local flag.
-Strings: `$00` end, `$01` new line, `$02` next page chunk, `$03` / `$04` the player's names (主人公の
-名字 "the protagonist's family name" / ヒロインの名前 "the heroine's given name": the script writes the default names 結城 / 千尋, `script.NAME_VARS`;
+Strings: `$00` end, `$01` new line, `$02` next page chunk, `$03` / `$04` the player's names (the given
+names of 主人公 結城 and ヒロイン 早瀬, whose family names are fixed: the script writes the default names 航 / 千尋, `script.NAME_VARS`;
 `ReadCode` hands out the name's glyphs from `names`), `$05` / `$06 mask16` a new line / page chunk only for the
 name lengths in the mask, `$10-$EF` the 224 most frequent glyphs, `$F0-$FF xx` the others (up to 4320 glyphs).
 A text with a name is laid out for each of the 16 pairs of name lengths (1-4 characters each, `script.NAME_LENS`);
@@ -270,9 +270,9 @@ A button, or the first wait after `DEMO_FRAMES` (60 s), returns to the title (`D
 Guest register (`NameConfirm`, state `ST_WELCOME`): はじめから first shows the names in the inn's register over the
 inn at dusk (`REGISTER_BG` in build.py; このまま始める / 名前を書きなおす; B back to the title).
 
-Name entry (`NameEntry`, ui.inc, state `ST_NAME`): 名前を書きなおす asks for 主人公の名字 and ヒロインの名前 (1-4 glyphs each,
-shown with ＿ for the free places, the fixed family name 早瀬 grey before the heroine's name and （名字） ("family name") /
-（名前） ("given name") after them) on a dark screen: 8 rows of 10 characters a page (かな, カナ, 3 pages of name
+Name entry (`NameEntry`, ui.inc, state `ST_NAME`): 名前を書きなおす asks for the given names of 主人公 and ヒロイン (1-4 glyphs each,
+shown with ＿ for the free places, the fixed family names 結城 / 早瀬 grey before them and （名前） ("given name")
+after them) on a dark screen: 8 rows of 10 characters a page (かな, カナ, 3 pages of name
 kanji, `NameGrid` from build.py `NAME_PAGES` / `NAME_KANJI`) and the commands かな カナ 漢字 けす 決定 (hiragana, katakana, kanji, erase, confirm).  Arrows move
 (wrapping), A types / runs the command, B deletes the last character (on an empty name: the first name again, or
 back to the title), L / R change the page, START decides.  The names are checked at power-on and at a bookmark load

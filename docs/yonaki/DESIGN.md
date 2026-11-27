@@ -63,6 +63,9 @@ old bathhouse.
 | (past) 権藤 千鶴 (Gondō Chizuru) | 17 | Maid in 1969 | — | Attacked by Kugayama; drowned in the bathtub |
 | (past) お由良 (Oyura) | 16 | Innkeeper's daughter at the end of the Edo period | The girl of the legend | Protagonist of おゆら篇 |
 
+The two call each other by their given names (航くん / 千尋さん); everyone else uses their family names. The player
+can change only the given names (はじめから, the guest register).
+
 ### Relationships
 - In 1969 Gondō lost his daughter Chizuru. His wife left, taking their younger daughter Sumiko (then 10). Gondō stayed at the
   inn ("I want to stay near Chizuru") and for 25 years believed it was an accident. Every year on 22 October (Chizuru's
