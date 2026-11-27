@@ -225,7 +225,8 @@ photo goes dark under the text and the new one comes up under it; every `BG` end
 `SIL key sil x colour` (sil `$FF` = remove the key), `SILCLEAR`, `BGM n` (`$FE` stop, `$FF` fade),
 `SE n`, `AMB k` (`$FF` off), `FX kind arg16`, `SET/CLR flag16`, `SETG/CLRG g`, `IF cond16 addr24`,
 `GOTO addr24`, `CHOICE id16 n {nconds conds… addr24 lines8 <string>}` (n bit 7: inline), `END ending`,
-`CHAPTER ch`, `HALT`, `ASK n {len8 glyph16… addr24}… default24 <question>`.
+`CHAPTER ch`, `HALT` (`@title`, the end of the program: back to the title), `ASK n {len8 glyph16… addr24}…
+default24 <question>`, `CAPTION <string>` (one line centred low on the photo, typed a glyph every 4 frames).
 
 Inline choices (`@choice inline`): the parser sends each option to an echo paragraph after the program (its text,
 re-wrapped, `nowait`) that goes on to the option's target. After the choice the VM erases the options and the blank
@@ -260,12 +261,14 @@ clears.  START at a paragraph wait or a choice: しおりをはさむ (insert a 
 A bookmark resumes at the paragraph (shown again on a fresh page) or at the choice (the paragraph before it
 is redrawn first).
 
-Title: after the boot the far bell (`bell_far`) rings on black for `TITLE_BELL` frames; the title picture fades
-in (`TITLE_FADE` frames a step) and the menu is drawn after it.  `DEMO_IDLE` frames (20 s) on the title without a
-button start the demo: the VM runs from `*demo` (a scenario without it has no demo) and `ReadPad` plays it,
-pressing A `DEMO_WAIT` frames into each paragraph wait and choice (the first option) while nothing else is held.
-A button, or the first wait after `DEMO_FRAMES` (60 s), returns to the title (`DemoExit`, only at a wait); an
-`@end` or `@ask` ends it at once.  The demo marks nothing read and skips `@setg` / `@clrg`.
+Opening: after the boot the VM plays `*opening` (`AutoPlay`; a scenario without it goes straight to the title):
+shots, `@caption` lines and sounds, ending with `@bg title white` and `@title`.  A button skips it: `@fx wait`
+and caption typing stop at once, and the VM leaves between ops (`DemoExit`).  `TitleScreen` keeps the title picture
+when the opening ended on it; otherwise it fades in (`TITLE_FADE` frames a step) and the menu is drawn after it.
+`DEMO_IDLE` frames (20 s) on the title without a button start the demo: `AutoPlay` from `*demo` (a scenario without
+it has no demo), `ReadPad` pressing A `DEMO_WAIT` frames into each paragraph wait and choice (the first option)
+while nothing else is held.  A button, or the first wait after `DEMO_FRAMES` (60 s), returns to the title; an
+`@end` or `@ask` ends it at once.  The opening and the demo mark nothing read and skip `@setg` / `@clrg`.
 
 Guest register (`NameConfirm`, state `ST_WELCOME`): はじめから first shows the names in the inn's register over the
 inn at dusk (`REGISTER_BG` in build.py; このまま始める / 名前を書きなおす; B back to the title).
@@ -348,7 +351,7 @@ over 2 lines (17 full-width characters each, the cursor takes the 18th), more th
 options, more than 4 conditions on an option, characters not in the font (JIS X 0208 + ASCII), a chapter title
 over 18 characters, an ending title over 14, the program running off its end, a background / silhouette without
 a picture (unless `--allow-missing-art`), more than 32 endings / global flags, 512 local flags.
-Warnings: labels unreachable from `*start` / `*omake` / `*demo`, endings not reachable (global-flag branches count as both
+Warnings: labels unreachable from `*start` / `*omake` / `*demo` / `*opening`, endings not reachable (global-flag branches count as both
 ways), flags tested but never set, kinsoku that could not be kept, unknown bg / sil names (not in
 `assets/yonaki/prompts.json`), unknown song / effect / ambience names (`--unknown-sound-error` makes them errors).
 Notes (report.txt): labels only reached by falling through, flags set but never tested.

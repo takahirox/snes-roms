@@ -138,7 +138,6 @@ CHOICE_X  = 26                  ; option letter (cursor at TX0)
 OPT_TEXT_X = CHOICE_X + 16      ; option text (tools/yonaki/script.py CHOICE_PX)
 DIM_READ  = 13                  ; BG1 dim while R is held
 DIM_MENU  = 15
-TITLE_BELL = 60                 ; frames of the far bell on black before the first title
 TITLE_FADE = 4                  ; frames a brightness step while the title picture comes up (the menu after it)
 DEMO_IDLE = 1200                ; frames on the title without a button before the demo plays
 DEMO_WAIT = 90                  ; frames the demo reads a paragraph or looks at a choice before it presses A
@@ -369,7 +368,7 @@ menu_hlc:  .res 2
 menu_cancel: .res 2
 menu_idle: .res 2              ; 1: MenuLoop returns MENU_IDLE after DEMO_IDLE frames without a button (the title)
 idle_frames: .res 2
-; the title's demo: the story plays itself (ReadPad presses A) until a button or DEMO_FRAMES
+; the opening and the title's demo: the script plays itself (ReadPad presses A) until a button or DEMO_FRAMES
 demo_on:   .res 2
 demo_quit: .res 2              ; 1: back to the title at the next wait
 demo_timer: .res 2             ; frames in the current wait
@@ -550,11 +549,12 @@ Reset:
     sta NMITIMEN                ; NMI + auto joypad read
     rep #$20
     .a16
-.if SE_TITLE <> $FF
-    lda #SE_TITLE               ; the bell, far away, on black before the first title
-    jsr SndQueue
-    lda #TITLE_BELL
-    jsr WaitFrames
+.if OPENING_ADDR
+    lda #.loword(OPENING_ADDR)  ; the opening (*opening) before the first title
+    sta vp
+    lda #^OPENING_ADDR
+    sta vp+2
+    jsr AutoPlay
 .endif
 Main:
     jsr TitleScreen             ; never returns (the VM returns to it)

@@ -129,11 +129,19 @@ MenuText:
 TitleScreen:
     lda #ST_BUSY
     sta ui_state
-    lda #2
+    lda pic_cur
+    cmp #PIC_TITLE
+    bne :+
+    lda blanked
+    bne :+
+    jsr ResetScreenState        ; the opening ended on the title picture: it stays
+    bra @song
+:   lda #2
     jsr FadeOut
     jsr ResetScreenState
     lda #PIC_TITLE
     jsr LoadPic
+@song:
     lda #TITLE_SONG
     cmp #$FF
     beq :+
@@ -230,23 +238,28 @@ TitleScreen:
     jsr TitleMenuDraw
     jmp @menu
 @demo:
+    lda #.loword(DEMO_ADDR)
+    sta vp
+    lda #^DEMO_ADDR
+    sta vp+2
+    jsr AutoPlay
+    lda #SND_FADE
+    jsr SndQueue
+    lda #$FFFF
+    sta music_cur
+    jmp TitleScreen
+
+; vp = the opening or the demo: it plays itself until a button (DemoExit) or the script stops
+AutoPlay:
     jsr StartGame
     lda #1
     sta demo_on
     stz demo_quit
     stz demo_timer
     stz demo_frames
-    lda #.loword(DEMO_ADDR)
-    sta vp
-    lda #^DEMO_ADDR
-    sta vp+2
-    jsr RunVM                   ; until a button (DemoExit) or the script stops
+    jsr RunVM
     stz demo_on
-    lda #SND_FADE
-    jsr SndQueue
-    lda #$FFFF
-    sta music_cur
-    jmp TitleScreen
+    rts
 
 ; ---------------------------------------------------------------- the guest register (はじめから)
 ; The names kept from the last time (or the defaults), written in the inn's register over the inn at dusk

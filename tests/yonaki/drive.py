@@ -49,7 +49,15 @@ class Driver(Game):
         self.until(lambda: self.state() == want, limit, f'{button} -> {want}')
         self.run(2)
 
+    def opening(self):
+        """The opening is playing (WRAM holds the game's values only after the reset code ran)."""
+        return self.frame > 8 and self.state() != 'BOOT' and self.w('demo_on')
+
     def title(self, limit=1500):
+        """Wait for the title; the opening at power-on is skipped with START."""
+        self.until(lambda: self.opening() or self.state() == 'TITLE', limit, 'title or the opening')
+        if self.state() != 'TITLE':
+            self.tap('START', 2, 2)
         self.until(lambda: self.state() == 'TITLE' and self.w('bright') == 15, limit, 'title')
         self.run(4)
 

@@ -53,6 +53,8 @@ WaitUploads:
     rts
 
 CheckSkip:
+    lda demo_quit               ; (@fx wait in the opening / demo: a button)
+    bne EventReady
     lda ff
     beq CheckTimer
     lda pad
@@ -164,7 +166,7 @@ CheckEnding:
     and #PAD_A|PAD_START
     rts
 
-; the demo leaves the story at a wait (no drawing or upload in progress) for the title
+; the opening / demo leaves the script at a wait or between ops (no drawing or upload in progress) for the title
 DemoExit:
     stz wait_event
     stz wait_remaining

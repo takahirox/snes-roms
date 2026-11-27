@@ -25,6 +25,8 @@ Ops (the VM of src/yonaki/vm.inc runs the same list, encoded by tools/yonaki/bui
                                 answers: spellings (lists of up to NAME_MAX characters) that lead to label
   ('end', ending_id)
   ('chapter', chid, title)
+  ('caption', text)             one line centred low on the photo, written a glyph at a time (the opening)
+  ('title',)                    back to the title (staying on the title picture when it is on screen)
 """
 import pathlib, re
 
@@ -48,7 +50,7 @@ MAX_CONDS = 4
 SIL_KEYS = ('l', 'c', 'r')
 BG_MODES = ('cut', 'fade', 'white', 'mosaic', 'keep')
 FX = ('shake', 'flash', 'redflash', 'ripple', 'dark', 'light', 'wait')
-BUILTIN_BG = ('black', 'white')
+BUILTIN_BG = ('black', 'white', 'title')   # title: the title picture (the opening ends on it)
 COLOURS = ('blue', 'white', 'red')
 
 
@@ -460,6 +462,16 @@ def parse(scn_dir, endings, font, diag):
                     emit(('end', args[0]), where)
                 elif cmd == 'page':
                     emit(('page',), where)
+                elif cmd == 'title':
+                    emit(('title',), where)
+                elif cmd == 'caption':
+                    text = normalize(s[len('@caption'):].strip(), font)
+                    bad = sorted({c for c in text if not font.has(c)})
+                    if not text or bad:
+                        diag.err(where, '@caption needs a text in the font' + (f' (not: {" ".join(bad)})' if bad else ''))
+                    elif width(text) > LINE_PX:
+                        diag.err(where, f'caption too wide ({width(text)} px; one line of 18 characters)')
+                    emit(('caption', text), where)
                 else:
                     diag.err(where, f'unknown command @{cmd}')
                 continue
@@ -509,12 +521,12 @@ def successors(prog, i):
         return [lab(op[2])] + nxt
     if k in ('choice', 'ask'):
         return [lab(t) for _, _, t in options(op)]
-    if k == 'end':
+    if k in ('end', 'title'):
         return []
     return nxt
 
 
-ENTRIES = ('start', 'omake', 'demo')     # the title starts the VM at these (demo: the idle demo)
+ENTRIES = ('start', 'omake', 'demo', 'opening')   # the VM starts at these (opening: at power-on; demo: idle title)
 
 
 def entries(prog):

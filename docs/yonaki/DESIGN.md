@@ -231,7 +231,11 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 - Chapter markers label bookmarks and let the story continue.
 - A: advance / confirm. B (held): fast-forward through text already read (stops at unread text). START: menu
   (しおりをはさむ "insert a bookmark", 文字の速さ "text speed", タイトルへ "to the title").
-- Title: the far bell rings on black, the title picture comes up, then the menu: はじめから (new game) / しおりから
+- Opening (at power-on, any button skips it): rain and the far bell on black; the valley, the inn in the storm,
+  the covered walkway, the empty bath (its water rippling) and the bell, with three lines of the taboo typed under
+  them (嵐の晩、/ 誰もいない湯殿で、鐘が鳴る。/ 鳴っても、数えてはいけない。); the bell strikes and the title comes
+  out of the white.
+- Title: the menu: はじめから (new game) / しおりから
   (continue from a bookmark) / 結末の一覧 (list of endings) / (after unlocking) おまけ (bonus). Left alone for 20
   seconds, the title plays a demo: the lounge in chapter 1 reads and chooses by itself until a button is pressed.
 - はじめから: the guest register of 水明館 over the inn at dusk in the rain; the story then opens on the bus, with no
@@ -243,7 +247,8 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 
 ```
 # comment
-*label                 label (unique across the whole script; *start begins the game, *demo the title's demo)
+*label                 label (unique across the whole script; *start begins the game, *opening plays at power-on,
+                       *demo is the title's demo)
 @chapter 第一章　最後の客
 @bg lobby [cut|fade|white|mosaic|keep]   background (default fade; keep: under the text, the page goes on)
 @sil chihiro l|c|r|x=NN [blue|white|red]   place a silhouette (x is a tile column)
@@ -263,6 +268,8 @@ short (the "rest of the rope" that Sumiko pulls in chapter 4).
 > * -> label                    anything else
 @end E01               ending (recorded in 結末の一覧, shows 「終」 and returns to the title)
 @page                  page break
+@caption text          one line centred low on the photo, typed slowly (the opening)
+@title                 back to the title (the opening ends with @bg title white, then @title)
 body text              one line is one paragraph; wrapped automatically, waits for A at the end of the paragraph
 (empty line)           adds one blank line when in the middle of a page
 ```

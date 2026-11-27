@@ -1,0 +1,7 @@
+# test fixture: a short opening (power-on): a caption, then the title out of the white
+*opening
+@bg valley fade
+@caption 嵐の晩、
+@fx wait 30
+@bg title white
+@title

@@ -144,6 +144,36 @@ def test_corrupt():
     return rec
 
 
+def test_opening():
+    """At power-on the opening plays by itself (its caption is written) and ends on the title picture, which stays
+    up while the menu comes; a button skips it to the title.  It keeps nothing in the battery."""
+    rec = {}
+    g = new('opening', sram=bytes(8192))
+    title = g.layout['pictures'].index('@title')
+    g.until(g.opening, 400, 'the opening')
+    g.until(lambda: g.w('pic_cur') == g.layout['pictures'].index('valley') and not g.w('blanked'), 400, 'first shot')
+    g.until(lambda: g.w('text_dirty') or g.w('text_dirty', 2), 200, 'the caption')
+    g.run(40)
+    shot(g, 'caption')
+    assert g.screen()[16:208].max() > 0
+    g.until(lambda: g.w('pic_cur') == title, 600, 'the title picture')
+    blanks = []
+    g.observers.append(lambda game: blanks.append(game.w('blanked')))
+    g.until(lambda: g.state() == 'TITLE', 600, 'the title menu')
+    assert not any(blanks), 'the title picture went dark before the menu'
+    rec['title_frame'] = g.frame
+    sram = finish(g, rec)
+    assert not any(sram[0x808:0x13F8]) and global_block(sram)['gflags'] == 0, 'the opening kept something'
+    g = new('opening_skip', sram=bytes(8192))
+    g.until(lambda: g.opening() and not g.w('blanked'), 600, 'the opening')
+    start = g.frame
+    g.tap('B', 2, 2)
+    g.until(lambda: g.state() == 'TITLE' and g.w('bright') == 15, 300, 'skipped to the title')
+    rec['skip_frames'] = g.frame - start
+    finish(g, rec.setdefault('skip', {}))
+    return rec
+
+
 def test_demo():
     """Left on the title, the story plays itself from *demo: it reads and chooses with no button pressed, keeps no
     read mark, flag or ending, and a button (or the end of its time) brings the title back."""
@@ -1041,7 +1071,7 @@ def test_coverage():
     ops = lay['ops']
     kinds = {o[0] for o in ops}
     want = {'text', 'blank', 'page', 'bg', 'sil', 'silclear', 'bgm', 'se', 'amb', 'fx', 'set', 'clr', 'setg', 'clrg',
-            'if', 'goto', 'choice', 'end', 'chapter', 'ask'}
+            'if', 'goto', 'choice', 'end', 'chapter', 'ask', 'caption', 'title'}
     assert want <= kinds, want - kinds
     assert {o[2] for o in ops if o[0] == 'bg'} >= {'cut', 'fade', 'white', 'mosaic', 'keep'}
     assert {o[1] for o in ops if o[0] == 'fx'} >= {'shake', 'flash', 'redflash', 'ripple_on', 'ripple_off', 'dark',
@@ -1059,7 +1089,7 @@ def test_coverage():
     return dict(ops=sorted(kinds))
 
 
-TESTS = [test_coverage, test_boot, test_demo, test_corrupt, test_endings, test_endings_list, test_save_load, test_recovery,
+TESTS = [test_coverage, test_boot, test_opening, test_demo, test_corrupt, test_endings, test_endings_list, test_save_load, test_recovery,
          test_names, test_name_layout, test_fastforward, test_speed, test_effects, test_scheduler,
          test_reading_controls, test_silhouette_updates]
 

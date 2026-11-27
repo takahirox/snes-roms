@@ -1,0 +1,29 @@
+# 夜鳴き鐘 — the opening: played at power-on before the title (any button goes to the title).
+# Rain and the far bell on black, the way to the inn as the night comes, the empty bath, the bell; the bell
+# strikes and the title comes out of the white.
+
+*opening
+@amb rain
+@fx wait 60
+@se bell_far
+@fx wait 100
+@bgm title
+@bg valley fade
+@fx wait 150
+@bg inn_storm fade
+@caption 嵐の晩、
+@fx wait 150
+@bg watari fade
+@fx wait 120
+@bg oldbath_night fade
+@fx ripple on
+@caption 誰もいない湯殿で、鐘が鳴る。
+@fx wait 180
+@fx ripple off
+@bg bell fade
+@caption 鳴っても、数えてはいけない。
+@fx wait 150
+@se bell
+@fx wait 20
+@bg title white
+@title
